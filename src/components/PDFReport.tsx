@@ -52,25 +52,52 @@ const PDFReport: React.FC<PDFReportProps> = ({
   const generatePDF = async () => {
     if (!reportRef.current) return;
 
-    const reportElement = reportRef.current;
-    const canvas = await html2canvas(reportElement, {
-      scale: 2,
-      useCORS: true,
-      logging: false
-    });
+    try {
+      const reportElement = reportRef.current;
+      
+      // Using more reliable HTML2Canvas options to avoid gradient issues
+      const canvas = await html2canvas(reportElement, {
+        scale: 1.5, // Reduced scale to avoid memory issues
+        useCORS: true,
+        logging: false,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        // Avoiding problematic elements like gradients that might cause issues
+        ignoreElements: (element) => {
+          const style = window.getComputedStyle(element);
+          return style.backgroundImage.includes('gradient');
+        }
+      });
 
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4'
-    });
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
 
-    const imgWidth = 210;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    
-    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-    pdf.save(`${clientName}-Solar-Report.pdf`);
+      const imgWidth = 210;
+      const pageHeight = 297;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      // Add multiple pages if content is long
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      pdf.save(`${clientName.replace(/\s+/g, '-')}-Solar-Report.pdf`);
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      alert("There was an error generating the PDF. Please try again.");
+    }
   };
 
   // Calculate yearly production sum
@@ -96,8 +123,8 @@ const PDFReport: React.FC<PDFReportProps> = ({
           className="pdf-report bg-white p-8" 
           style={{ width: "800px", minHeight: "1123px" }}
         >
-          {/* Header */}
-          <div className="bg-gradient-to-r from-[#4CB571] to-[#0496FF] p-6 rounded-lg text-white flex justify-between items-center mb-6">
+          {/* Header - Simplified with solid colors instead of gradients */}
+          <div className="bg-[#4CB571] p-6 rounded-lg text-white flex justify-between items-center mb-6">
             <div>
               <h1 className="text-3xl font-bold">Solar PV System Report</h1>
               <p className="text-lg">Financial Analysis & Environmental Benefits</p>
@@ -136,8 +163,8 @@ const PDFReport: React.FC<PDFReportProps> = ({
             </div>
           </div>
 
-          {/* Financial Summary */}
-          <div className="bg-gradient-to-r from-[#FDE1D3] to-[#FEF7CD] p-6 rounded-lg mb-8">
+          {/* Financial Summary - Changed from gradient to solid color */}
+          <div className="bg-[#FDE1D3] p-6 rounded-lg mb-8">
             <h2 className="text-xl font-semibold mb-4 text-[#1A1F2C] flex items-center">
               <LineChart className="h-5 w-5 mr-2 text-[#F97316]" />
               Financial Summary
@@ -176,8 +203,8 @@ const PDFReport: React.FC<PDFReportProps> = ({
             </div>
           </div>
 
-          {/* Environmental Benefits */}
-          <div className="bg-gradient-to-r from-[#D3E4FD] to-[#F2FCE2] p-6 rounded-lg mb-8">
+          {/* Environmental Benefits - Changed from gradient to solid color */}
+          <div className="bg-[#D3E4FD] p-6 rounded-lg mb-8">
             <h2 className="text-xl font-semibold mb-4 text-[#1A1F2C] flex items-center">
               <Trees className="h-5 w-5 mr-2 text-[#4CB571]" />
               Environmental Benefits (Annual)
