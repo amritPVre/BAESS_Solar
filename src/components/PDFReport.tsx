@@ -5,6 +5,7 @@ import { Download, FileText, Sun, Trees, Car, Cloud, LineChart } from "lucide-re
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { formatCurrency, formatNumber } from "@/utils/calculations";
+import { useToast } from "@/hooks/use-toast";
 
 interface PDFReportProps {
   clientName: string;
@@ -48,55 +49,94 @@ const PDFReport: React.FC<PDFReportProps> = ({
   cumulativeCashFlow
 }) => {
   const reportRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   const generatePDF = async () => {
     if (!reportRef.current) return;
 
     try {
-      const reportElement = reportRef.current;
-      
-      // Using more reliable HTML2Canvas options to avoid gradient issues
-      const canvas = await html2canvas(reportElement, {
-        scale: 1.5, // Reduced scale to avoid memory issues
-        useCORS: true,
-        logging: false,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        // Avoiding problematic elements like gradients that might cause issues
-        ignoreElements: (element) => {
-          const style = window.getComputedStyle(element);
-          return style.backgroundImage.includes('gradient');
-        }
+      // Show loading toast
+      toast({
+        title: "Generating PDF",
+        description: "Please wait while we prepare your report...",
       });
-
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      
+      // Make sure the report element is visible during capture
+      const reportElement = reportRef.current;
+      const originalDisplay = reportElement.style.display;
+      reportElement.style.display = "block";
+      
+      // Create a new jsPDF instance
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
         format: 'a4'
       });
-
-      const imgWidth = 210;
-      const pageHeight = 297;
+      
+      // Capture the element as an image
+      const canvas = await html2canvas(reportElement, {
+        scale: 1.5,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        onclone: (document, clonedDoc) => {
+          // Ensure the cloned element is visible and properly styled
+          const clonedElement = clonedDoc.querySelector('.pdf-report') as HTMLElement;
+          if (clonedElement) {
+            clonedElement.style.display = "block";
+            clonedElement.style.width = "800px";
+            clonedElement.style.height = "auto";
+            clonedElement.style.position = "absolute";
+            clonedElement.style.top = "0";
+            clonedElement.style.left = "0";
+          }
+        }
+      });
+      
+      // Convert canvas to image
+      const imgData = canvas.toDataURL('image/jpeg', 1.0);
+      
+      // Add image to PDF
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
       let heightLeft = imgHeight;
       let position = 0;
-
+      
+      // Add first page
       pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
       heightLeft -= pageHeight;
-
-      // Add multiple pages if content is long
+      
+      // Add additional pages if needed
       while (heightLeft >= 0) {
         position = heightLeft - imgHeight;
         pdf.addPage();
         pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
         heightLeft -= pageHeight;
       }
-
+      
+      // Reset display style
+      reportElement.style.display = originalDisplay;
+      
+      // Save the PDF
       pdf.save(`${clientName.replace(/\s+/g, '-')}-Solar-Report.pdf`);
+      
+      // Success toast
+      toast({
+        title: "PDF Generated Successfully",
+        description: "Your report has been downloaded.",
+        variant: "default",
+      });
     } catch (error) {
       console.error("Error generating PDF:", error);
-      alert("There was an error generating the PDF. Please try again.");
+      
+      // Error toast
+      toast({
+        title: "PDF Generation Failed",
+        description: "There was an error generating the PDF. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
