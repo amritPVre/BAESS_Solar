@@ -369,6 +369,17 @@ const SolarCalculator: React.FC = () => {
                 yearlyProduction={yearlyProduction}
                 yearlyCashFlow={yearlyCashFlow}
                 cumulativeCashFlow={cumulativeCashFlow}
+                // Pass client and company info to ResultsDisplay for PDF report
+                clientName={clientName}
+                clientEmail={clientEmail}
+                clientAddress={clientAddress}
+                companyName={companyName}
+                companyContact={companyContact}
+                systemSize={systemSize}
+                panelType={panelType}
+                co2Reduction={co2Reduction}
+                treesEquivalent={treesEquivalent}
+                vehicleMilesOffset={vehicleMilesOffset}
               />
             )}
             

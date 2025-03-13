@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { formatCurrency, formatNumber } from "@/utils/calculations";
 import DataCard from "@/components/ui/DataCard";
 import SolarChart from "@/components/ui/SolarChart";
+import PDFReport from "@/components/PDFReport";
 import { DollarSign, LineChart, BarChart3, TrendingUp, CalendarClock, Sun } from "lucide-react";
 
 interface ResultsDisplayProps {
@@ -15,6 +16,17 @@ interface ResultsDisplayProps {
   yearlyProduction: number[];
   yearlyCashFlow: number[];
   cumulativeCashFlow: number[];
+  // Client & company info for PDF report
+  clientName?: string;
+  clientEmail?: string;
+  clientAddress?: string;
+  companyName?: string;
+  companyContact?: string;
+  systemSize?: number;
+  panelType?: string;
+  co2Reduction?: number;
+  treesEquivalent?: number;
+  vehicleMilesOffset?: number;
 }
 
 const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
@@ -26,7 +38,18 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
   paybackPeriod,
   yearlyProduction,
   yearlyCashFlow,
-  cumulativeCashFlow
+  cumulativeCashFlow,
+  // Client & company info for PDF report
+  clientName = "Client",
+  clientEmail = "",
+  clientAddress = "",
+  companyName = "Solar Company",
+  companyContact = "",
+  systemSize = 0,
+  panelType = "",
+  co2Reduction = 0,
+  treesEquivalent = 0,
+  vehicleMilesOffset = 0
 }) => {
   const [activeTab, setActiveTab] = useState("summary");
   const [isVisible, setIsVisible] = useState(false);
@@ -94,6 +117,30 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
           value={`${paybackPeriod.years} years and ${paybackPeriod.months} months`}
           icon={<CalendarClock className="h-5 w-5" />}
           className="bg-solar-gray hover:shadow-md transition-all duration-300"
+        />
+      </div>
+      
+      {/* PDF Report Section */}
+      <div className="mb-8">
+        <PDFReport
+          clientName={clientName}
+          clientEmail={clientEmail}
+          clientAddress={clientAddress}
+          companyName={companyName}
+          companyContact={companyContact}
+          systemSize={systemSize}
+          panelType={panelType}
+          lcoe={lcoe}
+          annualRevenue={annualRevenue}
+          annualCost={annualCost}
+          netPresentValue={netPresentValue}
+          irr={irr}
+          paybackPeriod={paybackPeriod}
+          co2Reduction={co2Reduction}
+          treesEquivalent={treesEquivalent}
+          vehicleMilesOffset={vehicleMilesOffset}
+          yearlyProduction={yearlyProduction}
+          cumulativeCashFlow={cumulativeCashFlow}
         />
       </div>
       
