@@ -2,7 +2,7 @@
 import React from "react";
 import { formatNumber } from "@/utils/calculations";
 import DataCard from "@/components/ui/DataCard";
-import { Tree, Cloud, Car } from "lucide-react";
+import { Trees, Cloud, Car } from "lucide-react";
 
 interface EnvironmentalBenefitsProps {
   co2Reduction: number;
@@ -30,7 +30,7 @@ const EnvironmentalBenefits: React.FC<EnvironmentalBenefitsProps> = ({
         <DataCard
           title="Trees Planted Equivalent"
           value={`${formatNumber(treesEquivalent)}`}
-          icon={<Tree className="h-5 w-5" />}
+          icon={<Trees className="h-5 w-5" />}
           className="bg-solar-gray hover:shadow-md transition-all duration-300 animate-float"
           valueClassName="text-xl font-semibold"
         />
