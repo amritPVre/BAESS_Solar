@@ -240,7 +240,7 @@ const SolarCalculator: React.FC = () => {
           <TabsTrigger value="environmental" disabled={!showResults}>Environmental</TabsTrigger>
         </TabsList>
         
-        <ScrollArea className="w-full h-full max-h-[calc(100vh-280px)]">
+        <ScrollArea className="w-full h-[calc(100vh-200px)] min-h-[600px]">
           <TabsContent value="client" className="space-y-8 mt-2">
             <ClientDetails
               clientName={clientName}
@@ -264,7 +264,7 @@ const SolarCalculator: React.FC = () => {
               setCompanyPhone={setCompanyPhone}
             />
             
-            <div className="flex justify-end">
+            <div className="flex justify-end mb-10">
               <Button 
                 onClick={() => setActiveTab("solar")}
                 className="bg-solar hover:bg-solar-dark text-white"
@@ -298,7 +298,7 @@ const SolarCalculator: React.FC = () => {
               setShadingFactor={setShadingFactor}
             />
             
-            <div className="flex justify-between">
+            <div className="flex justify-between mb-10">
               <Button 
                 variant="outline" 
                 onClick={() => setActiveTab("client")}
@@ -340,7 +340,7 @@ const SolarCalculator: React.FC = () => {
               setDiscountRate={setDiscountRate}
             />
             
-            <div className="flex justify-between">
+            <div className="flex justify-between mb-10">
               <Button 
                 variant="outline" 
                 onClick={() => setActiveTab("solar")}
@@ -372,7 +372,7 @@ const SolarCalculator: React.FC = () => {
               />
             )}
             
-            <div className="flex justify-between mt-8">
+            <div className="flex justify-between mt-8 mb-10">
               <Button 
                 variant="outline" 
                 onClick={() => setActiveTab("financial")}
@@ -397,7 +397,7 @@ const SolarCalculator: React.FC = () => {
               />
             )}
             
-            <div className="flex justify-start mt-8">
+            <div className="flex justify-start mt-8 mb-10">
               <Button 
                 variant="outline" 
                 onClick={() => setActiveTab("results")}
