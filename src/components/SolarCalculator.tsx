@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -122,104 +121,204 @@ const SolarCalculator: React.FC = () => {
     setCalculating(true);
     
     // Simulate calculation delay for UX
-    setTimeout(() => {
+    setTimeout(async () => {
       try {
         // Calculate performance ratio
         const performanceRatio = calculatePerformanceRatio();
         
-        // Calculate annual energy production (kWh)
-        const annualProduction = knowsAnnualEnergy 
-          ? manualAnnualEnergy 
-          : systemSize * solarIrradiance * 365 * performanceRatio;
-        
-        // Calculate yearly production with degradation
-        const production = calculateYearlyProduction(
-          systemSize,
-          solarIrradiance,
-          performanceRatio,
-          degradationRate,
-          knowsAnnualEnergy ? manualAnnualEnergy : undefined
-        );
-        setYearlyProduction(production);
-        
-        // Calculate LCOE
-        const calculatedLCOE = calculateLevelizedCostOfEnergy(
-          systemCost - incentives,
-          annualProduction,
-          maintenanceCost,
-          25
-        );
-        setLCOE(calculatedLCOE);
-        
-        // Calculate annual revenue
-        const calculatedAnnualRevenue = calculateAnnualRevenue(
-          annualProduction,
-          electricityRate
-        );
-        setAnnualRevenue(calculatedAnnualRevenue);
-        
-        // Calculate annual cost
-        const calculatedAnnualCost = calculateAnnualCost(
-          maintenanceCost,
-          financingOption === "loan" ? (systemCost - incentives) * (interestRate / 100) : 0
-        );
-        setAnnualCost(calculatedAnnualCost);
-        
-        // Calculate net present value
-        const calculatedNPV = calculateNetPresentValue(
-          systemCost - incentives,
-          calculatedAnnualRevenue - calculatedAnnualCost,
-          discountRate,
-          25
-        );
-        setNetPresentValue(calculatedNPV);
-        
-        // Calculate IRR
-        const calculatedIRR = calculateInternalRateOfReturn(
-          systemCost - incentives,
-          calculatedAnnualRevenue - calculatedAnnualCost,
-          25
-        );
-        setIRR(calculatedIRR);
-        
-        // Calculate payback period
-        const calculatedPaybackPeriod = calculatePaybackPeriod(
-          systemCost - incentives,
-          calculatedAnnualRevenue - calculatedAnnualCost
-        );
-        setPaybackPeriod(calculatedPaybackPeriod);
-        
-        // Calculate yearly revenue (with electricity price escalation)
-        const yearlyRevenue = production.map((prod, index) => {
-          return prod * electricityRate * Math.pow(1 + (electricityEscalationRate / 100), index);
-        });
-        
-        // Calculate yearly costs (with maintenance escalation)
-        const yearlyOperationalCost = Array(25).fill(0).map((_, index) => {
-          return maintenanceCost * Math.pow(1 + (maintenanceEscalationRate / 100), index);
-        });
-        
-        // Calculate yearly cash flow
-        const calculatedYearlyCashFlow = calculateYearlyCashFlow(
-          systemCost - incentives,
-          yearlyRevenue,
-          yearlyOperationalCost
-        );
-        setYearlyCashFlow(calculatedYearlyCashFlow);
-        
-        // Calculate cumulative cash flow
-        const calculatedCumulativeCashFlow = calculateCumulativeCashFlow(calculatedYearlyCashFlow);
-        setCumulativeCashFlow(calculatedCumulativeCashFlow);
-        
-        // Calculate environmental benefits
-        const calculatedCO2Reduction = calculateCO2Reduction(annualProduction);
-        setCO2Reduction(calculatedCO2Reduction);
-        
-        // Calculate trees equivalent (approximate: 1 tree absorbs ~22kg CO2 per year)
-        setTreesEquivalent(calculatedCO2Reduction / 22);
-        
-        // Calculate vehicle miles offset (approximate: 404 grams CO2 per mile)
-        setVehicleMilesOffset(calculatedCO2Reduction * 1000 / 404);
+        // If the user knows their annual energy production, we use that value
+        // Otherwise, we use our advanced calculation service
+        if (knowsAnnualEnergy) {
+          // Simple calculation based on manual annual energy
+          const production = calculateYearlyProduction(
+            systemSize,
+            solarIrradiance,
+            performanceRatio,
+            degradationRate,
+            manualAnnualEnergy
+          );
+          setYearlyProduction(production);
+          
+          // Calculate LCOE
+          const calculatedLCOE = calculateLevelizedCostOfEnergy(
+            systemCost - incentives,
+            manualAnnualEnergy,
+            maintenanceCost,
+            25
+          );
+          setLCOE(calculatedLCOE);
+          
+          // Calculate annual revenue
+          const calculatedAnnualRevenue = calculateAnnualRevenue(
+            manualAnnualEnergy,
+            electricityRate
+          );
+          setAnnualRevenue(calculatedAnnualRevenue);
+          
+          // Calculate annual cost
+          const calculatedAnnualCost = calculateAnnualCost(
+            maintenanceCost,
+            financingOption === "loan" ? (systemCost - incentives) * (interestRate / 100) : 0
+          );
+          setAnnualCost(calculatedAnnualCost);
+          
+          // Calculate net present value
+          const calculatedNPV = calculateNetPresentValue(
+            systemCost - incentives,
+            calculatedAnnualRevenue - calculatedAnnualCost,
+            discountRate,
+            25
+          );
+          setNetPresentValue(calculatedNPV);
+          
+          // Calculate IRR
+          const calculatedIRR = calculateInternalRateOfReturn(
+            systemCost - incentives,
+            calculatedAnnualRevenue - calculatedAnnualCost,
+            25
+          );
+          setIRR(calculatedIRR);
+          
+          // Calculate payback period
+          const calculatedPaybackPeriod = calculatePaybackPeriod(
+            systemCost - incentives,
+            calculatedAnnualRevenue - calculatedAnnualCost
+          );
+          setPaybackPeriod(calculatedPaybackPeriod);
+          
+          // Calculate yearly revenue (with electricity price escalation)
+          const yearlyRevenue = production.map((prod, index) => {
+            return prod * electricityRate * Math.pow(1 + (electricityEscalationRate / 100), index);
+          });
+          
+          // Calculate yearly costs (with maintenance escalation)
+          const yearlyOperationalCost = Array(25).fill(0).map((_, index) => {
+            return maintenanceCost * Math.pow(1 + (maintenanceEscalationRate / 100), index);
+          });
+          
+          // Calculate yearly cash flow
+          const calculatedYearlyCashFlow = calculateYearlyCashFlow(
+            systemCost - incentives,
+            yearlyRevenue,
+            yearlyOperationalCost
+          );
+          setYearlyCashFlow(calculatedYearlyCashFlow);
+          
+          // Calculate cumulative cash flow
+          const calculatedCumulativeCashFlow = calculateCumulativeCashFlow(calculatedYearlyCashFlow);
+          setCumulativeCashFlow(calculatedCumulativeCashFlow);
+          
+          // Calculate environmental benefits
+          const calculatedCO2Reduction = calculateCO2Reduction(annualProduction);
+          setCO2Reduction(calculatedCO2Reduction);
+          
+          // Calculate trees equivalent (approximate: 1 tree absorbs ~22kg CO2 per year)
+          setTreesEquivalent(calculatedCO2Reduction / 22);
+          
+          // Calculate vehicle miles offset (approximate: 404 grams CO2 per mile)
+          setVehicleMilesOffset(calculatedCO2Reduction * 1000 / 404);
+        } else {
+          // Use the advanced solar calculation service to get more accurate results
+          const solarParams = {
+            systemSize,
+            location,
+            panelType,
+            panelEfficiency,
+            inverterEfficiency,
+            roofAngle,
+            orientation,
+            shadingFactor,
+            degradationRate
+          };
+          
+          // Fetch detailed solar production estimate
+          const productionEstimate = await fetchSolarProductionEstimate(solarParams);
+          
+          // Set the yearly production with the detailed calculation
+          setYearlyProduction(productionEstimate.yearlyProduction);
+          
+          // Use the first year production as the annual production value
+          const annualProduction = productionEstimate.estimatedAnnualProduction;
+          
+          // Calculate LCOE
+          const calculatedLCOE = calculateLevelizedCostOfEnergy(
+            systemCost - incentives,
+            annualProduction,
+            maintenanceCost,
+            25
+          );
+          setLCOE(calculatedLCOE);
+          
+          // Calculate annual revenue
+          const calculatedAnnualRevenue = calculateAnnualRevenue(
+            annualProduction,
+            electricityRate
+          );
+          setAnnualRevenue(calculatedAnnualRevenue);
+          
+          // Calculate annual cost
+          const calculatedAnnualCost = calculateAnnualCost(
+            maintenanceCost,
+            financingOption === "loan" ? (systemCost - incentives) * (interestRate / 100) : 0
+          );
+          setAnnualCost(calculatedAnnualCost);
+          
+          // Calculate net present value
+          const calculatedNPV = calculateNetPresentValue(
+            systemCost - incentives,
+            calculatedAnnualRevenue - calculatedAnnualCost,
+            discountRate,
+            25
+          );
+          setNetPresentValue(calculatedNPV);
+          
+          // Calculate IRR
+          const calculatedIRR = calculateInternalRateOfReturn(
+            systemCost - incentives,
+            calculatedAnnualRevenue - calculatedAnnualCost,
+            25
+          );
+          setIRR(calculatedIRR);
+          
+          // Calculate payback period
+          const calculatedPaybackPeriod = calculatePaybackPeriod(
+            systemCost - incentives,
+            calculatedAnnualRevenue - calculatedAnnualCost
+          );
+          setPaybackPeriod(calculatedPaybackPeriod);
+          
+          // Calculate yearly revenue (with electricity price escalation)
+          const yearlyRevenue = productionEstimate.yearlyProduction.map((prod, index) => {
+            return prod * electricityRate * Math.pow(1 + (electricityEscalationRate / 100), index);
+          });
+          
+          // Calculate yearly costs (with maintenance escalation)
+          const yearlyOperationalCost = Array(25).fill(0).map((_, index) => {
+            return maintenanceCost * Math.pow(1 + (maintenanceEscalationRate / 100), index);
+          });
+          
+          // Calculate yearly cash flow
+          const calculatedYearlyCashFlow = calculateYearlyCashFlow(
+            systemCost - incentives,
+            yearlyRevenue,
+            yearlyOperationalCost
+          );
+          setYearlyCashFlow(calculatedYearlyCashFlow);
+          
+          // Calculate cumulative cash flow
+          const calculatedCumulativeCashFlow = calculateCumulativeCashFlow(calculatedYearlyCashFlow);
+          setCumulativeCashFlow(calculatedCumulativeCashFlow);
+          
+          // Calculate environmental benefits
+          const calculatedCO2Reduction = calculateCO2Reduction(annualProduction);
+          setCO2Reduction(calculatedCO2Reduction);
+          
+          // Calculate trees equivalent (approximate: 1 tree absorbs ~22kg CO2 per year)
+          setTreesEquivalent(calculatedCO2Reduction / 22);
+          
+          // Calculate vehicle miles offset (approximate: 404 grams CO2 per mile)
+          setVehicleMilesOffset(calculatedCO2Reduction * 1000 / 404);
+        }
         
         setShowResults(true);
         setActiveTab("results");
@@ -426,7 +525,6 @@ const SolarCalculator: React.FC = () => {
                   yearlyProduction={yearlyProduction}
                   yearlyCashFlow={yearlyCashFlow}
                   cumulativeCashFlow={cumulativeCashFlow}
-                  // Pass client and company info to ResultsDisplay for PDF report
                   clientName={clientName}
                   clientEmail={clientEmail}
                   clientAddress={clientAddress}

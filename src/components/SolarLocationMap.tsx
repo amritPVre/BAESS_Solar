@@ -9,22 +9,26 @@ const SolarLocationMap: React.FC<SolarLocationMapProps> = ({ location }) => {
   const mapRef = useRef<HTMLIFrameElement>(null);
   
   useEffect(() => {
-    // This is a simple implementation using Google Maps embed
-    // For a more interactive map, you would use a proper mapping library like Mapbox or Leaflet
+    // When location changes, we update the map
+    // This would be more interactive with a proper mapping library like Mapbox or Leaflet
   }, [location]);
   
+  // Build the Google Maps embed URL with the marker at the specified coordinates
   const mapUrl = `https://maps.google.com/maps?q=${location.lat},${location.lng}&z=15&output=embed`;
   
   return (
-    <iframe 
-      ref={mapRef}
-      src={mapUrl}
-      width="100%" 
-      height="100%" 
-      style={{ border: 0 }} 
-      loading="lazy"
-      title="Solar Installation Location"
-    />
+    <div className="w-full h-full min-h-[300px] rounded-lg overflow-hidden border border-gray-200 shadow-sm">
+      <iframe 
+        ref={mapRef}
+        src={mapUrl}
+        width="100%" 
+        height="100%" 
+        style={{ border: 0, minHeight: '300px' }} 
+        loading="lazy"
+        title="Solar Installation Location"
+        className="w-full h-full"
+      />
+    </div>
   );
 };
 
