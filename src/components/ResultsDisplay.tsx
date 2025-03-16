@@ -4,7 +4,9 @@ import { formatCurrency, formatNumber } from "@/utils/calculations";
 import DataCard from "@/components/ui/DataCard";
 import SolarChart from "@/components/ui/SolarChart";
 import PDFReport from "@/components/PDFReport";
-import { DollarSign, LineChart, BarChart3, TrendingUp, CalendarClock, Sun } from "lucide-react";
+import { DollarSign, LineChart, BarChart3, TrendingUp, CalendarClock, Sun, MapPin } from "lucide-react";
+import SolarLocationMap from "@/components/SolarLocationMap";
+import ProductionCashflowTable from "@/components/ProductionCashflowTable";
 
 interface ResultsDisplayProps {
   lcoe: number;
@@ -27,6 +29,10 @@ interface ResultsDisplayProps {
   co2Reduction?: number;
   treesEquivalent?: number;
   vehicleMilesOffset?: number;
+  location?: { lat: number; lng: number };
+  timezone?: string;
+  country?: string;
+  city?: string;
 }
 
 const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
@@ -49,10 +55,14 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
   panelType = "",
   co2Reduction = 0,
   treesEquivalent = 0,
-  vehicleMilesOffset = 0
+  vehicleMilesOffset = 0,
+  location = { lat: 40.7128, lng: -74.0060 },
+  timezone = "America/New_York",
+  country = "United States",
+  city = "New York"
 }) => {
-  const [activeTab, setActiveTab] = useState("summary");
   const [isVisible, setIsVisible] = useState(false);
+  const [activeTab, setActiveTab] = useState("summary");
   
   useEffect(() => {
     setTimeout(() => setIsVisible(true), 100);
@@ -120,6 +130,24 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
         />
       </div>
       
+      {/* Location Information */}
+      <div className="mb-8 p-4 bg-solar-gray/30 rounded-lg">
+        <h3 className="text-lg font-semibold mb-3 flex items-center">
+          <MapPin className="h-5 w-5 mr-2" /> Location Information
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <p><strong>City:</strong> {city}</p>
+            <p><strong>Country:</strong> {country}</p>
+            <p><strong>Timezone:</strong> {timezone}</p>
+            <p><strong>Coordinates:</strong> {location.lat.toFixed(4)}, {location.lng.toFixed(4)}</p>
+          </div>
+          <div className="h-40 rounded-lg overflow-hidden">
+            <SolarLocationMap location={location} />
+          </div>
+        </div>
+      </div>
+      
       {/* PDF Report Section */}
       <div className="mb-8">
         <PDFReport
@@ -140,6 +168,19 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
           treesEquivalent={treesEquivalent}
           vehicleMilesOffset={vehicleMilesOffset}
           yearlyProduction={yearlyProduction}
+          cumulativeCashFlow={cumulativeCashFlow}
+          location={location}
+          city={city}
+          country={country}
+        />
+      </div>
+      
+      {/* 25-Year Production and Cashflow Table */}
+      <div className="mb-8">
+        <h3 className="text-lg font-semibold mb-3">25-Year Production & Cashflow</h3>
+        <ProductionCashflowTable 
+          yearlyProduction={yearlyProduction}
+          yearlyCashFlow={yearlyCashFlow}
           cumulativeCashFlow={cumulativeCashFlow}
         />
       </div>

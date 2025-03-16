@@ -8,6 +8,7 @@ import SolarPVDetails from "@/components/SolarPVDetails";
 import FinancialDetails from "@/components/FinancialDetails";
 import ResultsDisplay from "@/components/ResultsDisplay";
 import EnvironmentalBenefits from "@/components/EnvironmentalBenefits";
+import AnnualEnergyCheck from "@/components/AnnualEnergyCheck";
 import { 
   calculateLevelizedCostOfEnergy, 
   calculateAnnualRevenue, 
@@ -21,7 +22,6 @@ import {
   calculateCumulativeCashFlow
 } from "@/utils/calculations";
 import { toast } from "sonner";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { motion } from 'framer-motion';
 
 const SolarCalculator: React.FC = () => {
@@ -37,6 +37,10 @@ const SolarCalculator: React.FC = () => {
   const [companyEmail, setCompanyEmail] = useState("contact@solarsolutions.com");
   const [companyPhone, setCompanyPhone] = useState("(987) 654-3210");
   
+  // Annual energy check
+  const [knowsAnnualEnergy, setKnowsAnnualEnergy] = useState<boolean | null>(null);
+  const [manualAnnualEnergy, setManualAnnualEnergy] = useState<number>(12000);
+  
   // Solar PV System details
   const [systemSize, setSystemSize] = useState(10);
   const [panelType, setPanelType] = useState("monocrystalline");
@@ -48,6 +52,10 @@ const SolarCalculator: React.FC = () => {
   const [orientation, setOrientation] = useState("south");
   const [solarIrradiance, setSolarIrradiance] = useState(5);
   const [shadingFactor, setShadingFactor] = useState(5);
+  const [location, setLocation] = useState({ lat: 40.7128, lng: -74.0060 });
+  const [timezone, setTimezone] = useState("America/New_York");
+  const [country, setCountry] = useState("United States");
+  const [city, setCity] = useState("New York");
   
   // Financial details
   const [systemCost, setSystemCost] = useState(30000);
@@ -120,14 +128,17 @@ const SolarCalculator: React.FC = () => {
         const performanceRatio = calculatePerformanceRatio();
         
         // Calculate annual energy production (kWh)
-        const annualProduction = systemSize * solarIrradiance * 365 * performanceRatio;
+        const annualProduction = knowsAnnualEnergy 
+          ? manualAnnualEnergy 
+          : systemSize * solarIrradiance * 365 * performanceRatio;
         
         // Calculate yearly production with degradation
         const production = calculateYearlyProduction(
           systemSize,
           solarIrradiance,
           performanceRatio,
-          degradationRate
+          degradationRate,
+          knowsAnnualEnergy ? manualAnnualEnergy : undefined
         );
         setYearlyProduction(production);
         
@@ -234,13 +245,13 @@ const SolarCalculator: React.FC = () => {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid grid-cols-5 mb-8 w-full md:w-auto mx-auto">
           <TabsTrigger value="client">Client</TabsTrigger>
-          <TabsTrigger value="solar">Solar PV</TabsTrigger>
-          <TabsTrigger value="financial">Financial</TabsTrigger>
+          <TabsTrigger value="energyCheck">Energy Check</TabsTrigger>
+          <TabsTrigger value="solar" disabled={knowsAnnualEnergy === null}>Solar PV</TabsTrigger>
+          <TabsTrigger value="financial" disabled={knowsAnnualEnergy === null}>Financial</TabsTrigger>
           <TabsTrigger value="results" disabled={!showResults}>Results</TabsTrigger>
-          <TabsTrigger value="environmental" disabled={!showResults}>Environmental</TabsTrigger>
         </TabsList>
         
-        <ScrollArea className="w-full h-[calc(100vh-200px)] min-h-[600px]">
+        <div className="min-h-[600px]">
           <TabsContent value="client" className="space-y-8 mt-2">
             <ClientDetails
               clientName={clientName}
@@ -266,10 +277,41 @@ const SolarCalculator: React.FC = () => {
             
             <div className="flex justify-end mb-10">
               <Button 
-                onClick={() => setActiveTab("solar")}
+                onClick={() => setActiveTab("energyCheck")}
                 className="bg-solar hover:bg-solar-dark text-white"
               >
-                Next: Solar PV Details
+                Next: Energy Check
+              </Button>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="energyCheck" className="space-y-8 mt-2">
+            <AnnualEnergyCheck
+              knowsAnnualEnergy={knowsAnnualEnergy}
+              setKnowsAnnualEnergy={setKnowsAnnualEnergy}
+              manualAnnualEnergy={manualAnnualEnergy}
+              setManualAnnualEnergy={setManualAnnualEnergy}
+            />
+            
+            <div className="flex justify-between mb-10">
+              <Button 
+                variant="outline" 
+                onClick={() => setActiveTab("client")}
+              >
+                Back
+              </Button>
+              <Button 
+                onClick={() => {
+                  if (knowsAnnualEnergy) {
+                    setActiveTab("financial");
+                  } else {
+                    setActiveTab("solar");
+                  }
+                }}
+                className="bg-solar hover:bg-solar-dark text-white"
+                disabled={knowsAnnualEnergy === null}
+              >
+                {knowsAnnualEnergy ? "Next: Financial Details" : "Next: Solar PV Details"}
               </Button>
             </div>
           </TabsContent>
@@ -296,12 +338,20 @@ const SolarCalculator: React.FC = () => {
               setSolarIrradiance={setSolarIrradiance}
               shadingFactor={shadingFactor}
               setShadingFactor={setShadingFactor}
+              location={location}
+              setLocation={setLocation}
+              timezone={timezone}
+              setTimezone={setTimezone}
+              country={country}
+              setCountry={setCountry}
+              city={city}
+              setCity={setCity}
             />
             
             <div className="flex justify-between mb-10">
               <Button 
                 variant="outline" 
-                onClick={() => setActiveTab("client")}
+                onClick={() => setActiveTab("energyCheck")}
               >
                 Back
               </Button>
@@ -343,7 +393,13 @@ const SolarCalculator: React.FC = () => {
             <div className="flex justify-between mb-10">
               <Button 
                 variant="outline" 
-                onClick={() => setActiveTab("solar")}
+                onClick={() => {
+                  if (knowsAnnualEnergy) {
+                    setActiveTab("energyCheck");
+                  } else {
+                    setActiveTab("solar");
+                  }
+                }}
               >
                 Back
               </Button>
@@ -359,28 +415,40 @@ const SolarCalculator: React.FC = () => {
           
           <TabsContent value="results" className="mt-2">
             {showResults && (
-              <ResultsDisplay
-                lcoe={lcoe}
-                annualRevenue={annualRevenue}
-                annualCost={annualCost}
-                netPresentValue={netPresentValue}
-                irr={irr}
-                paybackPeriod={paybackPeriod}
-                yearlyProduction={yearlyProduction}
-                yearlyCashFlow={yearlyCashFlow}
-                cumulativeCashFlow={cumulativeCashFlow}
-                // Pass client and company info to ResultsDisplay for PDF report
-                clientName={clientName}
-                clientEmail={clientEmail}
-                clientAddress={clientAddress}
-                companyName={companyName}
-                companyContact={companyContact}
-                systemSize={systemSize}
-                panelType={panelType}
-                co2Reduction={co2Reduction}
-                treesEquivalent={treesEquivalent}
-                vehicleMilesOffset={vehicleMilesOffset}
-              />
+              <div className="space-y-8">
+                <ResultsDisplay
+                  lcoe={lcoe}
+                  annualRevenue={annualRevenue}
+                  annualCost={annualCost}
+                  netPresentValue={netPresentValue}
+                  irr={irr}
+                  paybackPeriod={paybackPeriod}
+                  yearlyProduction={yearlyProduction}
+                  yearlyCashFlow={yearlyCashFlow}
+                  cumulativeCashFlow={cumulativeCashFlow}
+                  // Pass client and company info to ResultsDisplay for PDF report
+                  clientName={clientName}
+                  clientEmail={clientEmail}
+                  clientAddress={clientAddress}
+                  companyName={companyName}
+                  companyContact={companyContact}
+                  systemSize={systemSize}
+                  panelType={panelType}
+                  co2Reduction={co2Reduction}
+                  treesEquivalent={treesEquivalent}
+                  vehicleMilesOffset={vehicleMilesOffset}
+                  location={location}
+                  timezone={timezone}
+                  country={country}
+                  city={city}
+                />
+
+                <EnvironmentalBenefits
+                  co2Reduction={co2Reduction}
+                  treesEquivalent={treesEquivalent}
+                  vehicleMilesOffset={vehicleMilesOffset}
+                />
+              </div>
             )}
             
             <div className="flex justify-between mt-8 mb-10">
@@ -388,36 +456,11 @@ const SolarCalculator: React.FC = () => {
                 variant="outline" 
                 onClick={() => setActiveTab("financial")}
               >
-                Back
-              </Button>
-              <Button 
-                onClick={() => setActiveTab("environmental")}
-                className="bg-solar hover:bg-solar-dark text-white"
-              >
-                View Environmental Benefits
+                Back to Financial Details
               </Button>
             </div>
           </TabsContent>
-          
-          <TabsContent value="environmental" className="mt-2">
-            {showResults && (
-              <EnvironmentalBenefits
-                co2Reduction={co2Reduction}
-                treesEquivalent={treesEquivalent}
-                vehicleMilesOffset={vehicleMilesOffset}
-              />
-            )}
-            
-            <div className="flex justify-start mt-8 mb-10">
-              <Button 
-                variant="outline" 
-                onClick={() => setActiveTab("results")}
-              >
-                Back to Results
-              </Button>
-            </div>
-          </TabsContent>
-        </ScrollArea>
+        </div>
       </Tabs>
     </div>
   );

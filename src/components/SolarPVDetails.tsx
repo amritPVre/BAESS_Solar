@@ -1,9 +1,11 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
+import { Button } from "@/components/ui/button";
+import { MapPin } from "lucide-react";
 
 interface SolarPVDetailsProps {
   systemSize: number;
@@ -26,6 +28,14 @@ interface SolarPVDetailsProps {
   setSolarIrradiance: (value: number) => void;
   shadingFactor: number;
   setShadingFactor: (value: number) => void;
+  location: { lat: number; lng: number };
+  setLocation: (value: { lat: number; lng: number }) => void;
+  timezone: string;
+  setTimezone: (value: string) => void;
+  country: string;
+  setCountry: (value: string) => void;
+  city: string;
+  setCity: (value: string) => void;
 }
 
 const SolarPVDetails: React.FC<SolarPVDetailsProps> = ({
@@ -48,11 +58,152 @@ const SolarPVDetails: React.FC<SolarPVDetailsProps> = ({
   solarIrradiance,
   setSolarIrradiance,
   shadingFactor,
-  setShadingFactor
+  setShadingFactor,
+  location,
+  setLocation,
+  timezone,
+  setTimezone,
+  country,
+  setCountry,
+  city,
+  setCity
 }) => {
+  const handleLocationDetection = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setLocation({ lat: latitude, lng: longitude });
+          
+          // Fetch location details using reverse geocoding
+          fetchLocationDetails(latitude, longitude);
+        },
+        (error) => {
+          console.error("Error getting location:", error);
+        }
+      );
+    }
+  };
+  
+  const fetchLocationDetails = async (lat: number, lng: number) => {
+    try {
+      // This is a simple implementation. In a production app, you would use a proper geocoding service
+      // like Google's Geocoding API or Mapbox's Geocoding API
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10`
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.address) {
+          setCountry(data.address.country || country);
+          setCity(data.address.city || data.address.town || data.address.village || city);
+          
+          // For timezone, we're using a simple approach here
+          // In a real app, you'd use a timezone API
+          const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+          setTimezone(timezone);
+          
+          // Update solar irradiance based on location (simplified)
+          updateSolarIrradianceEstimate(lat);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching location details:", error);
+    }
+  };
+  
+  const updateSolarIrradianceEstimate = (latitude: number) => {
+    // This is a very simplified estimation
+    // In a real app, you would use actual solar radiation data from NASA or other sources
+    const absLat = Math.abs(latitude);
+    
+    if (absLat < 20) {
+      // Equatorial regions
+      setSolarIrradiance(6.0);
+    } else if (absLat < 35) {
+      // Subtropical regions
+      setSolarIrradiance(5.5);
+    } else if (absLat < 50) {
+      // Temperate regions
+      setSolarIrradiance(4.5);
+    } else {
+      // Polar regions
+      setSolarIrradiance(3.5);
+    }
+  };
+  
   return (
     <div className="glass-card rounded-xl p-6 shadow-sm transition-all duration-300 hover:shadow-md">
       <h2 className="section-title">Solar PV System Details</h2>
+      
+      {/* Location Section */}
+      <div className="mb-6 bg-solar-gray/20 p-4 rounded-lg">
+        <h3 className="text-lg font-semibold mb-3 flex items-center">
+          <MapPin className="h-5 w-5 mr-2" /> Location Information
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div className="space-y-2">
+            <Label htmlFor="latitude">Latitude</Label>
+            <Input
+              id="latitude"
+              type="number"
+              step="0.000001"
+              value={location.lat}
+              onChange={(e) => setLocation({ ...location, lat: Number(e.target.value) })}
+              className="input-field"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="longitude">Longitude</Label>
+            <Input
+              id="longitude"
+              type="number"
+              step="0.000001"
+              value={location.lng}
+              onChange={(e) => setLocation({ ...location, lng: Number(e.target.value) })}
+              className="input-field"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="city">City</Label>
+            <Input
+              id="city"
+              type="text"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              className="input-field"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="country">Country</Label>
+            <Input
+              id="country"
+              type="text"
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+              className="input-field"
+            />
+          </div>
+        </div>
+        
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={handleLocationDetection}
+          className="mb-2"
+        >
+          <MapPin className="h-4 w-4 mr-2" />
+          Detect My Location
+        </Button>
+        
+        <div className="text-sm text-muted-foreground mt-2">
+          <p>Your location helps us accurately calculate solar irradiance and system performance.</p>
+        </div>
+      </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-6">

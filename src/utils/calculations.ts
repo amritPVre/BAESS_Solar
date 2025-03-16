@@ -91,10 +91,11 @@ export const calculateYearlyProduction = (
   systemSize: number,
   solarIrradiance: number,
   performanceRatio: number,
-  annualDegradation: number
+  annualDegradation: number,
+  manualAnnualEnergy?: number
 ): number[] => {
   const yearlyProduction: number[] = [];
-  const baseProduction = systemSize * solarIrradiance * 365 * performanceRatio;
+  const baseProduction = manualAnnualEnergy || (systemSize * solarIrradiance * 365 * performanceRatio);
   
   for (let year = 0; year < 25; year++) {
     const degradationFactor = Math.pow(1 - annualDegradation / 100, year);

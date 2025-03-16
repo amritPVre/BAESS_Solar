@@ -1,7 +1,7 @@
 
 import React, { useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Download, FileText, Sun, Trees, Car, Cloud, LineChart } from "lucide-react";
+import { Download, FileText, Sun, Trees, Car, Cloud, LineChart, MapPin } from "lucide-react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { formatCurrency, formatNumber } from "@/utils/calculations";
@@ -26,6 +26,9 @@ interface PDFReportProps {
   vehicleMilesOffset: number;
   yearlyProduction: number[];
   cumulativeCashFlow: number[];
+  location?: { lat: number; lng: number };
+  city?: string;
+  country?: string;
 }
 
 const PDFReport: React.FC<PDFReportProps> = ({
@@ -46,7 +49,10 @@ const PDFReport: React.FC<PDFReportProps> = ({
   treesEquivalent,
   vehicleMilesOffset,
   yearlyProduction,
-  cumulativeCashFlow
+  cumulativeCashFlow,
+  location,
+  city,
+  country
 }) => {
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -224,6 +230,22 @@ const PDFReport: React.FC<PDFReportProps> = ({
               </div>
             </div>
           </div>
+
+          {/* Location Information */}
+          {location && (
+            <div className="mb-8 bg-[#E1EFF6] p-5 rounded-lg">
+              <h2 className="text-xl font-semibold mb-3 text-[#1A1F2C] flex items-center">
+                <MapPin className="h-5 w-5 mr-2 text-[#2563EB]" />
+                Location Information
+              </h2>
+              <div className="grid grid-cols-2 gap-4 text-[#403E43]">
+                <div>
+                  <p><strong>Location:</strong> {city}, {country}</p>
+                  <p><strong>Coordinates:</strong> {location.lat.toFixed(4)}, {location.lng.toFixed(4)}</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Financial Summary - Changed from gradient to solid color */}
           <div className="bg-[#FDE1D3] p-6 rounded-lg mb-8">
