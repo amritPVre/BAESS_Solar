@@ -23,25 +23,39 @@ import {
 import { fetchSolarProductionEstimate } from "@/utils/solarCalculationService";
 import { toast } from "sonner";
 import { motion } from 'framer-motion';
+import { useAuth } from "@/hooks/useAuth";
+import { useSolarProjects } from "@/hooks/useSolarProjects";
+import { SolarProject } from "@/types/solarProject";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useNavigate } from "react-router-dom";
 
-const SolarCalculator: React.FC = () => {
-  // Client details
+interface SolarCalculatorProps {
+  projectData?: SolarProject;
+  onSaveProject?: (project: SolarProject) => Promise<void>;
+}
+
+const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSaveProject }) => {
+  const { isAuthenticated } = useAuth();
+  const { saveProject } = useSolarProjects();
+  const navigate = useNavigate();
+  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
+  const [projectName, setProjectName] = useState("");
+  
   const [clientName, setClientName] = useState("John Doe");
   const [clientEmail, setClientEmail] = useState("john@example.com");
   const [clientPhone, setClientPhone] = useState("(123) 456-7890");
   const [clientAddress, setClientAddress] = useState("123 Solar Street");
   
-  // Company details
   const [companyName, setCompanyName] = useState("Solar Solutions Inc.");
   const [companyContact, setCompanyContact] = useState("Jane Smith");
   const [companyEmail, setCompanyEmail] = useState("contact@solarsolutions.com");
   const [companyPhone, setCompanyPhone] = useState("(987) 654-3210");
   
-  // Annual energy check
   const [knowsAnnualEnergy, setKnowsAnnualEnergy] = useState<boolean | null>(null);
   const [manualAnnualEnergy, setManualAnnualEnergy] = useState<number>(12000);
   
-  // Solar PV System details
   const [systemSize, setSystemSize] = useState(10);
   const [panelType, setPanelType] = useState("monocrystalline");
   const [panelEfficiency, setPanelEfficiency] = useState(20);
@@ -57,7 +71,6 @@ const SolarCalculator: React.FC = () => {
   const [country, setCountry] = useState("United States");
   const [city, setCity] = useState("New York");
   
-  // Financial details
   const [systemCost, setSystemCost] = useState(30000);
   const [electricityRate, setElectricityRate] = useState(0.15);
   const [electricityEscalationRate, setElectricityEscalationRate] = useState(3);
@@ -70,7 +83,6 @@ const SolarCalculator: React.FC = () => {
   const [degradationRate, setDegradationRate] = useState(0.5);
   const [discountRate, setDiscountRate] = useState(5);
   
-  // Calculation results
   const [lcoe, setLCOE] = useState(0);
   const [annualRevenue, setAnnualRevenue] = useState(0);
   const [annualCost, setAnnualCost] = useState(0);
@@ -87,6 +99,66 @@ const SolarCalculator: React.FC = () => {
   const [showResults, setShowResults] = useState(false);
   const [activeTab, setActiveTab] = useState("client");
   const [calculating, setCalculating] = useState(false);
+  
+  useEffect(() => {
+    if (projectData) {
+      setClientName(projectData.clientName);
+      setClientEmail(projectData.clientEmail);
+      setClientPhone(projectData.clientPhone);
+      setClientAddress(projectData.clientAddress);
+      
+      setCompanyName(projectData.companyName);
+      setCompanyContact(projectData.companyContact);
+      setCompanyEmail(projectData.companyEmail);
+      setCompanyPhone(projectData.companyPhone);
+      
+      setKnowsAnnualEnergy(projectData.knowsAnnualEnergy);
+      setManualAnnualEnergy(projectData.manualAnnualEnergy);
+      
+      setSystemSize(projectData.systemSize);
+      setPanelType(projectData.panelType);
+      setPanelEfficiency(projectData.panelEfficiency);
+      setInverterType(projectData.inverterType);
+      setInverterEfficiency(projectData.inverterEfficiency);
+      setRoofType(projectData.roofType);
+      setRoofAngle(projectData.roofAngle);
+      setOrientation(projectData.orientation);
+      setSolarIrradiance(projectData.solarIrradiance);
+      setShadingFactor(projectData.shadingFactor);
+      setLocation(projectData.location);
+      setTimezone(projectData.timezone);
+      setCountry(projectData.country);
+      setCity(projectData.city);
+      
+      setSystemCost(projectData.systemCost);
+      setElectricityRate(projectData.electricityRate);
+      setElectricityEscalationRate(projectData.electricityEscalationRate);
+      setIncentives(projectData.incentives);
+      setFinancingOption(projectData.financingOption);
+      setLoanTerm(projectData.loanTerm);
+      setInterestRate(projectData.interestRate);
+      setMaintenanceCost(projectData.maintenanceCost);
+      setMaintenanceEscalationRate(projectData.maintenanceEscalationRate);
+      setDegradationRate(projectData.degradationRate);
+      setDiscountRate(projectData.discountRate);
+      
+      setLCOE(projectData.lcoe);
+      setAnnualRevenue(projectData.annualRevenue);
+      setAnnualCost(projectData.annualCost);
+      setNetPresentValue(projectData.netPresentValue);
+      setIRR(projectData.irr);
+      setPaybackPeriod(projectData.paybackPeriod);
+      setCO2Reduction(projectData.co2Reduction);
+      setTreesEquivalent(projectData.treesEquivalent);
+      setVehicleMilesOffset(projectData.vehicleMilesOffset);
+      setYearlyProduction(projectData.yearlyProduction);
+      setYearlyCashFlow(projectData.yearlyCashFlow);
+      setCumulativeCashFlow(projectData.cumulativeCashFlow);
+      
+      setShowResults(true);
+      setProjectName(projectData.name);
+    }
+  }, [projectData]);
   
   const calculatePerformanceRatio = () => {
     let pr = 0.8;
@@ -292,6 +364,140 @@ const SolarCalculator: React.FC = () => {
     }, 1500);
   };
   
+  const handleSaveProject = async () => {
+    if (!isAuthenticated) {
+      toast.error("Please log in to save your project");
+      navigate("/auth");
+      return;
+    }
+    
+    if (!projectName.trim()) {
+      toast.error("Please enter a project name");
+      return;
+    }
+    
+    try {
+      if (projectData && onSaveProject) {
+        const updatedProject: SolarProject = {
+          ...projectData,
+          name: projectName,
+          clientName,
+          clientEmail,
+          clientPhone,
+          clientAddress,
+          companyName,
+          companyContact,
+          companyEmail,
+          companyPhone,
+          knowsAnnualEnergy: !!knowsAnnualEnergy,
+          manualAnnualEnergy,
+          annualEnergy: knowsAnnualEnergy ? manualAnnualEnergy : yearlyProduction.reduce((sum, val) => sum + val, 0),
+          systemSize,
+          panelType,
+          panelEfficiency,
+          inverterType,
+          inverterEfficiency,
+          roofType,
+          roofAngle,
+          orientation,
+          solarIrradiance,
+          shadingFactor,
+          location,
+          timezone,
+          country,
+          city,
+          systemCost,
+          electricityRate,
+          electricityEscalationRate,
+          incentives,
+          financingOption,
+          loanTerm,
+          interestRate,
+          maintenanceCost,
+          maintenanceEscalationRate,
+          degradationRate,
+          discountRate,
+          lcoe,
+          annualRevenue,
+          annualCost,
+          netPresentValue,
+          irr,
+          paybackPeriod,
+          co2Reduction,
+          treesEquivalent,
+          vehicleMilesOffset,
+          yearlyProduction,
+          yearlyCashFlow,
+          cumulativeCashFlow,
+        };
+        
+        await onSaveProject(updatedProject);
+        toast.success("Project updated successfully!");
+      } else {
+        const newProject = {
+          name: projectName,
+          clientName,
+          clientEmail,
+          clientPhone,
+          clientAddress,
+          companyName,
+          companyContact,
+          companyEmail,
+          companyPhone,
+          knowsAnnualEnergy: !!knowsAnnualEnergy,
+          manualAnnualEnergy,
+          annualEnergy: knowsAnnualEnergy ? manualAnnualEnergy : yearlyProduction.reduce((sum, val) => sum + val, 0),
+          systemSize,
+          panelType,
+          panelEfficiency,
+          inverterType,
+          inverterEfficiency,
+          roofType,
+          roofAngle,
+          orientation,
+          solarIrradiance,
+          shadingFactor,
+          location,
+          timezone,
+          country,
+          city,
+          systemCost,
+          electricityRate,
+          electricityEscalationRate,
+          incentives,
+          financingOption,
+          loanTerm,
+          interestRate,
+          maintenanceCost,
+          maintenanceEscalationRate,
+          degradationRate,
+          discountRate,
+          lcoe,
+          annualRevenue,
+          annualCost,
+          netPresentValue,
+          irr,
+          paybackPeriod,
+          co2Reduction,
+          treesEquivalent,
+          vehicleMilesOffset,
+          yearlyProduction,
+          yearlyCashFlow,
+          cumulativeCashFlow,
+        };
+        
+        const savedProject = await saveProject(newProject);
+        toast.success("Project saved successfully!");
+        navigate(`/project/${savedProject.id}`);
+      }
+      
+      setIsSaveDialogOpen(false);
+    } catch (error) {
+      console.error("Failed to save project:", error);
+      toast.error("Failed to save project");
+    }
+  };
+  
   return (
     <div className="w-full max-w-7xl mx-auto">
       <div className="mb-8 text-center">
@@ -475,6 +681,43 @@ const SolarCalculator: React.FC = () => {
           <TabsContent value="results" className="mt-2">
             {showResults && (
               <div className="space-y-8">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-2xl font-bold">Results Summary</h2>
+                  
+                  <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button className="bg-solar hover:bg-solar-dark text-white">
+                        {projectData ? "Update Project" : "Save Project"}
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>{projectData ? "Update Project" : "Save Project"}</DialogTitle>
+                        <DialogDescription>
+                          {projectData 
+                            ? "Update your solar PV project details."
+                            : "Give your project a name to save it to your dashboard."}
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="py-4">
+                        <Label htmlFor="projectName">Project Name</Label>
+                        <Input 
+                          id="projectName" 
+                          value={projectName} 
+                          onChange={(e) => setProjectName(e.target.value)}
+                          placeholder="e.g., Residential Solar - John Smith"
+                          className="mt-2"
+                        />
+                      </div>
+                      <DialogFooter>
+                        <Button onClick={handleSaveProject}>
+                          {projectData ? "Update Project" : "Save Project"}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+                
                 <ResultsDisplay
                   lcoe={lcoe}
                   annualRevenue={annualRevenue}
@@ -525,3 +768,4 @@ const SolarCalculator: React.FC = () => {
 };
 
 export default SolarCalculator;
+
