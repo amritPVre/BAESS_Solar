@@ -61,42 +61,64 @@ const PDFReport: React.FC<PDFReportProps> = ({
         description: "Please wait while we prepare your report...",
       });
       
-      // Make sure the report element is visible during capture
-      const reportElement = reportRef.current;
-      const originalDisplay = reportElement.style.display;
-      reportElement.style.display = "block";
+      // Create a temporary container for the report that we'll remove later
+      const tempContainer = document.createElement('div');
+      tempContainer.className = 'pdf-temp-container';
+      tempContainer.style.position = 'absolute';
+      tempContainer.style.left = '-9999px';
+      tempContainer.style.top = '0';
+      tempContainer.style.width = '800px';
+      tempContainer.style.zIndex = '-1000';
+      document.body.appendChild(tempContainer);
       
-      // Create a new jsPDF instance
+      // Clone the report for rendering
+      const reportClone = reportRef.current.cloneNode(true) as HTMLElement;
+      reportClone.style.display = 'block';
+      reportClone.style.width = '800px';
+      reportClone.style.height = 'auto';
+      reportClone.style.overflow = 'visible';
+      reportClone.style.position = 'relative';
+      reportClone.style.backgroundColor = 'white';
+      tempContainer.appendChild(reportClone);
+      
+      // Wait for any resources to load
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Use html2canvas with more reliable settings
+      const canvas = await html2canvas(reportClone, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: 'white',
+        logging: true,
+        windowWidth: 800,
+        windowHeight: reportClone.offsetHeight,
+        onclone: (document, clone) => {
+          // Ensure all elements are properly rendered in the clone
+          const clonedReport = clone.querySelector('.pdf-report') as HTMLElement;
+          if (clonedReport) {
+            clonedReport.style.display = 'block';
+            clonedReport.style.width = '800px';
+            clonedReport.style.visibility = 'visible';
+            clonedReport.style.overflow = 'visible';
+            
+            // Ensure all child elements are visible
+            const allElements = clonedReport.querySelectorAll('*');
+            allElements.forEach(el => {
+              (el as HTMLElement).style.visibility = 'visible';
+            });
+          }
+        }
+      });
+      
+      // Create PDF with appropriate dimensions
+      const imgData = canvas.toDataURL('image/jpeg', 1.0);
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
         format: 'a4'
       });
       
-      // Capture the element as an image
-      const canvas = await html2canvas(reportElement, {
-        scale: 1.5,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        onclone: (document, clonedDoc) => {
-          // Ensure the cloned element is visible and properly styled
-          const clonedElement = clonedDoc.querySelector('.pdf-report') as HTMLElement;
-          if (clonedElement) {
-            clonedElement.style.display = "block";
-            clonedElement.style.width = "800px";
-            clonedElement.style.height = "auto";
-            clonedElement.style.position = "absolute";
-            clonedElement.style.top = "0";
-            clonedElement.style.left = "0";
-          }
-        }
-      });
-      
-      // Convert canvas to image
-      const imgData = canvas.toDataURL('image/jpeg', 1.0);
-      
-      // Add image to PDF
       const imgWidth = 210; // A4 width in mm
       const pageHeight = 297; // A4 height in mm
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
@@ -116,8 +138,8 @@ const PDFReport: React.FC<PDFReportProps> = ({
         heightLeft -= pageHeight;
       }
       
-      // Reset display style
-      reportElement.style.display = originalDisplay;
+      // Clean up - remove the temporary container
+      document.body.removeChild(tempContainer);
       
       // Save the PDF
       pdf.save(`${clientName.replace(/\s+/g, '-')}-Solar-Report.pdf`);
