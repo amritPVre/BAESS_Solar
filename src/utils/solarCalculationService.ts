@@ -89,6 +89,23 @@ const calculateTemperatureDerating = (
   });
 };
 
+/**
+ * Simulates fetching solar radiation data from NASA POWER API
+ * In a real implementation, this would call the NASA POWER API to get actual TMY data
+ * @param latitude Latitude of location
+ * @param longitude Longitude of location
+ */
+const fetchSolarRadiationData = async (latitude: number, longitude: number): Promise<number[]> => {
+  // In a real implementation, we would make an API call to NASA POWER API
+  // For now, we'll use our simulated data based on latitude zones
+  const climateZone = getClimateZone(latitude);
+  
+  // Simulate API latency
+  await new Promise(resolve => setTimeout(resolve, 300));
+  
+  return solarRadiationByLatitude[climateZone];
+};
+
 // Calculate yearly production with hourly granularity (simplified to monthly in this mock)
 export const calculateDetailedYearlyProduction = (
   systemSize: number,
