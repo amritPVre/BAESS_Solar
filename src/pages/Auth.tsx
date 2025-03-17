@@ -102,13 +102,11 @@ const Auth: React.FC = () => {
     try {
       console.log("Attempting login with:", values.email);
       await login(values.email, values.password);
-      toast.success("Login successful!");
       console.log("Login successful, redirecting to dashboard");
       navigate("/dashboard");
     } catch (error: any) {
       console.error("Login error:", error);
       setError(error.message || "Login failed. Please check your credentials.");
-      toast.error(error.message || "Login failed. Please check your credentials.");
     } finally {
       setIsLoggingIn(false);
     }
@@ -121,12 +119,10 @@ const Auth: React.FC = () => {
     try {
       console.log("Attempting registration with:", values.email);
       await register(values.name, values.email, values.password);
-      toast.success("Registration successful! Please check your email to confirm your account.");
       setActiveTab("login");
     } catch (error: any) {
       console.error("Registration error:", error);
       setError(error.message || "Registration failed. Please try again.");
-      toast.error(error.message || "Registration failed. Please try again.");
     } finally {
       setIsRegistering(false);
     }

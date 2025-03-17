@@ -132,13 +132,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       if (error) {
         console.error("Login error:", error.message);
+        toast.error(error.message || "Failed to log in");
         throw error;
       }
       
       console.log("Login successful:", data);
-      // No need to return data here, as we're using void return type
+      toast.success("Login successful!");
+      // No need to return anything as we're using void return type
     } catch (error: any) {
       console.error("Login failed:", error.message);
+      toast.error(error.message || "Failed to log in");
       throw error;
     } finally {
       setLoading(false);
@@ -162,13 +165,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       if (error) {
         console.error("Registration error:", error.message);
+        toast.error(error.message || "Failed to register");
         throw error;
       }
       
       console.log("Registration successful:", data);
-      // No need to return data here, as we're using void return type
+      toast.success("Registration successful! Please check your email to confirm your account.");
+      // No need to return anything as we're using void return type
     } catch (error: any) {
       console.error("Registration failed:", error.message);
+      toast.error(error.message || "Failed to register");
       throw error;
     } finally {
       setLoading(false);
@@ -181,6 +187,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const { error } = await supabase.auth.signOut();
       if (error) {
         console.error("Logout error:", error);
+        toast.error("Error logging out");
         throw error;
       }
       console.log("Logout successful");
@@ -213,6 +220,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
       if (error) {
         console.error("Profile update error:", error);
+        toast.error("Failed to update profile");
         throw error;
       }
       
@@ -223,8 +231,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
       
       console.log("Profile updated successfully");
+      toast.success("Profile updated successfully");
     } catch (error: any) {
       console.error("Failed to update profile:", error.message);
+      toast.error("Failed to update profile");
       throw error;
     } finally {
       setLoading(false);
