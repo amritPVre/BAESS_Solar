@@ -4,6 +4,7 @@ import { useAuth } from "./useAuth";
 import { SolarProject } from "@/types/solarProject";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Json } from "@/integrations/supabase/types";
 
 interface SolarProjectsContextType {
   projects: SolarProject[];
@@ -23,6 +24,25 @@ export const SolarProjectsProvider: React.FC<{ children: ReactNode }> = ({ child
   const [projects, setProjects] = useState<SolarProject[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Helper function to safely parse JSON fields
+  const parseJsonField = <T,>(field: Json | null, defaultValue: T): T => {
+    if (!field) return defaultValue;
+    
+    if (typeof field === 'object') {
+      return field as unknown as T;
+    }
+    
+    try {
+      if (typeof field === 'string') {
+        return JSON.parse(field) as T;
+      }
+      return defaultValue;
+    } catch (e) {
+      console.error("Error parsing JSON field:", e);
+      return defaultValue;
+    }
+  };
 
   const loadProjects = useCallback(async () => {
     if (!isAuthenticated || !user) {
@@ -44,7 +64,7 @@ export const SolarProjectsProvider: React.FC<{ children: ReactNode }> = ({ child
         throw fetchError;
       }
       
-      // Convert database format to SolarProject format
+      // Convert database format to SolarProject format with proper type handling
       const formattedProjects: SolarProject[] = data.map(project => ({
         id: project.id,
         userId: project.user_id,
@@ -72,7 +92,7 @@ export const SolarProjectsProvider: React.FC<{ children: ReactNode }> = ({ child
         orientation: project.orientation || '',
         solarIrradiance: Number(project.solar_irradiance) || 0,
         shadingFactor: Number(project.shading_factor) || 0,
-        location: project.location || { lat: 0, lng: 0 },
+        location: parseJsonField<{lat: number, lng: number}>(project.location, { lat: 0, lng: 0 }),
         timezone: project.timezone || '',
         country: project.country || '',
         city: project.city || '',
@@ -92,13 +112,13 @@ export const SolarProjectsProvider: React.FC<{ children: ReactNode }> = ({ child
         annualCost: Number(project.annual_cost) || 0,
         netPresentValue: Number(project.net_present_value) || 0,
         irr: Number(project.irr) || 0,
-        paybackPeriod: project.payback_period || { years: 0, months: 0 },
+        paybackPeriod: parseJsonField<{years: number, months: number}>(project.payback_period, { years: 0, months: 0 }),
         co2Reduction: Number(project.co2_reduction) || 0,
         treesEquivalent: Number(project.trees_equivalent) || 0,
         vehicleMilesOffset: Number(project.vehicle_miles_offset) || 0,
-        yearlyProduction: project.yearly_production || [],
-        yearlyCashFlow: project.yearly_cash_flow || [],
-        cumulativeCashFlow: project.cumulative_cash_flow || [],
+        yearlyProduction: parseJsonField<number[]>(project.yearly_production, []),
+        yearlyCashFlow: parseJsonField<number[]>(project.yearly_cash_flow, []),
+        cumulativeCashFlow: parseJsonField<number[]>(project.cumulative_cash_flow, []),
       }));
       
       setProjects(formattedProjects);
@@ -131,7 +151,7 @@ export const SolarProjectsProvider: React.FC<{ children: ReactNode }> = ({ child
         throw new Error("Project not found");
       }
       
-      // Convert database format to SolarProject format
+      // Convert database format to SolarProject format with proper type handling
       return {
         id: data.id,
         userId: data.user_id,
@@ -159,7 +179,7 @@ export const SolarProjectsProvider: React.FC<{ children: ReactNode }> = ({ child
         orientation: data.orientation || '',
         solarIrradiance: Number(data.solar_irradiance) || 0,
         shadingFactor: Number(data.shading_factor) || 0,
-        location: data.location || { lat: 0, lng: 0 },
+        location: parseJsonField<{lat: number, lng: number}>(data.location, { lat: 0, lng: 0 }),
         timezone: data.timezone || '',
         country: data.country || '',
         city: data.city || '',
@@ -179,13 +199,13 @@ export const SolarProjectsProvider: React.FC<{ children: ReactNode }> = ({ child
         annualCost: Number(data.annual_cost) || 0,
         netPresentValue: Number(data.net_present_value) || 0,
         irr: Number(data.irr) || 0,
-        paybackPeriod: data.payback_period || { years: 0, months: 0 },
+        paybackPeriod: parseJsonField<{years: number, months: number}>(data.payback_period, { years: 0, months: 0 }),
         co2Reduction: Number(data.co2_reduction) || 0,
         treesEquivalent: Number(data.trees_equivalent) || 0,
         vehicleMilesOffset: Number(data.vehicle_miles_offset) || 0,
-        yearlyProduction: data.yearly_production || [],
-        yearlyCashFlow: data.yearly_cash_flow || [],
-        cumulativeCashFlow: data.cumulative_cash_flow || [],
+        yearlyProduction: parseJsonField<number[]>(data.yearly_production, []),
+        yearlyCashFlow: parseJsonField<number[]>(data.yearly_cash_flow, []),
+        cumulativeCashFlow: parseJsonField<number[]>(data.cumulative_cash_flow, []),
       };
     } catch (err: any) {
       console.error("Failed to get project:", err);
