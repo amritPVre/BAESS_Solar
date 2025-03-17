@@ -9,7 +9,213 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          company: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          name: string | null
+          phone: string | null
+          preferred_currency: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          company?: string | null
+          created_at?: string | null
+          email?: string | null
+          id: string
+          name?: string | null
+          phone?: string | null
+          preferred_currency?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          company?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name?: string | null
+          phone?: string | null
+          preferred_currency?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      projects: {
+        Row: {
+          annual_cost: number | null
+          annual_energy: number | null
+          annual_revenue: number | null
+          city: string | null
+          client_address: string | null
+          client_email: string | null
+          client_name: string
+          client_phone: string | null
+          co2_reduction: number | null
+          company_contact: string | null
+          company_email: string | null
+          company_name: string | null
+          company_phone: string | null
+          country: string | null
+          created_at: string | null
+          cumulative_cash_flow: Json | null
+          currency: string | null
+          degradation_rate: number | null
+          discount_rate: number | null
+          electricity_escalation_rate: number | null
+          electricity_rate: number
+          financing_option: string | null
+          id: string
+          incentives: number | null
+          interest_rate: number | null
+          inverter_efficiency: number | null
+          inverter_type: string | null
+          irr: number | null
+          knows_annual_energy: boolean
+          lcoe: number | null
+          loan_term: number | null
+          location: Json | null
+          maintenance_cost: number | null
+          maintenance_escalation_rate: number | null
+          manual_annual_energy: number | null
+          name: string
+          net_present_value: number | null
+          orientation: string | null
+          panel_efficiency: number | null
+          panel_type: string | null
+          payback_period: Json | null
+          roof_angle: number | null
+          roof_type: string | null
+          shading_factor: number | null
+          solar_irradiance: number | null
+          system_cost: number
+          system_size: number
+          timezone: string | null
+          trees_equivalent: number | null
+          updated_at: string | null
+          user_id: string
+          vehicle_miles_offset: number | null
+          yearly_cash_flow: Json | null
+          yearly_production: Json | null
+        }
+        Insert: {
+          annual_cost?: number | null
+          annual_energy?: number | null
+          annual_revenue?: number | null
+          city?: string | null
+          client_address?: string | null
+          client_email?: string | null
+          client_name: string
+          client_phone?: string | null
+          co2_reduction?: number | null
+          company_contact?: string | null
+          company_email?: string | null
+          company_name?: string | null
+          company_phone?: string | null
+          country?: string | null
+          created_at?: string | null
+          cumulative_cash_flow?: Json | null
+          currency?: string | null
+          degradation_rate?: number | null
+          discount_rate?: number | null
+          electricity_escalation_rate?: number | null
+          electricity_rate: number
+          financing_option?: string | null
+          id?: string
+          incentives?: number | null
+          interest_rate?: number | null
+          inverter_efficiency?: number | null
+          inverter_type?: string | null
+          irr?: number | null
+          knows_annual_energy?: boolean
+          lcoe?: number | null
+          loan_term?: number | null
+          location?: Json | null
+          maintenance_cost?: number | null
+          maintenance_escalation_rate?: number | null
+          manual_annual_energy?: number | null
+          name: string
+          net_present_value?: number | null
+          orientation?: string | null
+          panel_efficiency?: number | null
+          panel_type?: string | null
+          payback_period?: Json | null
+          roof_angle?: number | null
+          roof_type?: string | null
+          shading_factor?: number | null
+          solar_irradiance?: number | null
+          system_cost: number
+          system_size: number
+          timezone?: string | null
+          trees_equivalent?: number | null
+          updated_at?: string | null
+          user_id: string
+          vehicle_miles_offset?: number | null
+          yearly_cash_flow?: Json | null
+          yearly_production?: Json | null
+        }
+        Update: {
+          annual_cost?: number | null
+          annual_energy?: number | null
+          annual_revenue?: number | null
+          city?: string | null
+          client_address?: string | null
+          client_email?: string | null
+          client_name?: string
+          client_phone?: string | null
+          co2_reduction?: number | null
+          company_contact?: string | null
+          company_email?: string | null
+          company_name?: string | null
+          company_phone?: string | null
+          country?: string | null
+          created_at?: string | null
+          cumulative_cash_flow?: Json | null
+          currency?: string | null
+          degradation_rate?: number | null
+          discount_rate?: number | null
+          electricity_escalation_rate?: number | null
+          electricity_rate?: number
+          financing_option?: string | null
+          id?: string
+          incentives?: number | null
+          interest_rate?: number | null
+          inverter_efficiency?: number | null
+          inverter_type?: string | null
+          irr?: number | null
+          knows_annual_energy?: boolean
+          lcoe?: number | null
+          loan_term?: number | null
+          location?: Json | null
+          maintenance_cost?: number | null
+          maintenance_escalation_rate?: number | null
+          manual_annual_energy?: number | null
+          name?: string
+          net_present_value?: number | null
+          orientation?: string | null
+          panel_efficiency?: number | null
+          panel_type?: string | null
+          payback_period?: Json | null
+          roof_angle?: number | null
+          roof_type?: string | null
+          shading_factor?: number | null
+          solar_irradiance?: number | null
+          system_cost?: number
+          system_size?: number
+          timezone?: string | null
+          trees_equivalent?: number | null
+          updated_at?: string | null
+          user_id?: string
+          vehicle_miles_offset?: number | null
+          yearly_cash_flow?: Json | null
+          yearly_production?: Json | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

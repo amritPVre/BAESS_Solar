@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import ProjectDetails from "./pages/ProjectDetails";
 import { AuthProvider } from "@/hooks/useAuth";
 import { SolarProjectsProvider } from "@/hooks/useSolarProjects";
+import AuthGuard from "./components/AuthGuard";
 
 const queryClient = new QueryClient();
 
@@ -25,8 +26,19 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/project/:projectId" element={<ProjectDetails />} />
+              
+              {/* Protected Routes */}
+              <Route path="/dashboard" element={
+                <AuthGuard>
+                  <Dashboard />
+                </AuthGuard>
+              } />
+              <Route path="/project/:projectId" element={
+                <AuthGuard>
+                  <ProjectDetails />
+                </AuthGuard>
+              } />
+              
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

@@ -15,12 +15,14 @@ import * as z from "zod";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { SolarProject } from "@/types/solarProject";
+import CurrencySelector from "@/components/CurrencySelector";
+import { getCurrencySymbol } from "@/components/CurrencySelector";
 
 const profileSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
-  email: z.string().email({ message: "Please enter a valid email" }).optional(),
   company: z.string().optional(),
   phone: z.string().optional(),
+  preferredCurrency: z.string(),
 });
 
 const Dashboard: React.FC = () => {
@@ -33,27 +35,23 @@ const Dashboard: React.FC = () => {
     resolver: zodResolver(profileSchema),
     defaultValues: {
       name: user?.name || "",
-      email: user?.email || "",
       company: user?.company || "",
       phone: user?.phone || "",
+      preferredCurrency: user?.preferredCurrency || "USD",
     },
   });
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      navigate("/auth");
-      return;
-    }
     loadProjects();
-  }, [isAuthenticated, navigate, loadProjects]);
+  }, [loadProjects]);
 
   useEffect(() => {
     if (user) {
       form.reset({
         name: user.name || "",
-        email: user.email || "",
         company: user.company || "",
         phone: user.phone || "",
+        preferredCurrency: user.preferredCurrency || "USD",
       });
     }
   }, [user, form]);
@@ -90,6 +88,8 @@ const Dashboard: React.FC = () => {
       .join("")
       .toUpperCase();
   };
+
+  const currencySymbol = user ? getCurrencySymbol(user.preferredCurrency) : "$";
 
   return (
     <div className="container mx-auto py-8">
@@ -131,20 +131,6 @@ const Dashboard: React.FC = () => {
                   
                   <FormField
                     control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Your email" disabled {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
                     name="company"
                     render={({ field }) => (
                       <FormItem>
@@ -165,6 +151,23 @@ const Dashboard: React.FC = () => {
                         <FormLabel>Phone</FormLabel>
                         <FormControl>
                           <Input placeholder="Your phone number" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="preferredCurrency"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Preferred Currency</FormLabel>
+                        <FormControl>
+                          <CurrencySelector 
+                            value={field.value} 
+                            onChange={field.onChange}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

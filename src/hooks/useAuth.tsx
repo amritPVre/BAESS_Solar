@@ -1,76 +1,125 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { User, Session } from "@supabase/supabase-js";
 import { toast } from "sonner";
 
-interface User {
+interface UserProfile {
   id: string;
   name: string;
   email: string;
   company?: string;
   phone?: string;
   avatarUrl?: string;
+  preferredCurrency: string;
 }
 
 interface AuthContextType {
-  user: User | null;
+  user: UserProfile | null;
+  session: Session | null;
   isAuthenticated: boolean;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
-  logout: () => void;
-  updateProfile: (userData: Partial<User>) => Promise<void>;
+  logout: () => Promise<void>;
+  updateProfile: (userData: Partial<UserProfile>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for user in localStorage on initial load
-    const storedUser = localStorage.getItem("solar_app_user");
-    
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (error) {
-        console.error("Failed to parse user from localStorage:", error);
-        localStorage.removeItem("solar_app_user");
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, currentSession) => {
+        setSession(currentSession);
+        setLoading(true);
+
+        if (currentSession) {
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', currentSession.user.id)
+            .single();
+
+          if (error) {
+            console.error("Error fetching user profile:", error);
+          } else if (profile) {
+            setUser({
+              id: profile.id,
+              name: profile.name || '',
+              email: profile.email || '',
+              company: profile.company,
+              phone: profile.phone,
+              avatarUrl: profile.avatar_url,
+              preferredCurrency: profile.preferred_currency || 'USD',
+            });
+          }
+        } else {
+          setUser(null);
+        }
+
+        setLoading(false);
       }
-    }
-    
-    setLoading(false);
+    );
+
+    // Get initial session
+    const initializeAuth = async () => {
+      setLoading(true);
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      
+      if (currentSession) {
+        setSession(currentSession);
+        
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', currentSession.user.id)
+          .single();
+
+        if (error) {
+          console.error("Error fetching user profile:", error);
+        } else if (profile) {
+          setUser({
+            id: profile.id,
+            name: profile.name || '',
+            email: profile.email || '',
+            company: profile.company,
+            phone: profile.phone,
+            avatarUrl: profile.avatar_url,
+            preferredCurrency: profile.preferred_currency || 'USD',
+          });
+        }
+      }
+      
+      setLoading(false);
+    };
+
+    initializeAuth();
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  // In a real application, you would connect to a backend service
-  // For simplicity, we'll use localStorage
   const login = async (email: string, password: string) => {
     setLoading(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
       
-      // In a real app, you would validate credentials with a server
-      // For demo, let's use mock data from localStorage
-      const usersJson = localStorage.getItem("solar_app_users") || "[]";
-      const users = JSON.parse(usersJson);
-      
-      const foundUser = users.find((u: any) => u.email === email);
-      
-      if (!foundUser || foundUser.password !== password) {
-        throw new Error("Invalid email or password");
+      if (error) {
+        throw error;
       }
-      
-      const { password: _, ...userWithoutPassword } = foundUser;
-      
-      // Set the user in state and localStorage
-      setUser(userWithoutPassword);
-      localStorage.setItem("solar_app_user", JSON.stringify(userWithoutPassword));
-      
-    } catch (error) {
-      console.error("Login failed:", error);
+    } catch (error: any) {
+      console.error("Login failed:", error.message);
       throw error;
     } finally {
       setLoading(false);
@@ -81,77 +130,71 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setLoading(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Check if user already exists
-      const usersJson = localStorage.getItem("solar_app_users") || "[]";
-      const users = JSON.parse(usersJson);
-      
-      if (users.some((u: any) => u.email === email)) {
-        throw new Error("Email already registered");
-      }
-      
-      // Create new user
-      const newUser = {
-        id: `user_${Date.now()}`,
-        name,
+      const { error } = await supabase.auth.signUp({
         email,
         password,
-        createdAt: new Date().toISOString(),
-      };
+        options: {
+          data: {
+            name: name,
+          },
+        },
+      });
       
-      // Save to "database"
-      users.push(newUser);
-      localStorage.setItem("solar_app_users", JSON.stringify(users));
-      
-    } catch (error) {
-      console.error("Registration failed:", error);
+      if (error) {
+        throw error;
+      }
+    } catch (error: any) {
+      console.error("Registration failed:", error.message);
       throw error;
     } finally {
       setLoading(false);
     }
   };
   
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem("solar_app_user");
-    toast.info("You have been logged out");
+  const logout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        throw error;
+      }
+      toast.info("You have been logged out");
+    } catch (error) {
+      console.error("Error logging out:", error);
+      toast.error("Error logging out");
+    }
   };
   
-  const updateProfile = async (userData: Partial<User>) => {
+  const updateProfile = async (userData: Partial<UserProfile>) => {
+    if (!user || !session) {
+      throw new Error("No authenticated user");
+    }
+    
     setLoading(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      if (!user) {
-        throw new Error("User not logged in");
+      // Update profile in Supabase
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          name: userData.name,
+          company: userData.company,
+          phone: userData.phone,
+          preferred_currency: userData.preferredCurrency,
+        })
+        .eq('id', user.id);
+        
+      if (error) {
+        throw error;
       }
       
-      // Update user in state
-      const updatedUser = { ...user, ...userData };
-      setUser(updatedUser);
-      
-      // Update user in localStorage
-      localStorage.setItem("solar_app_user", JSON.stringify(updatedUser));
-      
-      // Update user in "database"
-      const usersJson = localStorage.getItem("solar_app_users") || "[]";
-      const users = JSON.parse(usersJson);
-      
-      const updatedUsers = users.map((u: any) => {
-        if (u.id === user.id) {
-          return { ...u, ...userData };
-        }
-        return u;
+      // Update local user state
+      setUser({
+        ...user,
+        ...userData,
       });
       
-      localStorage.setItem("solar_app_users", JSON.stringify(updatedUsers));
-      
-    } catch (error) {
-      console.error("Update profile failed:", error);
+    } catch (error: any) {
+      console.error("Failed to update profile:", error.message);
       throw error;
     } finally {
       setLoading(false);
@@ -162,7 +205,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     <AuthContext.Provider
       value={{
         user,
-        isAuthenticated: !!user,
+        session,
+        isAuthenticated: !!user && !!session,
         loading,
         login,
         register,
