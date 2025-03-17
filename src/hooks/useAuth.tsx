@@ -136,7 +136,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       
       console.log("Login successful:", data);
-      return data;
+      // No need to return data here, as we're using void return type
     } catch (error: any) {
       console.error("Login failed:", error.message);
       throw error;
@@ -166,7 +166,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       
       console.log("Registration successful:", data);
-      return data;
+      // No need to return data here, as we're using void return type
     } catch (error: any) {
       console.error("Registration failed:", error.message);
       throw error;
@@ -231,7 +231,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
   
-  const contextValue = {
+  const contextValue: AuthContextType = {
     user,
     session,
     isAuthenticated: !!user && !!session,
