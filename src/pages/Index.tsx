@@ -20,6 +20,26 @@ const Index: React.FC = () => {
     navigate("/auth");
   };
 
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { 
+      opacity: 1,
+      transition: { 
+        staggerChildren: 0.1 
+      }
+    }
+  };
+  
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: { 
+      y: 0, 
+      opacity: 1,
+      transition: { duration: 0.6 }
+    }
+  };
+
   const features = [
     {
       icon: <Sun className="h-10 w-10 text-solar" />,
@@ -87,21 +107,82 @@ const Index: React.FC = () => {
               transition={{ duration: 0.5, delay: 0.2 }}
             >
               <div className="relative">
-                <div className="bg-solar-light rounded-2xl shadow-2xl overflow-hidden">
-                  <img 
-                    src="/placeholder.svg" 
-                    alt="Solar PV Calculator Dashboard" 
-                    className="w-full h-auto transform scale-105"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-solar/20 to-transparent"></div>
+                <div className="bg-solar-light rounded-2xl shadow-2xl overflow-hidden p-2">
+                  <motion.div
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ 
+                      duration: 0.8,
+                      type: "spring", 
+                      stiffness: 100 
+                    }}
+                  >
+                    <img 
+                      src="https://images.unsplash.com/photo-1613665813446-82a78b7127aa?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80" 
+                      alt="Solar panels on house roof" 
+                      className="w-full h-auto rounded-xl"
+                    />
+                  </motion.div>
+                  
+                  <motion.div 
+                    className="absolute top-4 right-4 bg-white p-3 rounded-lg shadow-md"
+                    initial={{ x: 50, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: 0.5, duration: 0.5 }}
+                  >
+                    <div className="text-sm font-medium">Annual Savings</div>
+                    <div className="text-xl font-bold text-solar">$1,250+</div>
+                  </motion.div>
+                  
+                  <motion.div 
+                    className="absolute bottom-4 left-4 bg-white p-3 rounded-lg shadow-md"
+                    initial={{ x: -50, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: 0.7, duration: 0.5 }}
+                  >
+                    <div className="text-sm font-medium">CO₂ Reduction</div>
+                    <div className="text-xl font-bold text-green-500">4.2 tons/year</div>
+                  </motion.div>
                 </div>
-                <div className="absolute -bottom-6 -right-6 h-24 w-24 bg-solar rounded-full flex items-center justify-center">
+                
+                <motion.div 
+                  className="absolute -bottom-6 -right-6 h-24 w-24 bg-solar rounded-full flex items-center justify-center"
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.9, duration: 0.3, type: "spring" }}
+                >
                   <Shield className="h-12 w-12 text-white" />
-                </div>
+                </motion.div>
               </div>
             </motion.div>
           </div>
         </div>
+        
+        {/* Floating Elements */}
+        <motion.div 
+          className="absolute top-1/4 left-5 h-20 w-20 bg-yellow-100 rounded-full opacity-70"
+          animate={{ 
+            y: [0, -15, 0],
+            x: [0, 5, 0]
+          }}
+          transition={{ 
+            repeat: Infinity,
+            duration: 8,
+            ease: "easeInOut" 
+          }}
+        />
+        <motion.div 
+          className="absolute top-2/3 right-10 h-12 w-12 bg-blue-100 rounded-full opacity-60"
+          animate={{ 
+            y: [0, 20, 0],
+            x: [0, -10, 0]
+          }}
+          transition={{ 
+            repeat: Infinity,
+            duration: 7,
+            ease: "easeInOut" 
+          }}
+        />
       </section>
 
       {/* Features Section */}
@@ -114,14 +195,18 @@ const Index: React.FC = () => {
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <motion.div 
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.2 }}
+          >
             {features.map((feature, index) => (
               <motion.div 
                 key={index}
                 className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: index * 0.1 }}
+                variants={itemVariants}
               >
                 <div className="mb-4 bg-solar-light rounded-full w-16 h-16 flex items-center justify-center">
                   {feature.icon}
@@ -130,7 +215,7 @@ const Index: React.FC = () => {
                 <p className="text-gray-600">{feature.description}</p>
               </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
 
