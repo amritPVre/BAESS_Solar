@@ -12,7 +12,11 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
   const navigate = useNavigate();
   
   useEffect(() => {
+    console.log("AuthGuard: isAuthenticated:", isAuthenticated, "loading:", loading);
+    
+    // Only redirect when we're sure the user is not authenticated (loading is complete)
     if (!loading && !isAuthenticated) {
+      console.log("User is not authenticated, redirecting to auth page");
       navigate("/auth");
     }
   }, [isAuthenticated, loading, navigate]);
@@ -28,11 +32,8 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
     );
   }
 
-  if (!isAuthenticated) {
-    return null;
-  }
-
-  return <>{children}</>;
+  // Only render children when authenticated
+  return isAuthenticated ? <>{children}</> : null;
 };
 
 export default AuthGuard;

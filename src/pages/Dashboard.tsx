@@ -25,7 +25,7 @@ const profileSchema = z.object({
 });
 
 const Dashboard: React.FC = () => {
-  const { user, logout, updateProfile, isAuthenticated } = useAuth();
+  const { user, logout, updateProfile } = useAuth();
   const { projects, deleteProject, loadProjects } = useSolarProjects();
   const navigate = useNavigate();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -82,6 +82,7 @@ const Dashboard: React.FC = () => {
   };
 
   const handleCreateNewProject = () => {
+    console.log("Navigating to solar calculator");
     navigate("/solar-calculator");
   };
 

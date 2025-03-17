@@ -9,6 +9,7 @@ import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import ProjectDetails from "./pages/ProjectDetails";
+import SolarCalculator from "./components/SolarCalculator";
 import { AuthProvider } from "@/hooks/useAuth";
 import { SolarProjectsProvider } from "@/hooks/useSolarProjects";
 import AuthGuard from "./components/AuthGuard";
@@ -36,6 +37,11 @@ const App = () => (
               <Route path="/project/:projectId" element={
                 <AuthGuard>
                   <ProjectDetails />
+                </AuthGuard>
+              } />
+              <Route path="/solar-calculator" element={
+                <AuthGuard>
+                  <SolarCalculator />
                 </AuthGuard>
               } />
               

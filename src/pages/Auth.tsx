@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -63,7 +62,7 @@ const currencyOptions = [
 ];
 
 const Auth: React.FC = () => {
-  const { login, register, isAuthenticated } = useAuth();
+  const { login, register, isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("login");
   const [error, setError] = useState<string | null>(null);
@@ -88,17 +87,17 @@ const Auth: React.FC = () => {
   });
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && !loading) {
+      console.log("User is authenticated, redirecting to dashboard");
       navigate("/dashboard");
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, loading, navigate]);
 
   const handleLogin = async (values: z.infer<typeof loginSchema>) => {
     setError(null);
     try {
       await login(values.email, values.password);
       toast.success("Login successful!");
-      navigate("/dashboard");
     } catch (error: any) {
       console.error("Login error:", error);
       setError(error.message || "Login failed. Please check your credentials.");
