@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -10,18 +10,24 @@ interface AuthGuardProps {
 const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
+  const [authChecked, setAuthChecked] = useState(false);
   
   useEffect(() => {
     console.log("AuthGuard: isAuthenticated:", isAuthenticated, "loading:", loading);
     
-    // Only redirect when we're sure the user is not authenticated (loading is complete)
-    if (!loading && !isAuthenticated) {
-      console.log("User is not authenticated, redirecting to auth page");
-      navigate("/auth");
+    // Only take action when loading is complete
+    if (!loading) {
+      setAuthChecked(true);
+      
+      if (!isAuthenticated) {
+        console.log("User is not authenticated, redirecting to auth page");
+        navigate("/auth");
+      }
     }
   }, [isAuthenticated, loading, navigate]);
 
-  if (loading) {
+  // Show loading while checking auth status
+  if (loading || !authChecked) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">

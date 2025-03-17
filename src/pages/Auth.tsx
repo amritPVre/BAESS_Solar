@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -66,6 +67,8 @@ const Auth: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("login");
   const [error, setError] = useState<string | null>(null);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -95,19 +98,29 @@ const Auth: React.FC = () => {
 
   const handleLogin = async (values: z.infer<typeof loginSchema>) => {
     setError(null);
+    setIsLoggingIn(true);
+    
     try {
+      console.log("Attempting login with:", values.email);
       await login(values.email, values.password);
       toast.success("Login successful!");
+      console.log("Login successful, redirecting to dashboard");
+      navigate("/dashboard");
     } catch (error: any) {
       console.error("Login error:", error);
       setError(error.message || "Login failed. Please check your credentials.");
       toast.error(error.message || "Login failed. Please check your credentials.");
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
   const handleRegister = async (values: z.infer<typeof registerSchema>) => {
     setError(null);
+    setIsRegistering(true);
+    
     try {
+      console.log("Attempting registration with:", values.email);
       await register(values.name, values.email, values.password);
       toast.success("Registration successful! Please check your email to confirm your account.");
       setActiveTab("login");
@@ -115,6 +128,8 @@ const Auth: React.FC = () => {
       console.error("Registration error:", error);
       setError(error.message || "Registration failed. Please try again.");
       toast.error(error.message || "Registration failed. Please try again.");
+    } finally {
+      setIsRegistering(false);
     }
   };
 
@@ -222,8 +237,12 @@ const Auth: React.FC = () => {
                           )}
                         />
                         
-                        <Button type="submit" className="w-full bg-solar hover:bg-solar-dark">
-                          Login
+                        <Button 
+                          type="submit" 
+                          className="w-full bg-solar hover:bg-solar-dark"
+                          disabled={isLoggingIn}
+                        >
+                          {isLoggingIn ? "Logging in..." : "Login"}
                         </Button>
                       </form>
                     </Form>
@@ -313,8 +332,12 @@ const Auth: React.FC = () => {
                           )}
                         />
                         
-                        <Button type="submit" className="w-full bg-solar hover:bg-solar-dark">
-                          Register
+                        <Button 
+                          type="submit" 
+                          className="w-full bg-solar hover:bg-solar-dark"
+                          disabled={isRegistering}
+                        >
+                          {isRegistering ? "Registering..." : "Register"}
                         </Button>
                       </form>
                     </Form>
