@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
@@ -32,6 +31,41 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const fetchAndSetUserProfile = async (userId: string) => {
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error("Error fetching user profile:", error);
+        setUser(null);
+        return false;
+      } 
+      
+      if (profile) {
+        console.log("User profile loaded:", profile);
+        setUser({
+          id: profile.id,
+          name: profile.name || '',
+          email: profile.email || '',
+          company: profile.company,
+          phone: profile.phone,
+          avatarUrl: profile.avatar_url,
+          preferredCurrency: profile.preferred_currency || 'USD',
+        });
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error("Error in fetchAndSetUserProfile:", error);
+      return false;
+    }
+  };
+
   useEffect(() => {
     console.log("AuthProvider: Initializing auth state listener");
     
@@ -44,27 +78,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         if (currentSession) {
           console.log("User session detected:", currentSession.user.id);
-          const { data: profile, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', currentSession.user.id)
-            .single();
-
-          if (error) {
-            console.error("Error fetching user profile:", error);
-            setUser(null);
-          } else if (profile) {
-            console.log("User profile loaded:", profile);
-            setUser({
-              id: profile.id,
-              name: profile.name || '',
-              email: profile.email || '',
-              company: profile.company,
-              phone: profile.phone,
-              avatarUrl: profile.avatar_url,
-              preferredCurrency: profile.preferred_currency || 'USD',
-            });
-          }
+          await fetchAndSetUserProfile(currentSession.user.id);
         } else {
           console.log("No user session");
           setUser(null);
@@ -85,28 +99,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         if (currentSession) {
           setSession(currentSession);
-          
-          const { data: profile, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', currentSession.user.id)
-            .single();
-
-          if (error) {
-            console.error("Error fetching user profile:", error);
-            setUser(null);
-          } else if (profile) {
-            console.log("User profile loaded:", profile);
-            setUser({
-              id: profile.id,
-              name: profile.name || '',
-              email: profile.email || '',
-              company: profile.company,
-              phone: profile.phone,
-              avatarUrl: profile.avatar_url,
-              preferredCurrency: profile.preferred_currency || 'USD',
-            });
-          }
+          await fetchAndSetUserProfile(currentSession.user.id);
         }
       } catch (error) {
         console.error("Error initializing auth:", error);
@@ -140,9 +133,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         throw error;
       }
       
-      console.log("Login successful:", data);
+      console.log("Login successful:", data.user?.id);
       toast.success("Login successful!");
-      // The state will be updated via the auth state listener
+      
+      // Immediately fetch and set user profile instead of waiting for auth listener
+      if (data.user) {
+        await fetchAndSetUserProfile(data.user.id);
+      }
     } catch (error: any) {
       console.error("Login failed:", error.message);
       toast.error(error.message || "Failed to log in");
