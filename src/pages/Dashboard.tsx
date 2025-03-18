@@ -1,247 +1,209 @@
+
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useSolarProjects } from "@/hooks/useSolarProjects";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { toast } from "sonner";
 import { SolarProject } from "@/types/solarProject";
-import CurrencySelector from "@/components/CurrencySelector";
-import { getCurrencySymbol } from "@/components/CurrencySelector";
-
-const profileSchema = z.object({
-  name: z.string().min(2, { message: "Name must be at least 2 characters" }),
-  company: z.string().optional(),
-  phone: z.string().optional(),
-  preferredCurrency: z.string(),
-});
+import { toast } from "sonner";
+import { formatCurrency, formatNumber } from "@/utils/calculations";
+import { motion } from "framer-motion";
+import { Sun, Plus, Calculator, BarChart3 } from "lucide-react";
 
 const Dashboard: React.FC = () => {
-  const { user, logout, updateProfile } = useAuth();
-  const { projects, deleteProject, loadProjects } = useSolarProjects();
+  const { user } = useAuth();
+  const { projects, loadProjects, deleteProject } = useSolarProjects();
   const navigate = useNavigate();
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
-
-  const form = useForm<z.infer<typeof profileSchema>>({
-    resolver: zodResolver(profileSchema),
-    defaultValues: {
-      name: user?.name || "",
-      company: user?.company || "",
-      phone: user?.phone || "",
-      preferredCurrency: user?.preferredCurrency || "USD",
-    },
-  });
+  const [isNewProjectDialogOpen, setIsNewProjectDialogOpen] = useState(false);
+  const [newProjectName, setNewProjectName] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadProjects();
-    console.log("Loading projects...");
+    const fetchProjects = async () => {
+      try {
+        setIsLoading(true);
+        await loadProjects();
+      } catch (error) {
+        console.error("Error loading projects:", error);
+        toast.error("Failed to load your projects.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProjects();
   }, [loadProjects]);
 
-  useEffect(() => {
-    if (user) {
-      form.reset({
-        name: user.name || "",
-        company: user.company || "",
-        phone: user.phone || "",
-        preferredCurrency: user.preferredCurrency || "USD",
-      });
+  const handleCreateProject = () => {
+    if (!newProjectName.trim()) {
+      toast.error("Please enter a project name");
+      return;
     }
-  }, [user, form]);
 
-  const handleProfileUpdate = async (values: z.infer<typeof profileSchema>) => {
-    try {
-      await updateProfile(values);
-      toast.success("Profile updated successfully!");
-      setIsProfileOpen(false);
-    } catch (error) {
-      toast.error("Failed to update profile");
-    }
-  };
-
-  const handleProjectClick = (project: SolarProject) => {
-    navigate(`/project/${project.id}`);
-  };
-
-  const handleDeleteProject = async (projectId: string, event: React.MouseEvent) => {
-    event.stopPropagation();
+    navigate("/solar-calculator", { 
+      state: { newProjectName } 
+    });
     
-    try {
-      await deleteProject(projectId);
-      toast.success("Project deleted successfully!");
-    } catch (error) {
-      toast.error("Failed to delete project");
+    setIsNewProjectDialogOpen(false);
+    setNewProjectName("");
+  };
+
+  const handleDeleteProject = async (projectId: string) => {
+    if (window.confirm("Are you sure you want to delete this project?")) {
+      try {
+        await deleteProject(projectId);
+        toast.success("Project deleted successfully");
+      } catch (error) {
+        console.error("Error deleting project:", error);
+        toast.error("Failed to delete project");
+      }
     }
   };
 
-  const handleCreateNewProject = () => {
-    console.log("Navigating to solar calculator");
-    navigate("/solar-calculator");
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   };
-
-  const getInitials = (name: string): string => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase();
-  };
-
-  const currencySymbol = user ? getCurrencySymbol(user.preferredCurrency) : "$";
 
   return (
     <div className="container mx-auto py-8">
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">Manage your solar projects</p>
+          <h1 className="text-3xl font-bold mb-2">Welcome back, {user?.name || "User"}</h1>
+          <p className="text-muted-foreground">
+            Manage your solar projects and financial analyses
+          </p>
         </div>
-        <div className="flex gap-4 items-center">
-          <Dialog open={isProfileOpen} onOpenChange={setIsProfileOpen}>
+        
+        <div className="mt-4 md:mt-0 flex gap-4">
+          <Link to="/advanced-calculator">
+            <Button variant="outline" className="flex gap-2">
+              <Calculator className="h-4 w-4" />
+              Advanced Calculator
+            </Button>
+          </Link>
+          
+          <Dialog open={isNewProjectDialogOpen} onOpenChange={setIsNewProjectDialogOpen}>
             <DialogTrigger asChild>
-              <Avatar className="cursor-pointer h-10 w-10">
-                <AvatarImage src={user?.avatarUrl} />
-                <AvatarFallback>{user?.name ? getInitials(user.name) : "U"}</AvatarFallback>
-              </Avatar>
+              <Button className="bg-solar hover:bg-solar-dark text-white">
+                <Plus className="h-4 w-4 mr-2" />
+                New Project
+              </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Profile Settings</DialogTitle>
+                <DialogTitle>Create New Project</DialogTitle>
                 <DialogDescription>
-                  Update your profile information
+                  Give your solar project a name to get started.
                 </DialogDescription>
               </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleProfileUpdate)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Your name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="company"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Company</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Your company" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Your phone number" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="preferredCurrency"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Preferred Currency</FormLabel>
-                        <FormControl>
-                          <CurrencySelector 
-                            value={field.value} 
-                            onChange={field.onChange}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <DialogFooter>
-                    <Button type="submit">Save Changes</Button>
-                  </DialogFooter>
-                </form>
-              </Form>
+              <div className="py-4">
+                <Label htmlFor="project-name">Project Name</Label>
+                <Input 
+                  id="project-name" 
+                  value={newProjectName} 
+                  onChange={(e) => setNewProjectName(e.target.value)}
+                  placeholder="e.g., Residential Solar - John Smith"
+                  className="mt-2"
+                />
+              </div>
+              <DialogFooter>
+                <Button onClick={handleCreateProject}>Create Project</Button>
+              </DialogFooter>
             </DialogContent>
           </Dialog>
-          <Button variant="outline" onClick={logout}>Logout</Button>
         </div>
       </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card className="flex flex-col justify-center items-center h-64 border-dashed cursor-pointer hover:border-solar transition-colors" onClick={handleCreateNewProject}>
-          <div className="flex flex-col items-center justify-center text-center p-6">
-            <div className="rounded-full bg-muted flex items-center justify-center h-12 w-12 mb-4">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
-                <path d="M5 12h14"></path>
-                <path d="M12 5v14"></path>
-              </svg>
-            </div>
-            <h3 className="font-medium text-xl">Create New Project</h3>
-            <p className="text-muted-foreground mt-2">
-              Start designing a new solar PV system
+
+      {isLoading ? (
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-solar"></div>
+        </div>
+      ) : projects.length === 0 ? (
+        <Card className="mt-8">
+          <CardContent className="flex flex-col items-center py-12">
+            <Sun className="h-16 w-16 text-muted-foreground mb-4" />
+            <h2 className="text-xl font-semibold mb-2">No projects yet</h2>
+            <p className="text-muted-foreground mb-6 text-center max-w-md">
+              Create your first solar project to start analyzing financial performance and return on investment.
             </p>
-          </div>
+            <Button 
+              onClick={() => setIsNewProjectDialogOpen(true)}
+              className="bg-solar hover:bg-solar-dark text-white"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create Your First Project
+            </Button>
+          </CardContent>
         </Card>
-        
-        {projects.map((project) => (
-          <Card key={project.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleProjectClick(project)}>
-            <CardHeader className="pb-2">
-              <CardTitle>{project.name}</CardTitle>
-              <CardDescription>
-                {new Date(project.createdAt).toLocaleDateString()}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div>
-                  <span className="text-muted-foreground">System Size:</span>
-                  <p>{project.systemSize} kWp</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Annual Energy:</span>
-                  <p>{project.annualEnergy} kWh</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Payback Period:</span>
-                  <p>{project.paybackPeriod?.years}.{project.paybackPeriod?.months} years</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Location:</span>
-                  <p>{project.city || "Unknown"}</p>
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="pt-2 justify-end">
-              <Button variant="destructive" size="sm" onClick={(e) => handleDeleteProject(project.id, e)}>
-                Delete
-              </Button>
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {projects.map((project, index) => (
+            <motion.div
+              key={project.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: index * 0.1 }}
+            >
+              <Card className="h-full flex flex-col hover:shadow-md transition-all duration-300">
+                <CardHeader className="pb-3">
+                  <CardTitle>{project.name}</CardTitle>
+                  <CardDescription>Created on {formatDate(project.createdAt)}</CardDescription>
+                </CardHeader>
+                <CardContent className="flex-grow">
+                  <div className="space-y-3">
+                    <div>
+                      <span className="text-sm font-medium text-muted-foreground">Client:</span>
+                      <p>{project.clientName}</p>
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium text-muted-foreground">System Size:</span>
+                      <p>{project.systemSize} kW</p>
+                    </div>
+                    <div className="flex justify-between">
+                      <div>
+                        <span className="text-sm font-medium text-muted-foreground">IRR:</span>
+                        <p>{formatNumber(project.irr)}%</p>
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium text-muted-foreground">NPV:</span>
+                        <p>{formatCurrency(project.netPresentValue)}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium text-muted-foreground">Payback Period:</span>
+                      <p>{project.paybackPeriod.years} years, {project.paybackPeriod.months} months</p>
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter className="pt-3 flex justify-between">
+                  <Button 
+                    variant="destructive" 
+                    size="sm"
+                    onClick={() => handleDeleteProject(project.id)}
+                  >
+                    Delete
+                  </Button>
+                  <Button 
+                    onClick={() => navigate(`/project/${project.id}`)}
+                    className="bg-solar hover:bg-solar-dark text-white"
+                  >
+                    View Details
+                  </Button>
+                </CardFooter>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

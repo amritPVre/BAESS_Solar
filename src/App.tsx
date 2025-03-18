@@ -4,12 +4,14 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Helmet } from "react-helmet";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import ProjectDetails from "./pages/ProjectDetails";
 import SolarCalculator from "./components/SolarCalculator";
+import AdvancedSolarCalculatorPage from "./pages/AdvancedSolarCalculator";
 import { AuthProvider } from "@/hooks/useAuth";
 import { SolarProjectsProvider } from "@/hooks/useSolarProjects";
 import AuthGuard from "./components/AuthGuard";
@@ -21,6 +23,7 @@ const App = () => (
     <AuthProvider>
       <SolarProjectsProvider>
         <TooltipProvider>
+          <Helmet titleTemplate="%s | Solar Financial Tool" defaultTitle="Solar Financial Tool" />
           <Toaster />
           <Sonner />
           <BrowserRouter>
@@ -42,6 +45,11 @@ const App = () => (
               <Route path="/solar-calculator" element={
                 <AuthGuard>
                   <SolarCalculator />
+                </AuthGuard>
+              } />
+              <Route path="/advanced-calculator" element={
+                <AuthGuard>
+                  <AdvancedSolarCalculatorPage />
                 </AuthGuard>
               } />
               

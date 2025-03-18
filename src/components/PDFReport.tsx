@@ -85,7 +85,14 @@ const PDFReport: React.FC<PDFReportProps> = ({
   const currencySymbol = getCurrencySymbol(user?.preferredCurrency || 'USD');
 
   const generatePDF = async () => {
-    if (!reportRef.current || !page2Ref.current || !page3Ref.current) return;
+    if (!reportRef.current || !page2Ref.current || !page3Ref.current) {
+      toast({
+        title: "Error",
+        description: "Could not find report elements to generate PDF",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       // Show loading toast
@@ -101,17 +108,33 @@ const PDFReport: React.FC<PDFReportProps> = ({
         format: 'a4'
       });
       
+      // Set maximum page width and height to ensure content fits
+      const pageWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
+      
+      // Ensure all container elements are visible for capture
+      const displayBackup = {
+        report: reportRef.current.style.display,
+        page2: page2Ref.current.style.display,
+        page3: page3Ref.current.style.display
+      };
+
+      reportRef.current.style.display = 'block';
+      page2Ref.current.style.display = 'block';
+      page3Ref.current.style.display = 'block';
+      
       // Capture first page
       const canvas1 = await html2canvas(reportRef.current, {
         scale: 2,
         useCORS: true,
         allowTaint: true,
         backgroundColor: 'white',
+        logging: false,
       });
       
       // Add first page
-      const imgData1 = canvas1.toDataURL('image/jpeg', 1.0);
-      pdf.addImage(imgData1, 'JPEG', 0, 0, 210, 297);
+      const imgData1 = canvas1.toDataURL('image/png', 1.0);
+      pdf.addImage(imgData1, 'PNG', 0, 0, pageWidth, pageHeight);
       
       // Capture second page
       const canvas2 = await html2canvas(page2Ref.current, {
@@ -119,12 +142,13 @@ const PDFReport: React.FC<PDFReportProps> = ({
         useCORS: true,
         allowTaint: true,
         backgroundColor: 'white',
+        logging: false,
       });
       
       // Add second page
       pdf.addPage();
-      const imgData2 = canvas2.toDataURL('image/jpeg', 1.0);
-      pdf.addImage(imgData2, 'JPEG', 0, 0, 210, 297);
+      const imgData2 = canvas2.toDataURL('image/png', 1.0);
+      pdf.addImage(imgData2, 'PNG', 0, 0, pageWidth, pageHeight);
       
       // Capture third page
       const canvas3 = await html2canvas(page3Ref.current, {
@@ -132,12 +156,18 @@ const PDFReport: React.FC<PDFReportProps> = ({
         useCORS: true,
         allowTaint: true,
         backgroundColor: 'white',
+        logging: false,
       });
       
       // Add third page
       pdf.addPage();
-      const imgData3 = canvas3.toDataURL('image/jpeg', 1.0);
-      pdf.addImage(imgData3, 'JPEG', 0, 0, 210, 297);
+      const imgData3 = canvas3.toDataURL('image/png', 1.0);
+      pdf.addImage(imgData3, 'PNG', 0, 0, pageWidth, pageHeight);
+      
+      // Restore original display styles
+      reportRef.current.style.display = displayBackup.report;
+      page2Ref.current.style.display = displayBackup.page2;
+      page3Ref.current.style.display = displayBackup.page3;
       
       // Save the PDF
       pdf.save(`${clientName.replace(/\s+/g, '-')}-Solar-Report.pdf`);
@@ -241,7 +271,7 @@ const PDFReport: React.FC<PDFReportProps> = ({
                   <p><strong>Coordinates:</strong> {location.lat.toFixed(4)}, {location.lng.toFixed(4)}</p>
                 </div>
                 <div className="h-48 rounded-lg overflow-hidden border-2 border-[#2563EB]/20">
-                  {/* Map Placeholder - would be replaced with actual map in implementation */}
+                  {/* Map Placeholder */}
                   <div className="bg-blue-100 h-full w-full flex items-center justify-center">
                     <MapPin className="h-12 w-12 text-[#2563EB]" />
                   </div>
