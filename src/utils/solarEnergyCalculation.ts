@@ -69,9 +69,11 @@ export const calculateSolarEnergy = (params: SolarParams): SolarCalculationResul
   let inverter_dc_ac_ratio = 1.0;  // Default value
   let number_of_inverters = 1;     // Default value
   let inverter_efficiency = 0.98;  // Default inverter efficiency
-
+  
   // Apply inverter parameters if available
   let effective_capacity = plant_capacity_kw;
+  let effective_performance_ratio = performance_ratio; // Create a new variable instead of modifying the constant
+  
   if (inverterParams) {
     number_of_inverters = inverterParams.configuration.num_inverters;
     inverter_dc_ac_ratio = inverterParams.configuration.dc_ac_ratio;
@@ -82,7 +84,7 @@ export const calculateSolarEnergy = (params: SolarParams): SolarCalculationResul
     effective_capacity = Math.min(plant_capacity_kw, total_ac_capacity);
     
     // Update performance ratio to include inverter efficiency
-    performance_ratio = performance_ratio * inverter_efficiency;
+    effective_performance_ratio = performance_ratio * inverter_efficiency;
   }
 
   // Calculate system parameters
@@ -129,7 +131,7 @@ export const calculateSolarEnergy = (params: SolarParams): SolarCalculationResul
 
   // Calculate daily energy production
   let daily_energy: number[] = daily_gii.map(irrad => 
-    irrad * module_efficiency * performance_ratio
+    irrad * module_efficiency * effective_performance_ratio // Use the new variable here
   );
 
   // Apply inverter clipping if configuration is available
@@ -200,6 +202,18 @@ export const calculateSolarEnergy = (params: SolarParams): SolarCalculationResul
   };
 };
 
+// Define orientation factors map
+const orientationFactorsMap: Record<string, number> = {
+  'south': 1.0,
+  'southeast': 0.97,
+  'southwest': 0.97,
+  'east': 0.93,
+  'west': 0.93,
+  'northeast': 0.88,
+  'northwest': 0.88,
+  'north': 0.85
+};
+
 // Helper functions for orientation
 function getOrientationKey(azimuth: number): string {
   // Convert azimuth angle to cardinal direction
@@ -211,7 +225,7 @@ function getOrientationKey(azimuth: number): string {
 }
 
 function getOrientationFactor(orientation: string): number {
-  return orientation in orientationFactors 
-    ? orientationFactors[orientation as keyof typeof orientationFactors]
+  return orientation in orientationFactorsMap 
+    ? orientationFactorsMap[orientation]
     : 0.9; // Default factor
 }
