@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,6 +9,9 @@ import FinancialDetails from "@/components/FinancialDetails";
 import ResultsDisplay from "@/components/ResultsDisplay";
 import EnvironmentalBenefits from "@/components/EnvironmentalBenefits";
 import AnnualEnergyCheck from "@/components/AnnualEnergyCheck";
+import AdvancedSolarInputs from "@/components/AdvancedSolarInputs";
+import ElectricityDetails from "@/components/ElectricityDetails";
+import FinancialMetricsDisplay from "@/components/FinancialMetricsDisplay";
 import { 
   calculateLevelizedCostOfEnergy, 
   calculateAnnualRevenue, 
@@ -20,9 +24,15 @@ import {
   calculateYearlyCashFlow,
   calculateCumulativeCashFlow
 } from "@/utils/calculations";
-import { fetchSolarProductionEstimate } from "@/utils/solarCalculationService";
+import { 
+  FinancialCalculator, 
+  ElectricityData, 
+  ProjectCost, 
+  OMParams, 
+  FinancialMetrics 
+} from "@/utils/financialCalculator";
+import { SolarCalculationResult } from "@/types/solarCalculations";
 import { toast } from "sonner";
-import { motion } from 'framer-motion';
 import { useAuth } from "@/hooks/useAuth";
 import { useSolarProjects } from "@/hooks/useSolarProjects";
 import { SolarProject } from "@/types/solarProject";
@@ -30,6 +40,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
+import { User, Calculator, Check, Home, DollarSign, FileBarChart, PanelRight } from "lucide-react";
 
 interface SolarCalculatorProps {
   projectData?: SolarProject;
@@ -43,19 +54,23 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSavePr
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [projectName, setProjectName] = useState("");
   
+  // Client Details
   const [clientName, setClientName] = useState("John Doe");
   const [clientEmail, setClientEmail] = useState("john@example.com");
   const [clientPhone, setClientPhone] = useState("(123) 456-7890");
   const [clientAddress, setClientAddress] = useState("123 Solar Street");
   
+  // Company Details
   const [companyName, setCompanyName] = useState("Solar Solutions Inc.");
   const [companyContact, setCompanyContact] = useState("Jane Smith");
   const [companyEmail, setCompanyEmail] = useState("contact@solarsolutions.com");
   const [companyPhone, setCompanyPhone] = useState("(987) 654-3210");
   
+  // Energy Check
   const [knowsAnnualEnergy, setKnowsAnnualEnergy] = useState<boolean | null>(null);
   const [manualAnnualEnergy, setManualAnnualEnergy] = useState<number>(12000);
   
+  // Solar PV Details (Basic)
   const [systemSize, setSystemSize] = useState(10);
   const [panelType, setPanelType] = useState("monocrystalline");
   const [panelEfficiency, setPanelEfficiency] = useState(20);
@@ -71,6 +86,10 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSavePr
   const [country, setCountry] = useState("United States");
   const [city, setCity] = useState("New York");
   
+  // Advanced Solar Calculation Results
+  const [advancedCalculationResults, setAdvancedCalculationResults] = useState<SolarCalculationResult | null>(null);
+  
+  // Financial Details
   const [systemCost, setSystemCost] = useState(30000);
   const [electricityRate, setElectricityRate] = useState(0.15);
   const [electricityEscalationRate, setElectricityEscalationRate] = useState(3);
@@ -83,6 +102,20 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSavePr
   const [degradationRate, setDegradationRate] = useState(0.5);
   const [discountRate, setDiscountRate] = useState(5);
   
+  // Financial Calculation Objects
+  const [financialCalculator] = useState(new FinancialCalculator());
+  const [financialInputs, setFinancialInputs] = useState<{
+    project_cost: ProjectCost | null;
+    om_params: OMParams | null;
+    electricity_data: ElectricityData | null;
+  }>({
+    project_cost: null,
+    om_params: null,
+    electricity_data: null
+  });
+  const [financialMetrics, setFinancialMetrics] = useState<FinancialMetrics | null>(null);
+  
+  // Legacy Financial Results
   const [lcoe, setLCOE] = useState(0);
   const [annualRevenue, setAnnualRevenue] = useState(0);
   const [annualCost, setAnnualCost] = useState(0);
@@ -100,6 +133,7 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSavePr
   const [activeTab, setActiveTab] = useState("client");
   const [calculating, setCalculating] = useState(false);
   
+  // Load project data if provided
   useEffect(() => {
     if (projectData) {
       setClientName(projectData.clientName);
@@ -160,201 +194,180 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSavePr
     }
   }, [projectData]);
   
-  const calculatePerformanceRatio = () => {
-    let pr = 0.8;
+  // Handle advanced calculation completion
+  const handleAdvancedCalculationComplete = (results: SolarCalculationResult) => {
+    setAdvancedCalculationResults(results);
     
-    pr *= (inverterEfficiency / 100);
+    // Update the system size to match the calculated capacity
+    setSystemSize(results.system.calculated_capacity);
     
-    if (panelEfficiency > 22) {
-      pr *= 1.05;
-    } else if (panelEfficiency < 18) {
-      pr *= 0.95;
-    }
+    // Set yearly production
+    setYearlyProduction(results.yearlyProduction);
     
-    if (orientation === "south") {
-      pr *= 1.05;
-    } else if (orientation === "north") {
-      pr *= 0.8;
-    } else {
-      pr *= 0.95;
-    }
-    
-    pr *= (1 - (shadingFactor / 100));
-    
-    return pr;
+    // Move to next step
+    setActiveTab("electricity");
+    toast.success("Advanced energy calculations completed, now continue with electricity details");
   };
+  
+  // Handle electricity data save
+  const handleElectricityDataSave = (electricityData: ElectricityData) => {
+    // Save electricity data to financial inputs
+    setFinancialInputs(prev => ({
+      ...prev,
+      electricity_data: electricityData
+    }));
+    
+    // Update the electricity rate
+    if (electricityData.tariff.type === "flat" && electricityData.tariff.rate) {
+      setElectricityRate(electricityData.tariff.rate);
+    }
+    
+    // Move to financial details tab
+    setActiveTab("financial");
+    toast.success("Electricity data saved, now complete the financial details");
+  };
+  
+  // Set up financial calculations when entering financial tab
+  useEffect(() => {
+    if (activeTab === "financial") {
+      // Initialize project cost
+      const annualEnergy = knowsAnnualEnergy ? manualAnnualEnergy : 
+        (advancedCalculationResults ? advancedCalculationResults.energy.metrics.total_yearly : 0);
+      
+      if (annualEnergy > 0) {
+        // Calculate project cost using financial calculator
+        const projectCost = financialCalculator.calculate_project_cost(systemSize);
+        setFinancialInputs(prev => ({
+          ...prev,
+          project_cost: {
+            ...projectCost,
+            cost_local: systemCost,
+            cost_per_kw_actual: systemCost / systemSize
+          }
+        }));
+        
+        // Calculate O&M parameters
+        const omParams = financialCalculator.calculate_om_parameters(systemCost);
+        
+        // Update the maintenance cost to match
+        setMaintenanceCost(omParams.yearly_om_cost);
+        
+        // Update financial inputs
+        setFinancialInputs(prev => ({
+          ...prev,
+          om_params: {
+            ...omParams,
+            // Convert percent to decimal for escalation rates
+            om_escalation: maintenanceEscalationRate / 100,
+            tariff_escalation: electricityEscalationRate / 100
+          }
+        }));
+      }
+    }
+  }, [activeTab, financialCalculator, systemSize, systemCost, knowsAnnualEnergy, manualAnnualEnergy, advancedCalculationResults, maintenanceEscalationRate, electricityEscalationRate]);
   
   const calculateResults = () => {
     setCalculating(true);
     
-    setTimeout(async () => {
+    setTimeout(() => {
       try {
-        const performanceRatio = calculatePerformanceRatio();
+        const { project_cost, om_params, electricity_data } = financialInputs;
         
-        if (knowsAnnualEnergy) {
-          const production = calculateYearlyProduction(
-            systemSize,
-            solarIrradiance,
-            performanceRatio,
-            degradationRate,
-            manualAnnualEnergy
-          );
-          setYearlyProduction(production);
-          
-          const calculatedLCOE = calculateLevelizedCostOfEnergy(
-            systemCost - incentives,
-            manualAnnualEnergy,
-            maintenanceCost,
-            25
-          );
-          setLCOE(calculatedLCOE);
-          
-          const calculatedAnnualRevenue = calculateAnnualRevenue(
-            manualAnnualEnergy,
-            electricityRate
-          );
-          setAnnualRevenue(calculatedAnnualRevenue);
-          
-          const calculatedAnnualCost = calculateAnnualCost(
-            maintenanceCost,
-            financingOption === "loan" ? (systemCost - incentives) * (interestRate / 100) : 0
-          );
-          setAnnualCost(calculatedAnnualCost);
-          
-          const calculatedNPV = calculateNetPresentValue(
-            systemCost - incentives,
-            calculatedAnnualRevenue - calculatedAnnualCost,
-            discountRate,
-            25
-          );
-          setNetPresentValue(calculatedNPV);
-          
-          const calculatedIRR = calculateInternalRateOfReturn(
-            systemCost - incentives,
-            calculatedAnnualRevenue - calculatedAnnualCost,
-            25
-          );
-          setIRR(calculatedIRR);
-          
-          const calculatedPaybackPeriod = calculatePaybackPeriod(
-            systemCost - incentives,
-            calculatedAnnualRevenue - calculatedAnnualCost
-          );
-          setPaybackPeriod(calculatedPaybackPeriod);
-          
-          const yearlyRevenue = production.map((prod, index) => {
-            return prod * electricityRate * Math.pow(1 + (electricityEscalationRate / 100), index);
-          });
-          
-          const yearlyOperationalCost = Array(25).fill(0).map((_, index) => {
-            return maintenanceCost * Math.pow(1 + (maintenanceEscalationRate / 100), index);
-          });
-          
-          const calculatedYearlyCashFlow = calculateYearlyCashFlow(
-            systemCost - incentives,
-            yearlyRevenue,
-            yearlyOperationalCost
-          );
-          setYearlyCashFlow(calculatedYearlyCashFlow);
-          
-          const calculatedCumulativeCashFlow = calculateCumulativeCashFlow(calculatedYearlyCashFlow);
-          setCumulativeCashFlow(calculatedCumulativeCashFlow);
-          
-          const calculatedCO2Reduction = calculateCO2Reduction(manualAnnualEnergy);
-          setCO2Reduction(calculatedCO2Reduction);
-          
-          setTreesEquivalent(calculatedCO2Reduction / 22);
-          
-          setVehicleMilesOffset(calculatedCO2Reduction * 1000 / 404);
-        } else {
-          const solarParams = {
-            systemSize,
-            location,
-            panelType,
-            panelEfficiency,
-            inverterEfficiency,
-            roofAngle,
-            orientation,
-            shadingFactor,
-            degradationRate
-          };
-          
-          const productionEstimate = await fetchSolarProductionEstimate(solarParams);
-          
-          setYearlyProduction(productionEstimate.yearlyProduction);
-          
-          const annualProduction = productionEstimate.estimatedAnnualProduction;
-          
-          const calculatedLCOE = calculateLevelizedCostOfEnergy(
-            systemCost - incentives,
-            annualProduction,
-            maintenanceCost,
-            25
-          );
-          setLCOE(calculatedLCOE);
-          
-          const calculatedAnnualRevenue = calculateAnnualRevenue(
-            annualProduction,
-            electricityRate
-          );
-          setAnnualRevenue(calculatedAnnualRevenue);
-          
-          const calculatedAnnualCost = calculateAnnualCost(
-            maintenanceCost,
-            financingOption === "loan" ? (systemCost - incentives) * (interestRate / 100) : 0
-          );
-          setAnnualCost(calculatedAnnualCost);
-          
-          const calculatedNPV = calculateNetPresentValue(
-            systemCost - incentives,
-            calculatedAnnualRevenue - calculatedAnnualCost,
-            discountRate,
-            25
-          );
-          setNetPresentValue(calculatedNPV);
-          
-          const calculatedIRR = calculateInternalRateOfReturn(
-            systemCost - incentives,
-            calculatedAnnualRevenue - calculatedAnnualCost,
-            25
-          );
-          setIRR(calculatedIRR);
-          
-          const calculatedPaybackPeriod = calculatePaybackPeriod(
-            systemCost - incentives,
-            calculatedAnnualRevenue - calculatedAnnualCost
-          );
-          setPaybackPeriod(calculatedPaybackPeriod);
-          
-          const yearlyRevenue = productionEstimate.yearlyProduction.map((prod, index) => {
-            return prod * electricityRate * Math.pow(1 + (electricityEscalationRate / 100), index);
-          });
-          
-          const yearlyOperationalCost = Array(25).fill(0).map((_, index) => {
-            return maintenanceCost * Math.pow(1 + (maintenanceEscalationRate / 100), index);
-          });
-          
-          const calculatedYearlyCashFlow = calculateYearlyCashFlow(
-            systemCost - incentives,
-            yearlyRevenue,
-            yearlyOperationalCost
-          );
-          setYearlyCashFlow(calculatedYearlyCashFlow);
-          
-          const calculatedCumulativeCashFlow = calculateCumulativeCashFlow(calculatedYearlyCashFlow);
-          setCumulativeCashFlow(calculatedCumulativeCashFlow);
-          
-          const calculatedCO2Reduction = calculateCO2Reduction(annualProduction);
-          setCO2Reduction(calculatedCO2Reduction);
-          
-          setTreesEquivalent(calculatedCO2Reduction / 22);
-          
-          setVehicleMilesOffset(calculatedCO2Reduction * 1000 / 404);
+        if (!project_cost || !om_params || !electricity_data) {
+          toast.error("Missing required financial inputs");
+          setCalculating(false);
+          return;
         }
+        
+        // Get actual yearly generation
+        const yearlyGeneration = knowsAnnualEnergy ? manualAnnualEnergy : 
+          (advancedCalculationResults ? advancedCalculationResults.energy.metrics.total_yearly : 0);
+        
+        if (yearlyGeneration <= 0) {
+          toast.error("Invalid energy generation amount");
+          setCalculating(false);
+          return;
+        }
+        
+        // Calculate financial metrics
+        const netProjectCost = systemCost - incentives;
+        const metrics = financialCalculator.calculate_financial_metrics(
+          electricity_data,
+          netProjectCost,
+          om_params,
+          yearlyGeneration,
+          degradationRate / 100
+        );
+        
+        setFinancialMetrics(metrics);
+        
+        // Legacy calculations for backward compatibility
+        const calculatedLCOE = calculateLevelizedCostOfEnergy(
+          netProjectCost,
+          yearlyGeneration,
+          maintenanceCost,
+          25
+        );
+        setLCOE(calculatedLCOE);
+        
+        const calculatedAnnualRevenue = calculateAnnualRevenue(
+          yearlyGeneration,
+          electricityRate
+        );
+        setAnnualRevenue(calculatedAnnualRevenue);
+        
+        const calculatedAnnualCost = calculateAnnualCost(
+          maintenanceCost,
+          financingOption === "loan" ? netProjectCost * (interestRate / 100) : 0
+        );
+        setAnnualCost(calculatedAnnualCost);
+        
+        const calculatedNPV = calculateNetPresentValue(
+          netProjectCost,
+          calculatedAnnualRevenue - calculatedAnnualCost,
+          discountRate,
+          25
+        );
+        setNetPresentValue(calculatedNPV);
+        
+        const calculatedIRR = calculateInternalRateOfReturn(
+          netProjectCost,
+          calculatedAnnualRevenue - calculatedAnnualCost,
+          25
+        );
+        setIRR(calculatedIRR);
+        
+        const calculatedPaybackPeriod = calculatePaybackPeriod(
+          netProjectCost,
+          calculatedAnnualRevenue - calculatedAnnualCost
+        );
+        setPaybackPeriod(calculatedPaybackPeriod);
+        
+        // Save yearly cash flows
+        setYearlyCashFlow(metrics.cash_flows);
+        
+        // Calculate cumulative cash flow
+        const cumulativeCF = metrics.cash_flows.reduce(
+          (acc: number[], val, idx) => {
+            const prevTotal = idx > 0 ? acc[idx - 1] : 0;
+            acc.push(prevTotal + val);
+            return acc;
+          }, 
+          []
+        );
+        setCumulativeCashFlow(cumulativeCF);
+        
+        // Environmental benefits
+        const calculatedCO2Reduction = calculateCO2Reduction(yearlyGeneration);
+        setCO2Reduction(calculatedCO2Reduction);
+        
+        setTreesEquivalent(calculatedCO2Reduction / 22);
+        
+        setVehicleMilesOffset(calculatedCO2Reduction * 1000 / 404);
         
         setShowResults(true);
         setActiveTab("results");
-        toast.success("Calculations completed successfully!");
+        toast.success("Financial calculations completed successfully!");
       } catch (error) {
         console.error("Calculation error:", error);
         toast.error("Error performing calculations. Please check your inputs.");
@@ -391,7 +404,8 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSavePr
           companyPhone,
           knowsAnnualEnergy: !!knowsAnnualEnergy,
           manualAnnualEnergy,
-          annualEnergy: knowsAnnualEnergy ? manualAnnualEnergy : yearlyProduction.reduce((sum, val) => sum + val, 0),
+          annualEnergy: knowsAnnualEnergy ? manualAnnualEnergy : 
+            (advancedCalculationResults ? advancedCalculationResults.energy.metrics.total_yearly : 0),
           systemSize,
           panelType,
           panelEfficiency,
@@ -446,7 +460,8 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSavePr
           companyPhone,
           knowsAnnualEnergy: !!knowsAnnualEnergy,
           manualAnnualEnergy,
-          annualEnergy: knowsAnnualEnergy ? manualAnnualEnergy : yearlyProduction.reduce((sum, val) => sum + val, 0),
+          annualEnergy: knowsAnnualEnergy ? manualAnnualEnergy : 
+            (advancedCalculationResults ? advancedCalculationResults.energy.metrics.total_yearly : 0),
           systemSize,
           panelType,
           panelEfficiency,
@@ -508,12 +523,31 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSavePr
       </div>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-5 mb-8 w-full md:w-auto mx-auto">
-          <TabsTrigger value="client">Client</TabsTrigger>
-          <TabsTrigger value="energyCheck">Energy Check</TabsTrigger>
-          <TabsTrigger value="solar" disabled={knowsAnnualEnergy === null}>Solar PV</TabsTrigger>
-          <TabsTrigger value="financial" disabled={knowsAnnualEnergy === null}>Financial</TabsTrigger>
-          <TabsTrigger value="results" disabled={!showResults}>Results</TabsTrigger>
+        <TabsList className="grid grid-cols-6 mb-8 w-full mx-auto overflow-auto">
+          <TabsTrigger value="client" className="flex items-center">
+            <Home className="h-4 w-4 mr-2 hidden sm:inline" />
+            Client
+          </TabsTrigger>
+          <TabsTrigger value="energyCheck" className="flex items-center">
+            <Check className="h-4 w-4 mr-2 hidden sm:inline" />
+            Energy Check
+          </TabsTrigger>
+          <TabsTrigger value="advanced" disabled={knowsAnnualEnergy === null || knowsAnnualEnergy === true} className="flex items-center">
+            <Calculator className="h-4 w-4 mr-2 hidden sm:inline" />
+            Advanced Solar
+          </TabsTrigger>
+          <TabsTrigger value="electricity" disabled={knowsAnnualEnergy === null || (knowsAnnualEnergy === false && !advancedCalculationResults)} className="flex items-center">
+            <PanelRight className="h-4 w-4 mr-2 hidden sm:inline" />
+            Electricity
+          </TabsTrigger>
+          <TabsTrigger value="financial" disabled={knowsAnnualEnergy === null || (knowsAnnualEnergy === false && !financialInputs.electricity_data)} className="flex items-center">
+            <DollarSign className="h-4 w-4 mr-2 hidden sm:inline" />
+            Financial
+          </TabsTrigger>
+          <TabsTrigger value="results" disabled={!showResults} className="flex items-center">
+            <FileBarChart className="h-4 w-4 mr-2 hidden sm:inline" />
+            Results
+          </TabsTrigger>
         </TabsList>
         
         <div className="min-h-[600px]">
@@ -568,49 +602,32 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSavePr
               <Button 
                 onClick={() => {
                   if (knowsAnnualEnergy) {
-                    setActiveTab("financial");
+                    setActiveTab("electricity");
                   } else {
-                    setActiveTab("solar");
+                    setActiveTab("advanced");
                   }
                 }}
                 className="bg-solar hover:bg-solar-dark text-white"
                 disabled={knowsAnnualEnergy === null}
               >
-                {knowsAnnualEnergy ? "Next: Financial Details" : "Next: Solar PV Details"}
+                {knowsAnnualEnergy ? "Next: Electricity Details" : "Next: Advanced Solar Details"}
               </Button>
             </div>
           </TabsContent>
           
-          <TabsContent value="solar" className="space-y-8 mt-2">
-            <SolarPVDetails
-              systemSize={systemSize}
-              setSystemSize={setSystemSize}
-              panelType={panelType}
-              setPanelType={setPanelType}
-              panelEfficiency={panelEfficiency}
-              setPanelEfficiency={setPanelEfficiency}
-              inverterType={inverterType}
-              setInverterType={setInverterType}
-              inverterEfficiency={inverterEfficiency}
-              setInverterEfficiency={setInverterEfficiency}
-              roofType={roofType}
-              setRoofType={setRoofType}
-              roofAngle={roofAngle}
-              setRoofAngle={setRoofAngle}
-              orientation={orientation}
-              setOrientation={setOrientation}
-              solarIrradiance={solarIrradiance}
-              setSolarIrradiance={setSolarIrradiance}
-              shadingFactor={shadingFactor}
-              setShadingFactor={setShadingFactor}
-              location={location}
-              setLocation={setLocation}
+          <TabsContent value="advanced" className="space-y-8 mt-2">
+            <AdvancedSolarInputs
+              latitude={location.lat}
+              longitude={location.lng}
+              setLatitude={(lat) => setLocation(prev => ({ ...prev, lat }))}
+              setLongitude={(lng) => setLocation(prev => ({ ...prev, lng }))}
               timezone={timezone}
               setTimezone={setTimezone}
+              capacity={systemSize}
+              setCapacity={setSystemSize}
+              onCalculationComplete={handleAdvancedCalculationComplete}
               country={country}
-              setCountry={setCountry}
               city={city}
-              setCity={setCity}
             />
             
             <div className="flex justify-between mb-10">
@@ -620,11 +637,34 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSavePr
               >
                 Back
               </Button>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="electricity" className="space-y-8 mt-2">
+            <ElectricityDetails
+              currency={financialCalculator.current_settings.currency}
+              currencySymbol={financialCalculator.current_settings.currency_symbol}
+              defaultTariff={financialCalculator.current_settings.regional_data.default_tariff}
+              onSave={handleElectricityDataSave}
+              yearlyGeneration={
+                knowsAnnualEnergy 
+                  ? manualAnnualEnergy 
+                  : (advancedCalculationResults ? advancedCalculationResults.energy.metrics.total_yearly : 0)
+              }
+            />
+            
+            <div className="flex justify-between mb-10">
               <Button 
-                onClick={() => setActiveTab("financial")}
-                className="bg-solar hover:bg-solar-dark text-white"
+                variant="outline" 
+                onClick={() => {
+                  if (knowsAnnualEnergy) {
+                    setActiveTab("energyCheck");
+                  } else {
+                    setActiveTab("advanced");
+                  }
+                }}
               >
-                Next: Financial Details
+                Back
               </Button>
             </div>
           </TabsContent>
@@ -658,13 +698,7 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSavePr
             <div className="flex justify-between mb-10">
               <Button 
                 variant="outline" 
-                onClick={() => {
-                  if (knowsAnnualEnergy) {
-                    setActiveTab("energyCheck");
-                  } else {
-                    setActiveTab("solar");
-                  }
-                }}
+                onClick={() => setActiveTab("electricity")}
               >
                 Back
               </Button>
@@ -718,37 +752,49 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSavePr
                   </Dialog>
                 </div>
                 
-                <ResultsDisplay
-                  lcoe={lcoe}
-                  annualRevenue={annualRevenue}
-                  annualCost={annualCost}
-                  netPresentValue={netPresentValue}
-                  irr={irr}
-                  paybackPeriod={paybackPeriod}
-                  yearlyProduction={yearlyProduction}
-                  yearlyCashFlow={yearlyCashFlow}
-                  cumulativeCashFlow={cumulativeCashFlow}
-                  clientName={clientName}
-                  clientEmail={clientEmail}
-                  clientAddress={clientAddress}
-                  companyName={companyName}
-                  companyContact={companyContact}
-                  systemSize={systemSize}
-                  panelType={panelType}
-                  co2Reduction={co2Reduction}
-                  treesEquivalent={treesEquivalent}
-                  vehicleMilesOffset={vehicleMilesOffset}
-                  location={location}
-                  timezone={timezone}
-                  country={country}
-                  city={city}
-                />
+                {/* Display calculated results */}
+                <div className="space-y-8">
+                  {/* Legacy Results Display for now */}
+                  <ResultsDisplay
+                    lcoe={lcoe}
+                    annualRevenue={annualRevenue}
+                    annualCost={annualCost}
+                    netPresentValue={netPresentValue}
+                    irr={irr}
+                    paybackPeriod={paybackPeriod}
+                    yearlyProduction={yearlyProduction}
+                    yearlyCashFlow={yearlyCashFlow}
+                    cumulativeCashFlow={cumulativeCashFlow}
+                    clientName={clientName}
+                    clientEmail={clientEmail}
+                    clientAddress={clientAddress}
+                    companyName={companyName}
+                    companyContact={companyContact}
+                    systemSize={systemSize}
+                    panelType={panelType}
+                    co2Reduction={co2Reduction}
+                    treesEquivalent={treesEquivalent}
+                    vehicleMilesOffset={vehicleMilesOffset}
+                    location={location}
+                    timezone={timezone}
+                    country={country}
+                    city={city}
+                  />
 
-                <EnvironmentalBenefits
-                  co2Reduction={co2Reduction}
-                  treesEquivalent={treesEquivalent}
-                  vehicleMilesOffset={vehicleMilesOffset}
-                />
+                  {/* New Financial Metrics Display */}
+                  {financialMetrics && (
+                    <FinancialMetricsDisplay 
+                      financialMetrics={financialMetrics}
+                      currencySymbol={financialCalculator.current_settings.currency_symbol}
+                    />
+                  )}
+
+                  <EnvironmentalBenefits
+                    co2Reduction={co2Reduction}
+                    treesEquivalent={treesEquivalent}
+                    vehicleMilesOffset={vehicleMilesOffset}
+                  />
+                </div>
               </div>
             )}
             
@@ -768,4 +814,3 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSavePr
 };
 
 export default SolarCalculator;
-

@@ -11,7 +11,6 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import ProjectDetails from "./pages/ProjectDetails";
 import SolarCalculator from "./components/SolarCalculator";
-import AdvancedSolarCalculatorPage from "./pages/AdvancedSolarCalculator";
 import { AuthProvider } from "@/hooks/useAuth";
 import { SolarProjectsProvider } from "@/hooks/useSolarProjects";
 import AuthGuard from "./components/AuthGuard";
@@ -45,11 +44,6 @@ const App = () => (
               <Route path="/solar-calculator" element={
                 <AuthGuard>
                   <SolarCalculator />
-                </AuthGuard>
-              } />
-              <Route path="/advanced-calculator" element={
-                <AuthGuard>
-                  <AdvancedSolarCalculatorPage />
                 </AuthGuard>
               } />
               

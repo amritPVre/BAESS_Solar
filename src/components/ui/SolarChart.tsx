@@ -1,206 +1,205 @@
 
-import React, { useEffect, useState } from "react";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar, LineChart, Line, Legend, ResponsiveContainer } from "recharts";
-
-type ChartType = "area" | "bar" | "line";
+import React from "react";
+import { 
+  ResponsiveContainer, 
+  LineChart, 
+  Line, 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  Area, 
+  AreaChart,
+  ReferenceLine,
+  ComposedChart
+} from "recharts";
 
 interface SolarChartProps {
-  data: Array<any>;
+  data: any[];
   xKey: string;
-  yKey: string;
+  yKey?: string;
   yKey2?: string;
+  barKeys?: string[];
+  lineKey?: string;
   title: string;
-  type?: ChartType;
+  type: "line" | "bar" | "area" | "composed";
   color?: string;
   color2?: string;
+  colors?: string[];
   xLabel?: string;
   yLabel?: string;
-  areaFillOpacity?: number;
-  hideXAxis?: boolean;
-  hideYAxis?: boolean;
-  hideGrid?: boolean;
-  hideLegend?: boolean;
   height?: number;
-  xTickFormatter?: (value: any) => string;
-  yTickFormatter?: (value: any) => string;
+  areaFillOpacity?: number;
+  yTickFormatter?: (value: number) => string;
+  legend?: { key: string; label: string; color: string }[];
 }
 
-const SolarChart: React.FC<SolarChartProps> = ({
-  data,
-  xKey,
-  yKey,
+const SolarChart: React.FC<SolarChartProps> = ({ 
+  data, 
+  xKey, 
+  yKey = 'value', 
   yKey2,
-  title,
-  type = "area",
-  color = "#4CB571",
-  color2 = "#0496FF",
-  xLabel,
-  yLabel,
-  areaFillOpacity = 0.2,
-  hideXAxis = false,
-  hideYAxis = false,
-  hideGrid = false,
-  hideLegend = true,
-  height = 300,
-  xTickFormatter,
-  yTickFormatter
+  barKeys = [],
+  lineKey,
+  title, 
+  type, 
+  color = "#8884d8", 
+  color2,
+  colors = ["#8884d8", "#82ca9d", "#ffc658"],
+  xLabel = "", 
+  yLabel = "", 
+  height = 400,
+  areaFillOpacity = 0.3,
+  yTickFormatter = (value) => `${value}`,
+  legend
 }) => {
-  const [isVisible, setIsVisible] = useState(false);
+  if (data.length === 0) {
+    return <div className="text-center text-muted-foreground">No data available</div>;
+  }
   
-  useEffect(() => {
-    setTimeout(() => setIsVisible(true), 100);
-  }, []);
-
   const renderChart = () => {
     switch (type) {
-      case "area":
+      case "line":
         return (
-          <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-            {!hideGrid && <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" />}
-            {!hideXAxis && <XAxis 
+          <LineChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+            <XAxis 
               dataKey={xKey} 
-              label={xLabel ? { value: xLabel, position: 'insideBottom', offset: -10 } : undefined}
-              tickFormatter={xTickFormatter}
-            />}
-            {!hideYAxis && <YAxis 
-              label={yLabel ? { value: yLabel, angle: -90, position: 'insideLeft' } : undefined}
-              tickFormatter={yTickFormatter}
-            />}
-            <Tooltip 
-              contentStyle={{ 
-                backgroundColor: 'rgba(255, 255, 255, 0.9)', 
-                border: 'none', 
-                borderRadius: '8px',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
-              }}
-              formatter={(value: number) => {
-                return yTickFormatter ? yTickFormatter(value) : value;
-              }}
+              label={{ value: xLabel, position: 'insideBottom', offset: -5 }} 
             />
-            {!hideLegend && <Legend />}
-            <Area
-              type="monotone"
-              dataKey={yKey}
-              stroke={color}
-              fill={color}
-              fillOpacity={areaFillOpacity}
-              animationDuration={1500}
-              strokeWidth={2}
+            <YAxis 
+              label={{ value: yLabel, angle: -90, position: 'insideLeft' }} 
+              tickFormatter={yTickFormatter}
+            />
+            <Tooltip formatter={(value) => yTickFormatter(Number(value))} />
+            <Line 
+              type="monotone" 
+              dataKey={yKey} 
+              stroke={color} 
+              activeDot={{ r: 8 }} 
+              name={yKey}
             />
             {yKey2 && (
-              <Area
-                type="monotone"
-                dataKey={yKey2}
-                stroke={color2}
-                fill={color2}
-                fillOpacity={areaFillOpacity}
-                animationDuration={1500}
-                strokeWidth={2}
+              <Line 
+                type="monotone" 
+                dataKey={yKey2} 
+                stroke={color2 || "#82ca9d"} 
+                activeDot={{ r: 8 }} 
+                name={yKey2}
               />
             )}
-          </AreaChart>
+            <ReferenceLine y={0} stroke="black" />
+          </LineChart>
         );
       case "bar":
         return (
-          <BarChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-            {!hideGrid && <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" />}
-            {!hideXAxis && <XAxis 
+          <BarChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+            <XAxis 
               dataKey={xKey} 
-              label={xLabel ? { value: xLabel, position: 'insideBottom', offset: -10 } : undefined}
-              tickFormatter={xTickFormatter}
-            />}
-            {!hideYAxis && <YAxis 
-              label={yLabel ? { value: yLabel, angle: -90, position: 'insideLeft' } : undefined}
+              label={{ value: xLabel, position: 'insideBottom', offset: -5 }} 
+            />
+            <YAxis 
+              label={{ value: yLabel, angle: -90, position: 'insideLeft' }} 
               tickFormatter={yTickFormatter}
-            />}
-            <Tooltip 
-              contentStyle={{ 
-                backgroundColor: 'rgba(255, 255, 255, 0.9)', 
-                border: 'none', 
-                borderRadius: '8px',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
-              }}
-              formatter={(value: number) => {
-                return yTickFormatter ? yTickFormatter(value) : value;
-              }}
             />
-            {!hideLegend && <Legend />}
-            <Bar
-              dataKey={yKey}
-              fill={color}
-              radius={[4, 4, 0, 0]}
-              animationDuration={1500}
+            <Tooltip formatter={(value) => yTickFormatter(Number(value))} />
+            <Bar 
+              dataKey={yKey} 
+              fill={color} 
+              name={yKey}
             />
-            {yKey2 && (
-              <Bar
-                dataKey={yKey2}
-                fill={color2}
-                radius={[4, 4, 0, 0]}
-                animationDuration={1500}
-              />
-            )}
           </BarChart>
         );
-      case "line":
+      case "area":
         return (
-          <LineChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-            {!hideGrid && <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" />}
-            {!hideXAxis && <XAxis 
+          <AreaChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+            <XAxis 
               dataKey={xKey} 
-              label={xLabel ? { value: xLabel, position: 'insideBottom', offset: -10 } : undefined}
-              tickFormatter={xTickFormatter}
-            />}
-            {!hideYAxis && <YAxis 
-              label={yLabel ? { value: yLabel, angle: -90, position: 'insideLeft' } : undefined}
+              label={{ value: xLabel, position: 'insideBottom', offset: -5 }} 
+            />
+            <YAxis 
+              label={{ value: yLabel, angle: -90, position: 'insideLeft' }} 
               tickFormatter={yTickFormatter}
-            />}
-            <Tooltip 
-              contentStyle={{ 
-                backgroundColor: 'rgba(255, 255, 255, 0.9)', 
-                border: 'none', 
-                borderRadius: '8px',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
-              }}
-              formatter={(value: number) => {
-                return yTickFormatter ? yTickFormatter(value) : value;
-              }}
             />
-            {!hideLegend && <Legend />}
-            <Line
-              type="monotone"
-              dataKey={yKey}
-              stroke={color}
-              strokeWidth={2}
-              dot={{ r: 3 }}
-              activeDot={{ r: 5 }}
-              animationDuration={1500}
+            <Tooltip formatter={(value) => yTickFormatter(Number(value))} />
+            <Area 
+              type="monotone" 
+              dataKey={yKey} 
+              stroke={color} 
+              fill={color} 
+              fillOpacity={areaFillOpacity}
+              name={yKey}
             />
-            {yKey2 && (
-              <Line
-                type="monotone"
-                dataKey={yKey2}
-                stroke={color2}
+            <ReferenceLine y={0} stroke="black" />
+          </AreaChart>
+        );
+      case "composed":
+        return (
+          <ComposedChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+            <XAxis 
+              dataKey={xKey} 
+              label={{ value: xLabel, position: 'insideBottom', offset: -5 }} 
+            />
+            <YAxis 
+              label={{ value: yLabel, angle: -90, position: 'insideLeft' }} 
+              tickFormatter={yTickFormatter}
+            />
+            <Tooltip formatter={(value) => yTickFormatter(Number(value))} />
+            {barKeys && barKeys.map((key, index) => (
+              <Bar key={key} dataKey={key} fill={colors[index % colors.length]} stackId="a" />
+            ))}
+            {lineKey && (
+              <Line 
+                type="monotone" 
+                dataKey={lineKey} 
+                stroke={colors[barKeys.length % colors.length]} 
                 strokeWidth={2}
-                dot={{ r: 3 }}
-                activeDot={{ r: 5 }}
-                animationDuration={1500}
               />
             )}
-          </LineChart>
+            {legend && <Legend />}
+          </ComposedChart>
         );
       default:
-        return null;
+        return (
+          <LineChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+            <XAxis dataKey={xKey} />
+            <YAxis />
+            <Tooltip />
+            <Line type="monotone" dataKey={yKey} stroke={color} activeDot={{ r: 8 }} />
+          </LineChart>
+        );
     }
   };
 
   return (
-    <div className={`bg-white p-4 rounded-xl shadow-sm transition-opacity duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
-      <h3 className="text-sm font-medium text-gray-500 mb-2">{title}</h3>
-      <div style={{ width: '100%', height: height }}>
+    <div className="w-full">
+      {title && <h3 className="text-center text-lg font-medium mb-4">{title}</h3>}
+      <div style={{ width: '100%', height }}>
         <ResponsiveContainer width="100%" height="100%">
           {renderChart()}
         </ResponsiveContainer>
       </div>
+      
+      {legend && (
+        <div className="flex flex-wrap justify-center mt-4 gap-4">
+          {legend.map((item) => (
+            <div key={item.key} className="flex items-center">
+              <div 
+                className="w-3 h-3 mr-1"
+                style={{ backgroundColor: item.color }}
+              />
+              <span className="text-sm">{item.label}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
