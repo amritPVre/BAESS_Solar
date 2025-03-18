@@ -55,37 +55,49 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Listen for auth state changes
   useEffect(() => {
     console.log("AuthProvider: Initializing auth state listener");
+    let subscription: any = null;
     
-    const subscription = authStateChange(async (event, currentSession) => {
-      console.log("Auth state changed:", event, currentSession?.user?.id);
-      setLoading(true);
-      
-      if (currentSession?.user) {
-        console.log("User session detected:", currentSession.user.id);
-        await fetchUserProfile(currentSession.user.id);
-      } else {
-        console.log("No user session");
-      }
-      
-      setLoading(false);
-    });
-
-    // Get initial session
-    const initializeAuth = async () => {
+    const setupAuthListener = async () => {
       console.log("Initializing auth state");
       setLoading(true);
       
-      const currentSession = await authStateChange(null, null);
-      
-      setLoading(false);
+      try {
+        // Pass null and null as the arguments
+        subscription = await authStateChange(null, null);
+      } catch (error) {
+        console.error("Error setting up auth listener:", error);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    initializeAuth();
+    setupAuthListener();
 
     return () => {
-      subscription.unsubscribe();
+      if (subscription && typeof subscription.unsubscribe === 'function') {
+        subscription.unsubscribe();
+      }
     };
-  }, [authStateChange, fetchUserProfile]);
+  }, [authStateChange]);
+
+  // Fetch user profile when session changes
+  useEffect(() => {
+    const fetchProfileForSession = async () => {
+      if (session?.user?.id) {
+        console.log("Fetching profile for user:", session.user.id);
+        setLoading(true);
+        try {
+          await fetchUserProfile(session.user.id);
+        } catch (error) {
+          console.error("Error fetching user profile:", error);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchProfileForSession();
+  }, [session, fetchUserProfile]);
 
   const login = async (email: string, password: string) => {
     console.log("Login attempt for:", email);

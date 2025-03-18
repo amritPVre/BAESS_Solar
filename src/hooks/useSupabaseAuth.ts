@@ -1,7 +1,7 @@
 
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Session } from "@supabase/supabase-js";
+import { Session, AuthChangeEvent } from "@supabase/supabase-js";
 
 export const useSupabaseAuth = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -60,9 +60,10 @@ export const useSupabaseAuth = () => {
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (eventType, session) => {
+      (eventType, session) => {
+        console.log("Auth state changed:", eventType, session?.user?.id);
         setSession(session);
-        return session;
+        // Don't return the session here as it causes TypeScript error
       }
     );
 

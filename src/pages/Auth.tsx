@@ -3,7 +3,6 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Info, Sun } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import LoginForm from "@/components/auth/LoginForm";
@@ -24,6 +23,8 @@ const Auth: React.FC = () => {
       sessionActive: !!isAuthenticated 
     });
     
+    // Only redirect when the auth state is fully determined (not loading)
+    // and the user is authenticated
     if (isAuthenticated && !loading) {
       console.log("User is authenticated, redirecting to dashboard");
       navigate("/dashboard", { replace: true });
