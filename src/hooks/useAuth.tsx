@@ -38,7 +38,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
-        console.log("Auth state changed:", event);
+        console.log("Auth state changed:", event, currentSession?.user?.id);
         setLoading(true);
         setSession(currentSession);
 
@@ -52,6 +52,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
           if (error) {
             console.error("Error fetching user profile:", error);
+            setUser(null);
           } else if (profile) {
             console.log("User profile loaded:", profile);
             setUser({
@@ -93,6 +94,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
           if (error) {
             console.error("Error fetching user profile:", error);
+            setUser(null);
           } else if (profile) {
             console.log("User profile loaded:", profile);
             setUser({
@@ -108,6 +110,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
       } catch (error) {
         console.error("Error initializing auth:", error);
+        setUser(null);
+        setSession(null);
       } finally {
         setLoading(false);
       }
@@ -138,7 +142,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       console.log("Login successful:", data);
       toast.success("Login successful!");
-      // No need to return anything as we're using void return type
+      // The state will be updated via the auth state listener
     } catch (error: any) {
       console.error("Login failed:", error.message);
       toast.error(error.message || "Failed to log in");

@@ -8,12 +8,17 @@ interface AuthGuardProps {
 }
 
 const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, user, session } = useAuth();
   const navigate = useNavigate();
   const [authChecked, setAuthChecked] = useState(false);
   
   useEffect(() => {
-    console.log("AuthGuard: isAuthenticated:", isAuthenticated, "loading:", loading);
+    console.log("AuthGuard: checking auth status:", { 
+      isAuthenticated, 
+      loading, 
+      userId: user?.id, 
+      sessionActive: !!session 
+    });
     
     // Only take action when loading is complete
     if (!loading) {
@@ -21,10 +26,10 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
       
       if (!isAuthenticated) {
         console.log("User is not authenticated, redirecting to auth page");
-        navigate("/auth");
+        navigate("/auth", { replace: true });
       }
     }
-  }, [isAuthenticated, loading, navigate]);
+  }, [isAuthenticated, loading, navigate, user, session]);
 
   // Show loading while checking auth status
   if (loading || !authChecked) {

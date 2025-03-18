@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -62,7 +61,7 @@ const currencyOptions = [
 ];
 
 const Auth: React.FC = () => {
-  const { login, register, isAuthenticated, loading } = useAuth();
+  const { login, register, isAuthenticated, loading, user, session } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("login");
   const [error, setError] = useState<string | null>(null);
@@ -89,11 +88,18 @@ const Auth: React.FC = () => {
   });
 
   useEffect(() => {
+    console.log("Auth page: checking auth status:", { 
+      isAuthenticated, 
+      loading, 
+      userId: user?.id, 
+      sessionActive: !!session 
+    });
+    
     if (isAuthenticated && !loading) {
       console.log("User is authenticated, redirecting to dashboard");
-      navigate("/dashboard");
+      navigate("/dashboard", { replace: true });
     }
-  }, [isAuthenticated, loading, navigate]);
+  }, [isAuthenticated, loading, navigate, user, session]);
 
   const handleLogin = async (values: z.infer<typeof loginSchema>) => {
     setError(null);
@@ -103,7 +109,6 @@ const Auth: React.FC = () => {
       console.log("Attempting login with:", values.email);
       await login(values.email, values.password);
       console.log("Login successful, redirecting to dashboard");
-      navigate("/dashboard");
     } catch (error: any) {
       console.error("Login error:", error);
       setError(error.message || "Login failed. Please check your credentials.");
