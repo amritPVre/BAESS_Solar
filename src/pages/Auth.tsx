@@ -1,185 +1,42 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { useAuth } from "@/hooks/useAuth";
-import { toast } from "sonner";
-import { Sun, Info } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Info, Sun } from "lucide-react";
 import { motion } from "framer-motion";
-
-const loginSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email" }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters" }),
-});
-
-const registerSchema = z.object({
-  name: z.string().min(2, { message: "Name must be at least 2 characters" }),
-  email: z.string().email({ message: "Please enter a valid email" }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters" }),
-  confirmPassword: z.string().min(6, { message: "Password must be at least 6 characters" }),
-  currency: z.string().default("USD"),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords do not match",
-  path: ["confirmPassword"],
-});
-
-const currencyOptions = [
-  { value: "USD", label: "US Dollar (USD)" },
-  { value: "EUR", label: "Euro (EUR)" },
-  { value: "GBP", label: "British Pound (GBP)" },
-  { value: "JPY", label: "Japanese Yen (JPY)" },
-  { value: "CAD", label: "Canadian Dollar (CAD)" },
-  { value: "AUD", label: "Australian Dollar (AUD)" },
-  { value: "INR", label: "Indian Rupee (INR)" },
-  { value: "CNY", label: "Chinese Yuan (CNY)" },
-];
+import { useAuth } from "@/hooks/useAuth";
+import LoginForm from "@/components/auth/LoginForm";
+import RegisterForm from "@/components/auth/RegisterForm";
+import AuthInfoPanel from "@/components/auth/AuthInfoPanel";
 
 const Auth: React.FC = () => {
-  const { login, register, isAuthenticated, loading, user, session } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("login");
   const [error, setError] = useState<string | null>(null);
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [isRegistering, setIsRegistering] = useState(false);
-
-  const loginForm = useForm<z.infer<typeof loginSchema>>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
-  });
-
-  const registerForm = useForm<z.infer<typeof registerSchema>>({
-    resolver: zodResolver(registerSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-      currency: "USD",
-    },
-  });
 
   useEffect(() => {
     console.log("Auth page: checking auth status:", { 
       isAuthenticated, 
       loading, 
-      userId: user?.id, 
-      sessionActive: !!session 
+      userId: isAuthenticated ? "authenticated" : "not authenticated", 
+      sessionActive: !!isAuthenticated 
     });
     
     if (isAuthenticated && !loading) {
       console.log("User is authenticated, redirecting to dashboard");
       navigate("/dashboard", { replace: true });
     }
-  }, [isAuthenticated, loading, navigate, user, session]);
+  }, [isAuthenticated, loading, navigate]);
 
-  const handleLogin = async (values: z.infer<typeof loginSchema>) => {
-    setError(null);
-    setIsLoggingIn(true);
-    
-    try {
-      console.log("Attempting login with:", values.email);
-      await login(values.email, values.password);
-      console.log("Login successful, redirecting to dashboard");
-    } catch (error: any) {
-      console.error("Login error:", error);
-      setError(error.message || "Login failed. Please check your credentials.");
-    } finally {
-      setIsLoggingIn(false);
-    }
-  };
-
-  const handleRegister = async (values: z.infer<typeof registerSchema>) => {
-    setError(null);
-    setIsRegistering(true);
-    
-    try {
-      console.log("Attempting registration with:", values.email);
-      await register(values.name, values.email, values.password);
-      setActiveTab("login");
-    } catch (error: any) {
-      console.error("Registration error:", error);
-      setError(error.message || "Registration failed. Please try again.");
-    } finally {
-      setIsRegistering(false);
-    }
-  };
+  const clearError = () => setError(null);
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-sky-50 to-white">
       <div className="w-full max-w-5xl p-4 md:p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-            className="flex flex-col justify-center p-6 hidden md:flex"
-          >
-            <div className="flex items-center mb-6">
-              <Sun className="h-10 w-10 text-solar mr-4" />
-              <h1 className="text-3xl font-bold">Solar Financial Calculator</h1>
-            </div>
-            <h2 className="text-2xl font-semibold mb-4">Welcome to our platform!</h2>
-            <p className="text-lg text-gray-600 mb-6">
-              Sign in to save your projects, track your calculations, and generate professional reports for your solar investments.
-            </p>
-            <div className="bg-solar-light rounded-lg p-4 mb-6 border border-solar/20">
-              <div className="flex items-start">
-                <Info className="h-5 w-5 text-solar mr-2 mt-0.5" />
-                <p className="text-sm text-gray-700">
-                  All your data is securely stored and you'll be able to access your projects from any device after signing in.
-                </p>
-              </div>
-            </div>
-            <div className="space-y-4">
-              <div className="flex items-center">
-                <div className="w-8 h-8 rounded-full bg-solar-light flex items-center justify-center mr-3">
-                  <span className="text-solar font-semibold">1</span>
-                </div>
-                <p>Design your solar system with custom parameters</p>
-              </div>
-              <div className="flex items-center">
-                <div className="w-8 h-8 rounded-full bg-solar-light flex items-center justify-center mr-3">
-                  <span className="text-solar font-semibold">2</span>
-                </div>
-                <p>Calculate financial metrics and environmental impact</p>
-              </div>
-              <div className="flex items-center">
-                <div className="w-8 h-8 rounded-full bg-solar-light flex items-center justify-center mr-3">
-                  <span className="text-solar font-semibold">3</span>
-                </div>
-                <p>Export professional reports for clients</p>
-              </div>
-            </div>
-          </motion.div>
+          <AuthInfoPanel />
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -207,140 +64,11 @@ const Auth: React.FC = () => {
                   </TabsList>
                   
                   <TabsContent value="login" className="mt-6">
-                    <Form {...loginForm}>
-                      <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
-                        <FormField
-                          control={loginForm.control}
-                          name="email"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Email</FormLabel>
-                              <FormControl>
-                                <Input placeholder="your@email.com" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={loginForm.control}
-                          name="password"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Password</FormLabel>
-                              <FormControl>
-                                <Input type="password" placeholder="Password" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <Button 
-                          type="submit" 
-                          className="w-full bg-solar hover:bg-solar-dark"
-                          disabled={isLoggingIn}
-                        >
-                          {isLoggingIn ? "Logging in..." : "Login"}
-                        </Button>
-                      </form>
-                    </Form>
+                    <LoginForm setError={setError} clearError={clearError} />
                   </TabsContent>
                   
                   <TabsContent value="register" className="mt-6">
-                    <Form {...registerForm}>
-                      <form onSubmit={registerForm.handleSubmit(handleRegister)} className="space-y-4">
-                        <FormField
-                          control={registerForm.control}
-                          name="name"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Name</FormLabel>
-                              <FormControl>
-                                <Input placeholder="John Doe" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={registerForm.control}
-                          name="email"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Email</FormLabel>
-                              <FormControl>
-                                <Input placeholder="your@email.com" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={registerForm.control}
-                          name="password"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Password</FormLabel>
-                              <FormControl>
-                                <Input type="password" placeholder="Password" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={registerForm.control}
-                          name="confirmPassword"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Confirm Password</FormLabel>
-                              <FormControl>
-                                <Input type="password" placeholder="Confirm password" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={registerForm.control}
-                          name="currency"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Preferred Currency</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select currency" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {currencyOptions.map((currency) => (
-                                    <SelectItem key={currency.value} value={currency.value}>
-                                      {currency.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <Button 
-                          type="submit" 
-                          className="w-full bg-solar hover:bg-solar-dark"
-                          disabled={isRegistering}
-                        >
-                          {isRegistering ? "Registering..." : "Register"}
-                        </Button>
-                      </form>
-                    </Form>
+                    <RegisterForm setError={setError} clearError={clearError} />
                   </TabsContent>
                 </Tabs>
               </CardContent>
