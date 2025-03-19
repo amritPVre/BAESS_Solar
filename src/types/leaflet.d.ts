@@ -17,6 +17,8 @@ declare module 'leaflet' {
     dragging: any;
     doubleClickZoom: any;
     scrollWheelZoom: any;
+    eachLayer(fn: (layer: Layer) => void): this;
+    removeLayer(layer: Layer): this;
   }
   
   export interface MapOptions {
@@ -29,10 +31,7 @@ declare module 'leaflet' {
     [key: string]: any;
   }
   
-  export interface LatLngExpression {
-    lat: number;
-    lng: number;
-  }
+  export type LatLngExpression = LatLng | [number, number] | {lat: number, lng: number};
   
   export class LatLng {
     constructor(lat: number, lng: number);
@@ -54,7 +53,7 @@ declare module 'leaflet' {
     [key: string]: any;
   }
   
-  export class TileLayer {
+  export class TileLayer extends Layer {
     addTo(map: Map): this;
   }
   
@@ -65,9 +64,10 @@ declare module 'leaflet' {
     [key: string]: any;
   }
   
-  export class Marker {
+  export class Marker extends Layer {
     addTo(map: Map): this;
     bindPopup(content: string): this;
+    openPopup(): this;
   }
   
   export function icon(options: IconOptions): Icon;
@@ -84,7 +84,25 @@ declare module 'leaflet' {
     [key: string]: any;
   }
   
+  export class Layer {
+    addTo(map: Map): this;
+    remove(): this;
+  }
+  
+  export namespace control {
+    export function layers(baseLayers?: Record<string, Layer>, overlays?: Record<string, Layer>, options?: ControlOptions): Control.Layers;
+  }
+  
   export class Control {
+    static Layers: any;
     static Search: any;
+    
+    static extend(options: any): typeof Control;
+    addTo(map: Map): this;
+  }
+  
+  export interface ControlOptions {
+    position?: string;
+    [key: string]: any;
   }
 }

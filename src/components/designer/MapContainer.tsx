@@ -53,7 +53,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
       // Add the street layer by default
       baseMaps["Street"].addTo(map);
       
-      // Add layer control
+      // Add layer control using the correct namespace syntax
       L.control.layers(baseMaps).addTo(map);
       
       // Make map instance available globally

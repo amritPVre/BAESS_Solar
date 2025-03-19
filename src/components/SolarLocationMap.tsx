@@ -16,8 +16,8 @@ const SolarLocationMap: React.FC<SolarLocationMapProps> = ({ location }) => {
     
     // Initialize the map if it doesn't exist
     if (!mapRef.current) {
-      mapRef.current = L.map(mapContainerRef.current, {
-        center: [location.lat, location.lng],
+      mapRef.current = L.map(mapContainerRef.current.id, {
+        center: { lat: location.lat, lng: location.lng },
         zoom: 15,
         zoomControl: true,
         attributionControl: true,
@@ -30,13 +30,13 @@ const SolarLocationMap: React.FC<SolarLocationMapProps> = ({ location }) => {
       }).addTo(mapRef.current);
       
       // Add a marker at the location
-      L.marker([location.lat, location.lng])
+      L.marker({ lat: location.lat, lng: location.lng })
         .addTo(mapRef.current)
         .bindPopup('Solar Installation Location')
         .openPopup();
     } else {
       // Update the map view and marker if it already exists
-      mapRef.current.setView([location.lat, location.lng], 15);
+      mapRef.current.setView({ lat: location.lat, lng: location.lng }, 15);
       
       // Clear existing markers and add a new one
       mapRef.current.eachLayer((layer) => {
@@ -45,10 +45,15 @@ const SolarLocationMap: React.FC<SolarLocationMapProps> = ({ location }) => {
         }
       });
       
-      L.marker([location.lat, location.lng])
+      L.marker({ lat: location.lat, lng: location.lng })
         .addTo(mapRef.current)
         .bindPopup('Solar Installation Location')
         .openPopup();
+    }
+    
+    // Ensure the map container has an ID
+    if (!mapContainerRef.current.id) {
+      mapContainerRef.current.id = 'solar-location-map';
     }
     
     // Cleanup function
@@ -64,6 +69,7 @@ const SolarLocationMap: React.FC<SolarLocationMapProps> = ({ location }) => {
     <div className="w-full h-full min-h-[300px] rounded-lg overflow-hidden border border-gray-200 shadow-sm">
       <div 
         ref={mapContainerRef}
+        id="solar-location-map"
         className="w-full h-full min-h-[300px]"
       />
     </div>
