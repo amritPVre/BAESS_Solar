@@ -13,7 +13,10 @@ export const MapSearchControls: React.FC<MapSearchControlsProps> = ({ mapLoaded 
   const [searchingAddress, setSearchingAddress] = useState(false);
 
   const handleSearchAddress = () => {
-    if (!address.trim() || !window.solarDesignerMap) return;
+    if (!address.trim() || !window.solarDesignerMap) {
+      toast.error("Please enter a location and ensure the map is loaded");
+      return;
+    }
     
     setSearchingAddress(true);
     
@@ -29,13 +32,21 @@ export const MapSearchControls: React.FC<MapSearchControlsProps> = ({ mapLoaded 
             lng: parseFloat(data[0].lon)
           };
           
-          window.solarDesignerMap.setView(location, 19);
-          toast.success(`Location found: ${data[0].display_name}`);
+          // Ensure the map is fully initialized
+          if (window.solarDesignerMap) {
+            // Force map update before setting view
+            window.solarDesignerMap.invalidateSize();
+            window.solarDesignerMap.setView(location, 19);
+            toast.success(`Location found: ${data[0].display_name}`);
+          } else {
+            toast.error("Map not fully initialized yet");
+          }
         } else {
           toast.error("Could not find location");
         }
       })
       .catch(error => {
+        console.error("Location search error:", error);
         setSearchingAddress(false);
         toast.error(`Error searching for location: ${error.message}`);
       });
@@ -44,7 +55,7 @@ export const MapSearchControls: React.FC<MapSearchControlsProps> = ({ mapLoaded 
   if (!mapLoaded) return null;
 
   return (
-    <div className="absolute top-2 left-2 z-10 bg-white p-2 rounded-md shadow-sm flex gap-2 items-center">
+    <div className="absolute top-2 left-2 z-20 bg-white p-2 rounded-md shadow-sm flex gap-2 items-center">
       <input
         id="map-search-input"
         type="text"

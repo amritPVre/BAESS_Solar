@@ -36,54 +36,69 @@ export const CanvasOverlay: React.FC<CanvasOverlayProps> = ({
     console.log("Initializing canvas overlay");
     
     // Make sure the canvas is properly sized and positioned
-    const width = mapRef.current.clientWidth;
-    const height = mapRef.current.clientHeight;
-    
-    canvasRef.current.width = width;
-    canvasRef.current.height = height;
-    
-    console.log(`Setting canvas size to: ${width}x${height}`);
-    
-    // Create fabric canvas
-    const canvasInstance = new fabric.Canvas(canvasRef.current, {
-      width: width,
-      height: height,
-      backgroundColor: 'rgba(0,0,0,0)',
-      selection: true,
-      fireRightClick: true,
-      renderOnAddRemove: true,
-      stopContextMenu: true // Prevent context menu from opening
-    });
-    
-    // Make canvas accessible globally for map interaction
-    window.designCanvas = canvasInstance;
-    fabricCanvasRef.current = canvasInstance;
-    
-    // Ensure canvas matches map dimensions
-    const resizeCanvas = () => {
-      if (!canvasInstance || !mapRef.current) return;
+    const setupCanvas = () => {
+      if (!mapRef.current || !canvasRef.current) return;
       
       const width = mapRef.current.clientWidth;
       const height = mapRef.current.clientHeight;
       
-      canvasInstance.setWidth(width);
-      canvasInstance.setHeight(height);
-      canvasInstance.renderAll();
+      canvasRef.current.width = width;
+      canvasRef.current.height = height;
+      
+      console.log(`Setting canvas size to: ${width}x${height}`);
+      
+      // Dispose of any existing canvas
+      if (fabricCanvasRef.current) {
+        fabricCanvasRef.current.dispose();
+      }
+      
+      // Create fabric canvas
+      const canvasInstance = new fabric.Canvas(canvasRef.current, {
+        width: width,
+        height: height,
+        backgroundColor: 'rgba(0,0,0,0)',
+        selection: true,
+        fireRightClick: true,
+        renderOnAddRemove: true,
+        stopContextMenu: true // Prevent context menu from opening
+      });
+      
+      // Make canvas accessible globally for map interaction
+      window.designCanvas = canvasInstance;
+      fabricCanvasRef.current = canvasInstance;
+      
+      // Prevent propagation of mouse events to map in drawing mode
+      canvasRef.current.style.pointerEvents = 'auto';
+      
+      console.log("Canvas created successfully", canvasInstance);
+    };
+    
+    // Wait a bit for the map to fully initialize
+    setTimeout(setupCanvas, 300);
+    
+    // Set up resize listener
+    const resizeCanvas = () => {
+      if (!fabricCanvasRef.current || !mapRef.current) return;
+      
+      const width = mapRef.current.clientWidth;
+      const height = mapRef.current.clientHeight;
+      
+      fabricCanvasRef.current.setWidth(width);
+      fabricCanvasRef.current.setHeight(height);
+      fabricCanvasRef.current.renderAll();
       
       console.log(`Canvas resized to: ${width}x${height}`);
     };
     
-    // Set initial size and add resize listener
-    resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
-    
-    console.log("Canvas created successfully", canvasInstance);
     
     return () => {
       window.removeEventListener('resize', resizeCanvas);
-      canvasInstance.dispose();
-      fabricCanvasRef.current = null;
-      window.designCanvas = null;
+      if (fabricCanvasRef.current) {
+        fabricCanvasRef.current.dispose();
+        fabricCanvasRef.current = null;
+        window.designCanvas = null;
+      }
     };
   }, [mapLoaded, mapRef]);
   
@@ -154,9 +169,26 @@ export const CanvasOverlay: React.FC<CanvasOverlayProps> = ({
         }
       }
       
-      canvas.on("mouse:down", startDrawing);
-      canvas.on("mouse:move", drawObject);
-      canvas.on("mouse:up", finishDrawing);
+      // Attach canvas event listeners
+      canvas.on("mouse:down", (event) => {
+        event.e.stopPropagation();
+        startDrawing(event);
+      });
+      
+      canvas.on("mouse:move", (event) => {
+        event.e.stopPropagation();
+        drawObject(event);
+      });
+      
+      canvas.on("mouse:up", (event) => {
+        event.e.stopPropagation();
+        finishDrawing(event);
+      });
+      
+      // Ensure canvas catches all events
+      if (canvasRef.current) {
+        canvasRef.current.style.pointerEvents = 'auto';
+      }
       
       console.log("Drawing event listeners added for", activeTool);
     } else {

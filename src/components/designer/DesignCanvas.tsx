@@ -24,6 +24,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   const mapRef = useRef<HTMLDivElement>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [canvasInitialized, setCanvasInitialized] = useState(false);
   
   // Generate a unique ID for the map div to be used by Leaflet
   useEffect(() => {
@@ -34,8 +35,25 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   
   const handleMapLoaded = () => {
     console.log("Map loaded callback triggered");
-    setMapLoaded(true);
+    
+    // Give the map a moment to fully render
+    setTimeout(() => {
+      if (window.solarDesignerMap) {
+        window.solarDesignerMap.invalidateSize(true);
+        setMapLoaded(true);
+      }
+    }, 200);
   };
+  
+  // Make sure to properly clean up when component unmounts
+  useEffect(() => {
+    return () => {
+      // Clean up global references
+      window.solarDesignerMap = undefined;
+      window.designCanvas = null;
+      window.isDrawingMode = false;
+    };
+  }, []);
   
   return (
     <div className="design-canvas-container relative w-full h-[600px] overflow-hidden rounded-md border-2 border-gray-200 shadow-sm">
