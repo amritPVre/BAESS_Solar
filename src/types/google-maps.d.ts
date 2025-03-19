@@ -1,128 +1,65 @@
-
-// Type definitions for Google Maps JavaScript API 3.54
-// This is a simplified version focusing on what we need
-
+// Type definitions for Google Maps JavaScript API
 declare namespace google.maps {
   class Map {
     constructor(mapDiv: Element, opts?: MapOptions);
     setCenter(latLng: LatLng | LatLngLiteral): void;
-    getCenter(): LatLng;
     setZoom(zoom: number): void;
-    getZoom(): number;
-    setMapTypeId(mapTypeId: string): void;
-    getMapTypeId(): string;
-    getBounds(): LatLngBounds | undefined;
-    fitBounds(bounds: LatLngBounds | LatLngBoundsLiteral, padding?: number | Padding): void;
-    addListener(eventName: string, handler: (...args: any[]) => void): MapsEventListener;
-    setOptions(options: MapOptions): void;
+    setOptions(options: MapOptions): void; // Added this method
+    // Add other map methods as needed
   }
-
+  
   interface MapOptions {
     center?: LatLng | LatLngLiteral;
     zoom?: number;
     mapTypeId?: string;
+    tilt?: number;
     disableDefaultUI?: boolean;
     zoomControl?: boolean;
     mapTypeControl?: boolean;
-    streetViewControl?: boolean;
+    scaleControl?: boolean;
     rotateControl?: boolean;
     fullscreenControl?: boolean;
-    gestureHandling?: 'cooperative' | 'greedy' | 'none' | 'auto';
-    draggable?: boolean;
+    streetViewControl?: boolean;
+    clickableIcons?: boolean;
+    gestureHandling?: string; // Added this property
+    draggable?: boolean; // Added this property
+    // Add other map options as needed
   }
-
-  class LatLng {
-    constructor(lat: number, lng: number, noWrap?: boolean);
-    lat(): number;
-    lng(): number;
-  }
-
+  
   interface LatLngLiteral {
     lat: number;
     lng: number;
   }
-
-  class LatLngBounds {
-    constructor(sw?: LatLng | LatLngLiteral, ne?: LatLng | LatLngLiteral);
-    extend(point: LatLng | LatLngLiteral): LatLngBounds;
-    union(other: LatLngBounds | LatLngBoundsLiteral): LatLngBounds;
+  
+  class LatLng {
+    constructor(lat: number, lng: number);
+    lat(): number;
+    lng(): number;
   }
-
-  interface LatLngBoundsLiteral {
-    east: number;
-    north: number;
-    south: number;
-    west: number;
-  }
-
-  interface Padding {
-    bottom: number;
-    left: number;
-    right: number;
-    top: number;
-  }
-
-  interface MapsEventListener {
-    remove(): void;
-  }
-
-  namespace places {
-    class SearchBox {
-      constructor(inputField: HTMLInputElement, opts?: SearchBoxOptions);
-      getPlaces(): Place[];
-      setBounds(bounds: LatLngBounds): void;
-      addListener(eventName: string, handler: (...args: any[]) => void): MapsEventListener;
-    }
-
-    interface SearchBoxOptions {
-      bounds?: LatLngBounds | LatLngBoundsLiteral;
-    }
-
-    interface Place {
-      geometry?: {
-        location?: LatLng;
-        viewport?: LatLngBounds;
-      };
-      formatted_address?: string;
-      name?: string;
-    }
-  }
-
+  
   class Geocoder {
-    geocode(request: GeocoderRequest, callback: (results: GeocoderResult[], status: string) => void): void;
+    geocode(request: GeocodeRequest, callback: (results: GeocodeResult[], status: string) => void): void;
   }
-
-  interface GeocoderRequest {
+  
+  interface GeocodeRequest {
     address?: string;
-    location?: LatLng | LatLngLiteral;
-    bounds?: LatLngBounds | LatLngBoundsLiteral;
-    componentRestrictions?: GeocoderComponentRestrictions;
-    region?: string;
+    location?: LatLng;
+    placeId?: string;
   }
-
-  interface GeocoderComponentRestrictions {
-    country: string | string[];
-  }
-
-  interface GeocoderResult {
-    types: string[];
+  
+  interface GeocodeResult {
+    geometry: {
+      location: LatLng;
+    };
     formatted_address: string;
-    address_components: GeocoderAddressComponent[];
-    geometry: GeocoderGeometry;
-    partial_match: boolean;
-    place_id: string;
+    // Add other properties as needed
   }
-
-  interface GeocoderAddressComponent {
-    short_name: string;
-    long_name: string;
-    types: string[];
+  
+  namespace event {
+    function addListenerOnce(instance: any, eventName: string, handler: Function): MapsEventListener;
   }
-
-  interface GeocoderGeometry {
-    location: LatLng;
-    location_type: string;
-    viewport: LatLngBounds;
-    bounds?: LatLngBounds;
+  
+  class MapsEventListener {
+    remove(): void;
   }
 }

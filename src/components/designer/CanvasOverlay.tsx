@@ -22,7 +22,7 @@ export const CanvasOverlay: React.FC<CanvasOverlayProps> = ({
   onStatsUpdate
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [canvas, setCanvas] = React.useState<fabric.Canvas | null>(null);
+  const fabricCanvasRef = useRef<fabric.Canvas | null>(null);
   
   const isDrawingRef = useRef(false);
   const startPointRef = useRef<{ x: number; y: number } | null>(null);
@@ -31,6 +31,8 @@ export const CanvasOverlay: React.FC<CanvasOverlayProps> = ({
   // Initialize canvas after map is loaded
   useEffect(() => {
     if (!mapLoaded || !canvasRef.current || !mapRef.current) return;
+    
+    console.log("Initializing canvas overlay");
     
     // Make sure the canvas is properly sized and positioned
     const width = mapRef.current.clientWidth;
@@ -53,6 +55,7 @@ export const CanvasOverlay: React.FC<CanvasOverlayProps> = ({
     
     // Make canvas accessible globally for map interaction
     window.designCanvas = canvasInstance;
+    fabricCanvasRef.current = canvasInstance;
     
     // Ensure canvas matches map dimensions
     const resizeCanvas = () => {
@@ -72,19 +75,19 @@ export const CanvasOverlay: React.FC<CanvasOverlayProps> = ({
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
     
-    setCanvas(canvasInstance);
-    
-    // Log canvas creation
     console.log("Canvas created successfully", canvasInstance);
     
     return () => {
       window.removeEventListener('resize', resizeCanvas);
       canvasInstance.dispose();
+      fabricCanvasRef.current = null;
+      window.designCanvas = null;
     };
   }, [mapLoaded, mapRef]);
   
   // Handle tool changes and set up drawing events
   useEffect(() => {
+    const canvas = fabricCanvasRef.current;
     if (!canvas) return;
     
     console.log("Tool changed to:", activeTool);
@@ -164,10 +167,11 @@ export const CanvasOverlay: React.FC<CanvasOverlayProps> = ({
         canvas.off("mouse:up");
       }
     };
-  }, [activeTool, canvas]);
+  }, [activeTool]);
   
   // Update stats when objects change
   useEffect(() => {
+    const canvas = fabricCanvasRef.current;
     if (!canvas || !onStatsUpdate) return;
     
     const updateStats = () => {
@@ -220,7 +224,7 @@ export const CanvasOverlay: React.FC<CanvasOverlayProps> = ({
       canvas.off('object:removed', updateStats);
       canvas.off('object:modified', updateStats);
     };
-  }, [canvas, onStatsUpdate]);
+  }, [onStatsUpdate]);
 
   return (
     <canvas 

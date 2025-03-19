@@ -1,3 +1,4 @@
+
 import { fabric } from "fabric";
 import { toast } from "sonner";
 
@@ -33,6 +34,11 @@ export const createDrawingHandlers = (
   const startDrawing = (options: fabric.IEvent<MouseEvent>) => {
     if (!canvas || !options.pointer) {
       console.error("Cannot start drawing: Canvas or pointer is null");
+      return;
+    }
+    
+    // Only start drawing if we're in building or panel mode
+    if (activeTool !== "building" && activeTool !== "panel") {
       return;
     }
     
@@ -123,7 +129,7 @@ export const createDrawingHandlers = (
     console.log("Finishing drawing", tempRectRef.current);
     
     if (tempRectRef.current.width && tempRectRef.current.height && 
-        tempRectRef.current.width > 0 && tempRectRef.current.height > 0) {
+        tempRectRef.current.width > 10 && tempRectRef.current.height > 10) {
       // Use more visible colors for buildings and panels
       const fillColor = activeTool === "building" ? 'rgba(149, 165, 166, 0.7)' : 'rgba(52, 152, 219, 0.7)';
       const strokeColor = activeTool === "building" ? '#7f8c8d' : '#2980b9';
@@ -138,10 +144,10 @@ export const createDrawingHandlers = (
         stroke: strokeColor,
         strokeWidth: 2,
         selectable: activeTool === "select",
+        objectType: activeTool === "building" ? "building" : "panel"
       };
       
       const finalRect = new fabric.Rect(objectOptions);
-      finalRect.set('objectType', activeTool === "building" ? "building" : "panel");
       canvas.add(finalRect);
       
       // Add a label to identify the object type
@@ -162,6 +168,8 @@ export const createDrawingHandlers = (
       } else {
         toast.success("Building created");
       }
+    } else {
+      toast.error("Drawing too small. Please create a larger shape.");
     }
     
     // Clean up temporary rectangle

@@ -1,7 +1,6 @@
 
-import React, { useEffect, useRef } from "react";
-import { Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import React, { useEffect } from "react";
+import { Loader } from "lucide-react";
 
 interface MapContainerProps {
   apiKey: string;
@@ -16,115 +15,74 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   onMapLoaded,
   onMapError
 }) => {
-  const mapLoadedRef = useRef(false);
-
+  // Load Google Maps API and initialize map
   useEffect(() => {
-    if (!apiKey || !mapRef.current || mapLoadedRef.current) return;
+    if (!apiKey || !mapRef.current) return;
     
-    // Load Google Maps API
-    const loadGoogleMaps = () => {
-      if (window.google?.maps) {
-        // If Google Maps is already loaded
-        initializeMap();
-        return;
-      }
-      
-      // Remove any existing Google Maps scripts to avoid conflicts
-      const existingScripts = document.querySelectorAll('script[src*="maps.googleapis.com"]');
-      existingScripts.forEach(script => script.remove());
-      
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initMap`;
-      script.async = true;
-      script.defer = true;
-      script.onerror = () => {
-        onMapError("Failed to load Google Maps API. Please check your API key.");
-        toast.error("Failed to load Google Maps API. Please check your API key.");
-      };
-      
-      window.initMap = initializeMap;
-      document.head.appendChild(script);
-    };
-
-    // Initialize map
-    const initializeMap = () => {
-      if (!mapRef.current) return;
-      
+    // Define init function in global scope for Google Maps callback
+    window.initMap = () => {
       try {
-        const defaultLocation = { lat: 37.773972, lng: -122.431297 }; // San Francisco
+        if (!mapRef.current) {
+          throw new Error("Map container not found");
+        }
         
+        // Create map instance
         const map = new window.google.maps.Map(mapRef.current, {
-          center: defaultLocation,
-          zoom: 20,
-          mapTypeId: 'satellite',
+          center: { lat: 37.7749, lng: -122.4194 }, // Default to San Francisco
+          zoom: 19, // Higher zoom level for better detail
+          mapTypeId: window.google.maps.MapTypeId.HYBRID, // Satellite with labels
+          tilt: 0, // No 3D tilt for better drawing surface
           disableDefaultUI: false,
           zoomControl: true,
           mapTypeControl: true,
-          streetViewControl: false,
+          scaleControl: true,
           rotateControl: false,
           fullscreenControl: true,
-          gestureHandling: 'cooperative', // This helps with preventing gesture conflicts
-          draggable: true // We control this dynamically
+          streetViewControl: false,
+          clickableIcons: false,
+          gestureHandling: "greedy", // Allow one-finger pan on mobile
+          draggable: true, // Will be disabled during drawing mode
         });
         
-        // Store map in window for access
+        // Make map instance available globally
         window.solarDesignerMap = map;
         
-        // Add search box for locations
-        const searchBox = new window.google.maps.places.SearchBox(
-          document.getElementById('map-search-input') as HTMLInputElement
-        );
-        
-        // Bias search box to current map bounds
-        map.addListener('bounds_changed', () => {
-          searchBox.setBounds(map.getBounds() as google.maps.LatLngBounds);
+        // Add event listener for when the map is fully loaded
+        window.google.maps.event.addListenerOnce(map, "idle", () => {
+          console.log("Google Maps fully loaded");
+          onMapLoaded();
         });
         
-        // Listen for search box events
-        searchBox.addListener('places_changed', () => {
-          const places = searchBox.getPlaces();
-          if (!places || places.length === 0) return;
-          
-          const bounds = new window.google.maps.LatLngBounds();
-          places.forEach(place => {
-            if (!place.geometry || !place.geometry.location) return;
-            
-            if (place.geometry.viewport) {
-              bounds.union(place.geometry.viewport);
-            } else {
-              bounds.extend(place.geometry.location);
-            }
-          });
-          
-          map.fitBounds(bounds);
-          // Zoom in more for better satellite detail
-          setTimeout(() => {
-            map.setZoom(20);
-          }, 500);
-        });
-        
-        // Disable map controls when drawing
-        map.addListener('dragstart', () => {
-          if (window.isDrawingMode && window.designCanvas) {
-            map.setOptions({ draggable: false });
-          }
-        });
-        
-        mapLoadedRef.current = true;
-        onMapLoaded();
-        toast.success("Map loaded successfully");
-        
-        // Log successful map creation
-        console.log("Map created successfully");
       } catch (error) {
-        console.error("Map initialization error:", error);
-        onMapError("Failed to initialize Google Maps. Please check your API key.");
-        toast.error("Failed to initialize Google Maps. Please check your API key.");
+        console.error("Error initializing map:", error);
+        onMapError(error.message || "Failed to initialize map");
       }
     };
     
-    loadGoogleMaps();
+    // Load Google Maps API
+    try {
+      if (!window.google || !window.google.maps) {
+        const script = document.createElement("script");
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap&libraries=places`;
+        script.async = true;
+        script.defer = true;
+        script.onerror = () => onMapError("Failed to load Google Maps API");
+        document.head.appendChild(script);
+      } else {
+        // API already loaded, initialize map directly
+        window.initMap();
+      }
+    } catch (error) {
+      console.error("Error loading Google Maps API:", error);
+      onMapError(error.message || "Failed to load Google Maps API");
+    }
+    
+    return () => {
+      // Clean up
+      delete window.initMap;
+      delete window.solarDesignerMap;
+    };
   }, [apiKey, mapRef, onMapLoaded, onMapError]);
-
-  return null; // This is just a container for the map functionality
+  
+  return null; // No visible component, just functionality
 };

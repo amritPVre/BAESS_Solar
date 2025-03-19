@@ -91,10 +91,10 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
 // Add Window interface extension for Google Maps and Canvas
 declare global {
   interface Window {
-    google: typeof google;
+    google: any;
     initMap: () => void;
     solarDesignerMap: google.maps.Map;
-    designCanvas: fabric.Canvas;
+    designCanvas: fabric.Canvas | null;
     isDrawingMode: boolean;
   }
 }
