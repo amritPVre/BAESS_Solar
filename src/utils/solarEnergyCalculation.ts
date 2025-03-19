@@ -76,7 +76,7 @@ export const calculateSolarEnergy = (params: SolarParams): SolarCalculationResul
   let effective_capacity = plant_capacity_kw;
   let effective_performance_ratio = performance_ratio; // Create a new variable instead of modifying the constant
   
-  if (inverterParams) {
+  if (inverterParams && inverterParams.configuration && inverterParams.specifications) {
     number_of_inverters = inverterParams.configuration.num_inverters;
     inverter_dc_ac_ratio = inverterParams.configuration.dc_ac_ratio;
     inverter_efficiency = inverterParams.specifications.max_efficiency;
@@ -137,7 +137,7 @@ export const calculateSolarEnergy = (params: SolarParams): SolarCalculationResul
   );
 
   // Apply inverter clipping if configuration is available
-  if (inverterParams) {
+  if (inverterParams && inverterParams.specifications) {
     const max_ac_power_per_inverter = inverterParams.specifications.nominal_ac_power;
     const max_total_ac_power = max_ac_power_per_inverter * number_of_inverters;
     
@@ -174,22 +174,22 @@ export const calculateSolarEnergy = (params: SolarParams): SolarCalculationResul
   // Create result object
   return {
     irradiation: {
-      daily: daily_gii.map((value, index) => ({ Date: new Date(2023, index, 15), 'Daily Solar Irradiation (kWh/m²)': value })),
       monthly: monthly_gii_with_names,
       metrics: {
         max_daily: Math.max(...daily_gii),
         min_daily: Math.min(...daily_gii),
         total_yearly: yearly_irradiation
-      }
+      },
+      daily: daily_gii.map((value, index) => ({ Date: new Date(2023, index, 15), 'Daily Solar Irradiation (kWh/m²)': value }))
     },
     energy: {
-      daily: daily_energy.map((value, index) => ({ Date: new Date(2023, index, 15), 'Daily Energy Production (kWh)': value * total_area })),
       monthly: monthly_energy_with_names,
       metrics: {
         max_daily: Math.max(...daily_energy) * total_area,
         min_daily: Math.min(...daily_energy) * total_area,
         total_yearly: yearly_energy_production
-      }
+      },
+      daily: daily_energy.map((value, index) => ({ Date: new Date(2023, index, 15), 'Daily Energy Production (kWh)': value * total_area }))
     },
     system: {
       total_modules: total_modules,
@@ -200,6 +200,8 @@ export const calculateSolarEnergy = (params: SolarParams): SolarCalculationResul
       number_of_inverters: number_of_inverters,
       inverter_efficiency: inverter_efficiency
     },
-    yearlyProduction: yearly_production
+    yearlyProduction: yearly_production,
+    location: { lat: latitude, lng: longitude },
+    timezone: timezone
   };
 };

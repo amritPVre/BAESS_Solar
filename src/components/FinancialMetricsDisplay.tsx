@@ -184,9 +184,9 @@ const FinancialMetricsDisplay: React.FC<FinancialMetricsDisplayProps> = ({
                   height={350}
                   yTickFormatter={(value) => `${currencySymbol}${formatNumber(value)}`}
                   legend={[
-                    { color: "#4CB571", label: summary.revenue_type },
-                    { color: "#FF9F1C", label: "O&M Expenses" },
-                    { color: "#0496FF", label: "Net Cash Flow" }
+                    { key: "revenue", color: "#4CB571", label: summary.revenue_type },
+                    { key: "expenses", color: "#FF9F1C", label: "O&M Expenses" },
+                    { key: "net", color: "#0496FF", label: "Net Cash Flow" }
                   ]}
                 />
               </div>

@@ -5,6 +5,14 @@ export interface InverterParams {
   efficiency: number;
   count: number;
   dcRatio: number;
+  configuration?: {
+    num_inverters: number;
+    dc_ac_ratio: number;
+  };
+  specifications?: {
+    nominal_ac_power: number;
+    max_efficiency: number;
+  };
 }
 
 export interface SystemDetails {
@@ -29,6 +37,7 @@ export interface IrradiationData {
     min_daily: number;
     total_yearly: number;
   };
+  daily?: { Date: Date; "Daily Solar Irradiation (kWh/m²)": number }[];
 }
 
 export interface EnergyData {
@@ -38,6 +47,7 @@ export interface EnergyData {
     min_daily: number;
     total_yearly: number;
   };
+  daily?: { Date: Date; "Daily Energy Production (kWh)": number }[];
 }
 
 export interface SolarParams {

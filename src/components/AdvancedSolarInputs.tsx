@@ -11,32 +11,50 @@ import InverterConfiguration from "./InverterConfiguration";
 import { InverterParams } from "@/types/solarCalculations";
 
 interface AdvancedSolarInputsProps {
-  latitude: number;
-  longitude: number;
-  setLatitude: (lat: number) => void;
-  setLongitude: (lng: number) => void;
-  timezone: string;
-  setTimezone: (tz: string) => void;
-  capacity: number;
-  setCapacity: (capacity: number) => void;
   onCalculationComplete: (results: SolarCalculationResult) => void;
+  latitude?: number;
+  longitude?: number;
+  setLatitude?: (lat: number) => void;
+  setLongitude?: (lng: number) => void;
+  timezone?: string;
+  setTimezone?: (tz: string) => void;
+  capacity?: number;
+  setCapacity?: (capacity: number) => void;
   country?: string;
   city?: string;
 }
 
 const AdvancedSolarInputs: React.FC<AdvancedSolarInputsProps> = ({
-  latitude,
-  longitude,
-  setLatitude,
-  setLongitude,
-  timezone,
-  setTimezone,
-  capacity,
-  setCapacity,
   onCalculationComplete,
+  latitude: propLatitude,
+  longitude: propLongitude,
+  setLatitude: propSetLatitude,
+  setLongitude: propSetLongitude,
+  timezone: propTimezone,
+  setTimezone: propSetTimezone,
+  capacity: propCapacity,
+  setCapacity: propSetCapacity,
   country = "United States",
   city = "New York"
 }) => {
+  // Use props if provided, otherwise use local state
+  const [localLatitude, setLocalLatitude] = useState(40.7128); // New York default
+  const [localLongitude, setLocalLongitude] = useState(-74.0060); // New York default
+  const [localTimezone, setLocalTimezone] = useState("America/New_York");
+  const [localCapacity, setLocalCapacity] = useState(10);
+  
+  // Use either the props or local state getters
+  const latitude = propLatitude !== undefined ? propLatitude : localLatitude;
+  const longitude = propLongitude !== undefined ? propLongitude : localLongitude;
+  const timezone = propTimezone !== undefined ? propTimezone : localTimezone;
+  const capacity = propCapacity !== undefined ? propCapacity : localCapacity;
+  
+  // Use either the props or local state setters
+  const setLatitude = propSetLatitude || setLocalLatitude;
+  const setLongitude = propSetLongitude || setLocalLongitude;
+  const setTimezone = propSetTimezone || setLocalTimezone;
+  const setCapacity = propSetCapacity || setLocalCapacity;
+  
   // System parameters
   const [tilt, setTilt] = useState(30);
   const [azimuth, setAzimuth] = useState(180); // 180 = south
@@ -72,6 +90,10 @@ const AdvancedSolarInputs: React.FC<AdvancedSolarInputsProps> = ({
       
       // Calculate solar energy
       const calculationResults = calculateSolarEnergy(params);
+      
+      // Add location and timezone to results for use in other components
+      calculationResults.location = { lat: latitude, lng: longitude };
+      calculationResults.timezone = timezone;
       
       // Update capacity to match calculated capacity
       setCapacity(calculationResults.system.calculated_capacity);

@@ -29,10 +29,10 @@ const COMMON_INVERTERS = [
 const InverterConfiguration: React.FC<InverterConfigurationProps> = ({ onConfigChange, initialConfig }) => {
   const [useInverter, setUseInverter] = useState(!!initialConfig);
   const [selectedInverter, setSelectedInverter] = useState(initialConfig ? "Custom" : COMMON_INVERTERS[0].name);
-  const [acPower, setAcPower] = useState(initialConfig?.specifications.nominal_ac_power || COMMON_INVERTERS[0].ac_power);
-  const [efficiency, setEfficiency] = useState(initialConfig?.specifications.max_efficiency || COMMON_INVERTERS[0].max_efficiency);
-  const [numInverters, setNumInverters] = useState(initialConfig?.configuration.num_inverters || 1);
-  const [dcAcRatio, setDcAcRatio] = useState(initialConfig?.configuration.dc_ac_ratio || 1.2);
+  const [acPower, setAcPower] = useState(initialConfig?.specifications?.nominal_ac_power || COMMON_INVERTERS[0].ac_power);
+  const [efficiency, setEfficiency] = useState(initialConfig?.specifications?.max_efficiency || COMMON_INVERTERS[0].max_efficiency);
+  const [numInverters, setNumInverters] = useState(initialConfig?.configuration?.num_inverters || 1);
+  const [dcAcRatio, setDcAcRatio] = useState(initialConfig?.configuration?.dc_ac_ratio || 1.2);
 
   const handleInverterChange = (value: string) => {
     setSelectedInverter(value);
@@ -60,13 +60,18 @@ const InverterConfiguration: React.FC<InverterConfigurationProps> = ({ onConfigC
     if (!useInverter) return;
     
     const config: InverterParams = {
-      configuration: {
-        num_inverters: numInverters,
-        dc_ac_ratio: dcAcRatio
-      },
+      model: selectedInverter,
+      power: acPower,
+      efficiency: efficiency,
+      count: numInverters,
+      dcRatio: dcAcRatio,
       specifications: {
         nominal_ac_power: acPower,
         max_efficiency: efficiency
+      },
+      configuration: {
+        num_inverters: numInverters,
+        dc_ac_ratio: dcAcRatio
       }
     };
     

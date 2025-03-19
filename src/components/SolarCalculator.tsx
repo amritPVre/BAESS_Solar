@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -171,6 +170,11 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSavePr
     }
   }, [projectData]);
   
+  // State for location parameters
+  const [latitude, setLatitude] = useState(40.7128); // Default to New York
+  const [longitude, setLongitude] = useState(-74.0060);
+  const [solarTimezone, setSolarTimezone] = useState("America/New_York");
+  
   // Handle advanced calculation completion
   const handleAdvancedCalculationComplete = (results: SolarCalculationResult) => {
     setAdvancedCalculationResults(results);
@@ -180,6 +184,17 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSavePr
     
     // Set yearly production
     setYearlyProduction(results.yearlyProduction);
+    
+    // Update location if available
+    if (results.location) {
+      setLatitude(results.location.lat);
+      setLongitude(results.location.lng);
+    }
+    
+    // Update timezone if available
+    if (results.timezone) {
+      setSolarTimezone(results.timezone);
+    }
     
     // Move to next step
     setActiveTab("electricity");
@@ -604,6 +619,14 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSavePr
           
           <TabsContent value="advanced" className="space-y-8 mt-2">
             <AdvancedSolarInputs
+              latitude={latitude}
+              longitude={longitude}
+              setLatitude={setLatitude}
+              setLongitude={setLongitude}
+              timezone={solarTimezone}
+              setTimezone={setSolarTimezone}
+              capacity={systemSize}
+              setCapacity={setSystemSize}
               onCalculationComplete={handleAdvancedCalculationComplete}
             />
             
