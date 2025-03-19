@@ -18,12 +18,9 @@ const SolarDesigner: React.FC = () => {
     panelCount: 0
   });
   
-  // Function to update stats based on canvas objects (will be passed down to DesignCanvas)
-  const updateDesignStats = (stats: Partial<typeof designStats>) => {
-    setDesignStats(prev => ({
-      ...prev,
-      ...stats
-    }));
+  // Function to update stats based on canvas objects
+  const updateDesignStats = (stats: typeof designStats) => {
+    setDesignStats(stats);
   };
   
   const handleSaveDesign = () => {
@@ -120,7 +117,10 @@ const SolarDesigner: React.FC = () => {
         <div className="lg:col-span-3">
           <Card className="bg-gradient-to-b from-white to-gray-50 shadow-sm border border-gray-200">
             <CardContent className="p-4">
-              <DesignCanvas activeTool={activeTool} />
+              <DesignCanvas 
+                activeTool={activeTool} 
+                onStatsUpdate={updateDesignStats}
+              />
             </CardContent>
           </Card>
           

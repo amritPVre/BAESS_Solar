@@ -8,9 +8,18 @@ import { Input } from "@/components/ui/input";
 
 interface DesignCanvasProps {
   activeTool: "select" | "building" | "panel" | "delete";
+  onStatsUpdate?: (stats: {
+    totalPanelArea: number;
+    estimatedCapacity: number;
+    buildingCount: number;
+    panelCount: number;
+  }) => void;
 }
 
-export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
+export const DesignCanvas: React.FC<DesignCanvasProps> = ({ 
+  activeTool,
+  onStatsUpdate 
+}) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mapRef = useRef<HTMLDivElement>(null);
   const [canvas, setCanvas] = useState<fabric.Canvas | null>(null);
@@ -77,7 +86,8 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
           streetViewControl: false,
           rotateControl: false,
           fullscreenControl: true,
-          gestureHandling: 'cooperative' // This helps with preventing gesture conflicts
+          gestureHandling: 'cooperative', // This helps with preventing gesture conflicts
+          draggable: true // We control this dynamically
         });
         
         // Store map in window for access
@@ -126,6 +136,9 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
         setMapLoaded(true);
         setMapError(null);
         toast.success("Map loaded successfully");
+        
+        // Log successful map creation
+        console.log("Map created successfully");
       } catch (error) {
         console.error("Map initialization error:", error);
         setMapError("Failed to initialize Google Maps. Please check your API key.");
@@ -142,8 +155,13 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
     
     // Make sure the canvas is properly sized and positioned
     if (mapRef.current) {
-      canvasRef.current.width = mapRef.current.clientWidth;
-      canvasRef.current.height = mapRef.current.clientHeight;
+      const width = mapRef.current.clientWidth;
+      const height = mapRef.current.clientHeight;
+      
+      canvasRef.current.width = width;
+      canvasRef.current.height = height;
+      
+      console.log(`Setting canvas size to: ${width}x${height}`);
     }
     
     const canvasInstance = new fabric.Canvas(canvasRef.current, {
@@ -166,6 +184,8 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
       canvasInstance.setWidth(width);
       canvasInstance.setHeight(height);
       canvasInstance.renderAll();
+      
+      console.log(`Canvas resized to: ${width}x${height}`);
     };
     
     // Set initial size and add resize listener
@@ -227,6 +247,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
       // Disable Google Maps dragging when in drawing mode
       if (window.solarDesignerMap) {
         window.solarDesignerMap.setOptions({ draggable: false });
+        console.log("Map dragging disabled for drawing mode");
       }
       
       canvas.on("mouse:down", startDrawing);
@@ -238,6 +259,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
       // Re-enable Google Maps dragging when not in drawing mode
       if (window.solarDesignerMap) {
         window.solarDesignerMap.setOptions({ draggable: true });
+        console.log("Map dragging re-enabled");
       }
     }
     
@@ -251,6 +273,62 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
       }
     };
   }, [activeTool, canvas]);
+  
+  // Update stats when objects change
+  useEffect(() => {
+    if (!canvas || !onStatsUpdate) return;
+    
+    const updateStats = () => {
+      const objects = canvas.getObjects();
+      
+      // Count buildings and panels
+      let buildingCount = 0;
+      let panelCount = 0;
+      let totalPanelArea = 0;
+      
+      objects.forEach(obj => {
+        // Skip text objects
+        if (obj instanceof fabric.Text) return;
+        
+        const objectType = obj.get('objectType');
+        if (objectType === 'building') {
+          buildingCount++;
+        } else if (objectType === 'panel') {
+          panelCount++;
+          
+          // Calculate panel area if it has width and height
+          if (obj.width && obj.height) {
+            const area = calculatePanelArea(obj.width, obj.height);
+            totalPanelArea += area;
+          }
+        }
+      });
+      
+      // Calculate estimated capacity
+      const estimatedCapacity = estimateKwCapacity(totalPanelArea);
+      
+      onStatsUpdate({
+        totalPanelArea,
+        estimatedCapacity,
+        buildingCount,
+        panelCount
+      });
+    };
+    
+    // Add event listeners for object modifications
+    canvas.on('object:added', updateStats);
+    canvas.on('object:removed', updateStats);
+    canvas.on('object:modified', updateStats);
+    
+    // Initial update
+    updateStats();
+    
+    return () => {
+      canvas.off('object:added', updateStats);
+      canvas.off('object:removed', updateStats);
+      canvas.off('object:modified', updateStats);
+    };
+  }, [canvas, onStatsUpdate]);
   
   // Snap point to grid
   const snapToGrid = (point: { x: number; y: number }, gridSize = 20) => {
@@ -270,8 +348,10 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
     console.log("Starting to draw", activeTool, options.pointer);
     
     // Prevent event propagation to Google Maps
-    options.e.preventDefault();
-    options.e.stopPropagation();
+    if (options.e) {
+      options.e.preventDefault();
+      options.e.stopPropagation();
+    }
     
     const pointer = options.pointer;
     const snappedPoint = snapToGrid(pointer);

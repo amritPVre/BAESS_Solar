@@ -14,6 +14,7 @@ declare namespace google.maps {
     getBounds(): LatLngBounds | undefined;
     fitBounds(bounds: LatLngBounds | LatLngBoundsLiteral, padding?: number | Padding): void;
     addListener(eventName: string, handler: (...args: any[]) => void): MapsEventListener;
+    setOptions(options: MapOptions): void;
   }
 
   interface MapOptions {
@@ -26,6 +27,8 @@ declare namespace google.maps {
     streetViewControl?: boolean;
     rotateControl?: boolean;
     fullscreenControl?: boolean;
+    gestureHandling?: 'cooperative' | 'greedy' | 'none' | 'auto';
+    draggable?: boolean;
   }
 
   class LatLng {
