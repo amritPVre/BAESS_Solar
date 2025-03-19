@@ -1,8 +1,10 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import { fabric } from "fabric";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 interface DesignCanvasProps {
   activeTool: "select" | "building" | "panel" | "delete";
@@ -13,8 +15,11 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const [canvas, setCanvas] = useState<fabric.Canvas | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
   const [address, setAddress] = useState("");
   const [searchingAddress, setSearchingAddress] = useState(false);
+  const [apiKey, setApiKey] = useState<string>("");
+  const [apiKeyEntered, setApiKeyEntered] = useState(false);
   
   const isDrawingRef = useRef(false);
   const startPointRef = useRef<{ x: number; y: number } | null>(null);
@@ -22,80 +27,100 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
   
   // Initialize Google Maps
   useEffect(() => {
+    if (!apiKeyEntered || !apiKey) return;
+    
     // Load Google Maps API
     const loadGoogleMaps = () => {
-      if (!window.google) {
-        const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=&libraries=places&callback=initMap`;
-        script.async = true;
-        script.defer = true;
-        window.initMap = initializeMap;
-        document.head.appendChild(script);
-      } else {
+      if (window.google?.maps) {
+        // If Google Maps is already loaded
         initializeMap();
+        return;
       }
+      
+      // Remove any existing Google Maps scripts to avoid conflicts
+      const existingScripts = document.querySelectorAll('script[src*="maps.googleapis.com"]');
+      existingScripts.forEach(script => script.remove());
+      
+      const script = document.createElement('script');
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initMap`;
+      script.async = true;
+      script.defer = true;
+      script.onerror = () => {
+        setMapError("Failed to load Google Maps API. Please check your API key.");
+        toast.error("Failed to load Google Maps API. Please check your API key.");
+      };
+      
+      window.initMap = initializeMap;
+      document.head.appendChild(script);
     };
 
     // Initialize map
     const initializeMap = () => {
       if (!mapRef.current) return;
       
-      const defaultLocation = { lat: 37.773972, lng: -122.431297 }; // San Francisco
-      
-      const map = new window.google.maps.Map(mapRef.current, {
-        center: defaultLocation,
-        zoom: 20,
-        mapTypeId: 'satellite',
-        disableDefaultUI: false,
-        zoomControl: true,
-        mapTypeControl: true,
-        streetViewControl: false,
-        rotateControl: false,
-        fullscreenControl: true,
-      });
-      
-      // Store map in window for access
-      window.solarDesignerMap = map;
-      
-      // Add search box for locations
-      const searchBox = new window.google.maps.places.SearchBox(
-        document.getElementById('map-search-input') as HTMLInputElement
-      );
-      
-      // Bias search box to current map bounds
-      map.addListener('bounds_changed', () => {
-        searchBox.setBounds(map.getBounds() as google.maps.LatLngBounds);
-      });
-      
-      // Listen for search box events
-      searchBox.addListener('places_changed', () => {
-        const places = searchBox.getPlaces();
-        if (!places || places.length === 0) return;
+      try {
+        const defaultLocation = { lat: 37.773972, lng: -122.431297 }; // San Francisco
         
-        const bounds = new window.google.maps.LatLngBounds();
-        places.forEach(place => {
-          if (!place.geometry || !place.geometry.location) return;
-          
-          if (place.geometry.viewport) {
-            bounds.union(place.geometry.viewport);
-          } else {
-            bounds.extend(place.geometry.location);
-          }
+        const map = new window.google.maps.Map(mapRef.current, {
+          center: defaultLocation,
+          zoom: 20,
+          mapTypeId: 'satellite',
+          disableDefaultUI: false,
+          zoomControl: true,
+          mapTypeControl: true,
+          streetViewControl: false,
+          rotateControl: false,
+          fullscreenControl: true,
         });
         
-        map.fitBounds(bounds);
-        // Zoom in more for better satellite detail
-        setTimeout(() => {
-          map.setZoom(20);
-        }, 500);
-      });
-      
-      setMapLoaded(true);
-      toast.success("Map loaded successfully");
+        // Store map in window for access
+        window.solarDesignerMap = map;
+        
+        // Add search box for locations
+        const searchBox = new window.google.maps.places.SearchBox(
+          document.getElementById('map-search-input') as HTMLInputElement
+        );
+        
+        // Bias search box to current map bounds
+        map.addListener('bounds_changed', () => {
+          searchBox.setBounds(map.getBounds() as google.maps.LatLngBounds);
+        });
+        
+        // Listen for search box events
+        searchBox.addListener('places_changed', () => {
+          const places = searchBox.getPlaces();
+          if (!places || places.length === 0) return;
+          
+          const bounds = new window.google.maps.LatLngBounds();
+          places.forEach(place => {
+            if (!place.geometry || !place.geometry.location) return;
+            
+            if (place.geometry.viewport) {
+              bounds.union(place.geometry.viewport);
+            } else {
+              bounds.extend(place.geometry.location);
+            }
+          });
+          
+          map.fitBounds(bounds);
+          // Zoom in more for better satellite detail
+          setTimeout(() => {
+            map.setZoom(20);
+          }, 500);
+        });
+        
+        setMapLoaded(true);
+        setMapError(null);
+        toast.success("Map loaded successfully");
+      } catch (error) {
+        console.error("Map initialization error:", error);
+        setMapError("Failed to initialize Google Maps. Please check your API key.");
+        toast.error("Failed to initialize Google Maps. Please check your API key.");
+      }
     };
     
     loadGoogleMaps();
-  }, []);
+  }, [apiKey, apiKeyEntered]);
   
   // Initialize canvas after map is loaded
   useEffect(() => {
@@ -197,7 +222,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
   };
   
   // Start drawing
-  const startDrawing = (options: fabric.IEvent) => {
+  const startDrawing = (options: fabric.IEvent<MouseEvent>) => {
     if (!canvas || !options.pointer) return;
     
     const pointer = options.pointer;
@@ -234,7 +259,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
   };
   
   // Draw object while mouse moves
-  const drawObject = (options: fabric.IEvent) => {
+  const drawObject = (options: fabric.IEvent<MouseEvent>) => {
     if (!canvas || !isDrawingRef.current || !startPointRef.current || !tempRectRef.current || !options.pointer) {
       return;
     }
@@ -257,12 +282,13 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
   };
   
   // Finish drawing
-  const finishDrawing = () => {
+  const finishDrawing = (options: fabric.IEvent<MouseEvent>) => {
     if (!canvas || !isDrawingRef.current || !tempRectRef.current) {
       return;
     }
     
-    if (tempRectRef.current.width > 0 && tempRectRef.current.height > 0) {
+    if (tempRectRef.current.width && tempRectRef.current.height && 
+        tempRectRef.current.width > 0 && tempRectRef.current.height > 0) {
       // Use more visible colors for buildings and panels
       const fillColor = activeTool === "building" ? 'rgba(149, 165, 166, 0.7)' : 'rgba(52, 152, 219, 0.7)';
       const strokeColor = activeTool === "building" ? '#7f8c8d' : '#2980b9';
@@ -277,7 +303,6 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
         stroke: strokeColor,
         strokeWidth: 2,
         selectable: activeTool === "select",
-        objectType: activeTool === "building" ? "building" : "panel",
       };
       
       const finalRect = new fabric.Rect(objectOptions);
@@ -297,7 +322,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
       
       // Calculate area if it's a solar panel
       if (activeTool === "panel") {
-        const areaInSquareMeters = calculatePanelArea(finalRect.width, finalRect.height);
+        const areaInSquareMeters = calculatePanelArea(finalRect.width || 0, finalRect.height || 0);
         toast.success(`Solar panel placed: ${areaInSquareMeters.toFixed(1)} m² (${estimateKwCapacity(areaInSquareMeters).toFixed(2)} kW)`);
       } else {
         toast.success("Building created");
@@ -305,8 +330,10 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
     }
     
     // Clean up temporary rectangle
-    canvas.remove(tempRectRef.current);
-    tempRectRef.current = null;
+    if (tempRectRef.current) {
+      canvas.remove(tempRectRef.current);
+      tempRectRef.current = null;
+    }
     
     isDrawingRef.current = false;
     startPointRef.current = null;
@@ -315,7 +342,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
   };
   
   // Delete object
-  const deleteObject = (options: fabric.IEvent) => {
+  const deleteObject = (options: fabric.IEvent<MouseEvent>) => {
     if (!canvas || activeTool !== "delete") return;
     
     const target = options.target;
@@ -361,30 +388,75 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
     });
   };
   
+  // Handle API key submission
+  const handleApiKeySubmit = () => {
+    if (!apiKey.trim()) {
+      toast.error("Please enter a valid Google Maps API key");
+      return;
+    }
+    
+    setApiKeyEntered(true);
+    toast.success("API key saved");
+  };
+  
   return (
     <div className="design-canvas-container relative w-full h-[600px] overflow-hidden rounded-md border-2 border-gray-200 shadow-sm">
+      {!apiKeyEntered ? (
+        <div className="absolute inset-0 flex flex-col items-center justify-center p-6 bg-white z-20">
+          <div className="max-w-md w-full space-y-4 text-center">
+            <h3 className="text-lg font-medium">Google Maps API Key Required</h3>
+            <p className="text-sm text-muted-foreground">
+              To use the Solar Designer tool, you need a Google Maps API key with Maps JavaScript API and Places API enabled.
+            </p>
+            <div className="flex flex-col space-y-3">
+              <Input
+                type="text"
+                placeholder="Enter your Google Maps API key"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                className="w-full"
+              />
+              <Button onClick={handleApiKeySubmit}>
+                Apply API Key
+              </Button>
+            </div>
+            <div className="text-xs text-muted-foreground mt-4">
+              <p>To get an API key:</p>
+              <ol className="text-left list-decimal pl-5 mt-2 space-y-1">
+                <li>Go to the <a href="https://console.cloud.google.com/google/maps-apis/overview" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Google Cloud Console</a></li>
+                <li>Create a project or select an existing one</li>
+                <li>Enable the Maps JavaScript API and Places API</li>
+                <li>Create an API key and copy it here</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      
       {/* Map search controls */}
-      <div className="absolute top-2 left-2 z-10 bg-white p-2 rounded-md shadow-sm flex gap-2 items-center">
-        <input
-          id="map-search-input"
-          type="text"
-          placeholder="Enter location or address"
-          className="px-3 py-1.5 border border-gray-300 rounded-md text-sm w-60"
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSearchAddress()}
-        />
-        <Button 
-          size="sm" 
-          onClick={handleSearchAddress}
-          disabled={searchingAddress}
-        >
-          {searchingAddress ? (
-            <Loader2 className="h-4 w-4 animate-spin mr-1" />
-          ) : null}
-          Search
-        </Button>
-      </div>
+      {apiKeyEntered && (
+        <div className="absolute top-2 left-2 z-10 bg-white p-2 rounded-md shadow-sm flex gap-2 items-center">
+          <input
+            id="map-search-input"
+            type="text"
+            placeholder="Enter location or address"
+            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm w-60"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearchAddress()}
+          />
+          <Button 
+            size="sm" 
+            onClick={handleSearchAddress}
+            disabled={searchingAddress}
+          >
+            {searchingAddress ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-1" />
+            ) : null}
+            Search
+          </Button>
+        </div>
+      )}
       
       {/* Map container */}
       <div 
@@ -410,8 +482,15 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
         </p>
       </div>
       
+      {/* Error display */}
+      {mapError && (
+        <div className="absolute bottom-0 left-0 right-0 bg-red-100 text-red-800 p-2 text-sm">
+          {mapError}
+        </div>
+      )}
+      
       {/* Loading indicator */}
-      {!mapLoaded && (
+      {apiKeyEntered && !mapLoaded && !mapError && (
         <div className="absolute inset-0 flex items-center justify-center bg-white/80">
           <div className="flex flex-col items-center">
             <Loader2 className="h-8 w-8 animate-spin text-solar" />
