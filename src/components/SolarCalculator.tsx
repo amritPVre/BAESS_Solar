@@ -18,10 +18,7 @@ import {
   calculateNetPresentValue, 
   calculateInternalRateOfReturn, 
   calculatePaybackPeriod,
-  calculateCO2Reduction,
-  calculateYearlyProduction,
-  calculateYearlyCashFlow,
-  calculateCumulativeCashFlow
+  calculateCO2Reduction
 } from "@/utils/calculations";
 import { 
   FinancialCalculator, 
@@ -69,24 +66,11 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSavePr
   const [knowsAnnualEnergy, setKnowsAnnualEnergy] = useState<boolean | null>(null);
   const [manualAnnualEnergy, setManualAnnualEnergy] = useState<number>(12000);
   
-  // Solar PV Details (Basic)
-  const [systemSize, setSystemSize] = useState(10);
-  const [panelType, setPanelType] = useState("monocrystalline");
-  const [panelEfficiency, setPanelEfficiency] = useState(20);
-  const [inverterType, setInverterType] = useState("string");
-  const [inverterEfficiency, setInverterEfficiency] = useState(97);
-  const [roofType, setRoofType] = useState("asphalt");
-  const [roofAngle, setRoofAngle] = useState(30);
-  const [orientation, setOrientation] = useState("south");
-  const [solarIrradiance, setSolarIrradiance] = useState(5);
-  const [shadingFactor, setShadingFactor] = useState(5);
-  const [location, setLocation] = useState({ lat: 40.7128, lng: -74.0060 });
-  const [timezone, setTimezone] = useState("America/New_York");
-  const [country, setCountry] = useState("United States");
-  const [city, setCity] = useState("New York");
-  
   // Advanced Solar Calculation Results
   const [advancedCalculationResults, setAdvancedCalculationResults] = useState<SolarCalculationResult | null>(null);
+  
+  // System details
+  const [systemSize, setSystemSize] = useState(10);
   
   // Financial Details
   const [systemCost, setSystemCost] = useState(30000);
@@ -132,6 +116,12 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSavePr
   const [activeTab, setActiveTab] = useState("client");
   const [calculating, setCalculating] = useState(false);
   
+  // Initialize financial settings
+  useEffect(() => {
+    // Initialize financial calculator with default settings
+    financialCalculator.initialize_financial_settings();
+  }, [financialCalculator]);
+  
   // Load project data if provided
   useEffect(() => {
     if (projectData) {
@@ -149,19 +139,6 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSavePr
       setManualAnnualEnergy(projectData.manualAnnualEnergy);
       
       setSystemSize(projectData.systemSize);
-      setPanelType(projectData.panelType);
-      setPanelEfficiency(projectData.panelEfficiency);
-      setInverterType(projectData.inverterType);
-      setInverterEfficiency(projectData.inverterEfficiency);
-      setRoofType(projectData.roofType);
-      setRoofAngle(projectData.roofAngle);
-      setOrientation(projectData.orientation);
-      setSolarIrradiance(projectData.solarIrradiance);
-      setShadingFactor(projectData.shadingFactor);
-      setLocation(projectData.location);
-      setTimezone(projectData.timezone);
-      setCountry(projectData.country);
-      setCity(projectData.city);
       
       setSystemCost(projectData.systemCost);
       setElectricityRate(projectData.electricityRate);
@@ -184,9 +161,10 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSavePr
       setCO2Reduction(projectData.co2Reduction);
       setTreesEquivalent(projectData.treesEquivalent);
       setVehicleMilesOffset(projectData.vehicleMilesOffset);
-      setYearlyProduction(projectData.yearlyProduction);
-      setYearlyCashFlow(projectData.yearlyCashFlow);
-      setCumulativeCashFlow(projectData.cumulativeCashFlow);
+      
+      if (projectData.yearlyProduction) setYearlyProduction(projectData.yearlyProduction);
+      if (projectData.yearlyCashFlow) setYearlyCashFlow(projectData.yearlyCashFlow);
+      if (projectData.cumulativeCashFlow) setCumulativeCashFlow(projectData.cumulativeCashFlow);
       
       setShowResults(true);
       setProjectName(projectData.name);
@@ -216,7 +194,7 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSavePr
       electricity_data: electricityData
     }));
     
-    // Update the electricity rate
+    // Update the electricity rate if flat rate
     if (electricityData.tariff.type === "flat" && electricityData.tariff.rate) {
       setElectricityRate(electricityData.tariff.rate);
     }
@@ -300,6 +278,30 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSavePr
         
         setFinancialMetrics(metrics);
         
+        // Save yearly cash flows and production
+        setYearlyCashFlow(metrics.cash_flows);
+        
+        if (advancedCalculationResults) {
+          setYearlyProduction(advancedCalculationResults.yearlyProduction);
+        } else {
+          // Generate synthetic year-by-year production with degradation
+          const syntheticProduction = Array(25).fill(0).map((_, index) => 
+            yearlyGeneration * Math.pow(1 - (degradationRate / 100), index)
+          );
+          setYearlyProduction(syntheticProduction);
+        }
+        
+        // Calculate cumulative cash flow
+        const cumulativeCF = metrics.cash_flows.reduce(
+          (acc: number[], val, idx) => {
+            const prevTotal = idx > 0 ? acc[idx - 1] : 0;
+            acc.push(prevTotal + val);
+            return acc;
+          }, 
+          []
+        );
+        setCumulativeCashFlow(cumulativeCF);
+        
         // Legacy calculations for backward compatibility
         const calculatedLCOE = calculateLevelizedCostOfEnergy(
           netProjectCost,
@@ -341,20 +343,6 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSavePr
           calculatedAnnualRevenue - calculatedAnnualCost
         );
         setPaybackPeriod(calculatedPaybackPeriod);
-        
-        // Save yearly cash flows
-        setYearlyCashFlow(metrics.cash_flows);
-        
-        // Calculate cumulative cash flow
-        const cumulativeCF = metrics.cash_flows.reduce(
-          (acc: number[], val, idx) => {
-            const prevTotal = idx > 0 ? acc[idx - 1] : 0;
-            acc.push(prevTotal + val);
-            return acc;
-          }, 
-          []
-        );
-        setCumulativeCashFlow(cumulativeCF);
         
         // Environmental benefits
         const calculatedCO2Reduction = calculateCO2Reduction(yearlyGeneration);
@@ -406,19 +394,19 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSavePr
           annualEnergy: knowsAnnualEnergy ? manualAnnualEnergy : 
             (advancedCalculationResults ? advancedCalculationResults.energy.metrics.total_yearly : 0),
           systemSize,
-          panelType,
-          panelEfficiency,
-          inverterType,
-          inverterEfficiency,
-          roofType,
-          roofAngle,
-          orientation,
-          solarIrradiance,
-          shadingFactor,
-          location,
-          timezone,
-          country,
-          city,
+          panelType: "monocrystalline", // Default
+          panelEfficiency: 20, // Default
+          inverterType: "string", // Default
+          inverterEfficiency: 97, // Default
+          roofType: "asphalt", // Default
+          roofAngle: 30, // Default
+          orientation: "south", // Default
+          solarIrradiance: 5, // Default
+          shadingFactor: 5, // Default
+          location: advancedCalculationResults?.location || { lat: 40.7128, lng: -74.0060 },
+          timezone: advancedCalculationResults?.timezone || "America/New_York",
+          country: "United States", // Default
+          city: "New York", // Default
           systemCost,
           electricityRate,
           electricityEscalationRate,
@@ -462,19 +450,19 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSavePr
           annualEnergy: knowsAnnualEnergy ? manualAnnualEnergy : 
             (advancedCalculationResults ? advancedCalculationResults.energy.metrics.total_yearly : 0),
           systemSize,
-          panelType,
-          panelEfficiency,
-          inverterType,
-          inverterEfficiency,
-          roofType,
-          roofAngle,
-          orientation,
-          solarIrradiance,
-          shadingFactor,
-          location,
-          timezone,
-          country,
-          city,
+          panelType: "monocrystalline", // Default
+          panelEfficiency: 20, // Default
+          inverterType: "string", // Default
+          inverterEfficiency: 97, // Default
+          roofType: "asphalt", // Default
+          roofAngle: 30, // Default
+          orientation: "south", // Default
+          solarIrradiance: 5, // Default
+          shadingFactor: 5, // Default
+          location: advancedCalculationResults?.location || { lat: 40.7128, lng: -74.0060 },
+          timezone: advancedCalculationResults?.timezone || "America/New_York",
+          country: "United States", // Default
+          city: "New York", // Default
           systemCost,
           electricityRate,
           electricityEscalationRate,
@@ -616,17 +604,7 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSavePr
           
           <TabsContent value="advanced" className="space-y-8 mt-2">
             <AdvancedSolarInputs
-              latitude={location.lat}
-              longitude={location.lng}
-              setLatitude={(lat) => setLocation(prev => ({ ...prev, lat }))}
-              setLongitude={(lng) => setLocation(prev => ({ ...prev, lng }))}
-              timezone={timezone}
-              setTimezone={setTimezone}
-              capacity={systemSize}
-              setCapacity={setSystemSize}
               onCalculationComplete={handleAdvancedCalculationComplete}
-              country={country}
-              city={city}
             />
             
             <div className="flex justify-between mb-10">
@@ -778,14 +756,14 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSavePr
                     companyName={companyName}
                     companyContact={companyContact}
                     systemSize={systemSize}
-                    panelType={panelType}
+                    panelType={"monocrystalline"}
                     co2Reduction={co2Reduction}
                     treesEquivalent={treesEquivalent}
                     vehicleMilesOffset={vehicleMilesOffset}
-                    location={location}
-                    timezone={timezone}
-                    country={country}
-                    city={city}
+                    location={advancedCalculationResults?.location || { lat: 40.7128, lng: -74.0060 }}
+                    timezone={advancedCalculationResults?.timezone || "America/New_York"}
+                    country={"United States"}
+                    city={"New York"}
                   />
 
                   <EnvironmentalBenefits

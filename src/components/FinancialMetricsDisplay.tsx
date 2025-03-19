@@ -1,25 +1,13 @@
 
-import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Download, Info } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import SolarChart from "./ui/SolarChart";
-import { 
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
+import SolarChart from "@/components/ui/SolarChart";
 import { FinancialMetrics } from "@/utils/financialCalculator";
+import { formatNumber } from "@/utils/calculations";
+import { DollarSign, BarChart3, LineChart, TrendingUp, Clock } from "lucide-react";
 
 interface FinancialMetricsDisplayProps {
   financialMetrics: FinancialMetrics;
@@ -30,320 +18,319 @@ const FinancialMetricsDisplay: React.FC<FinancialMetricsDisplayProps> = ({
   financialMetrics,
   currencySymbol
 }) => {
-  const [activeTab, setActiveTab] = useState("dashboard");
-  
-  const formatCurrency = (amount: number): string => {
-    return `${currencySymbol}${amount.toLocaleString(undefined, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    })}`;
-  };
-  
-  const formatNumber = (num: number, digits: number = 2): string => {
-    return num.toLocaleString(undefined, {
-      minimumFractionDigits: digits,
-      maximumFractionDigits: digits
-    });
-  };
-  
-  const isPaybackReached = !isNaN(financialMetrics.payback_period) && 
-                          isFinite(financialMetrics.payback_period) && 
-                          financialMetrics.payback_period <= 25;
-  
-  // Prepare data for cash flow chart
-  const cashFlowChartData = financialMetrics.cash_flows.map((cashFlow, index) => ({
+  const revenueType = financialMetrics.summary.revenue_type;
+  const paybackText = 
+    !isFinite(financialMetrics.payback_period) || financialMetrics.payback_period > 25
+      ? "Project does not reach payback within 25 years"
+      : `${Math.floor(financialMetrics.payback_period)} years and ${Math.round((financialMetrics.payback_period % 1) * 12)} months`;
+
+  // Create cash flow data for charts
+  const cashFlowData = financialMetrics.cash_flows.map((value, index) => ({
     year: index,
-    cashFlow,
-    cumulativeCashFlow: financialMetrics.cash_flows.slice(0, index + 1)
-      .reduce((sum, val) => sum + val, 0)
+    cashFlow: value
   }));
-  
-  // Calculate break-even point for annotation
-  let breakEvenYear = null;
-  let breakEvenValue = null;
-  
-  for (let i = 1; i < cashFlowChartData.length; i++) {
-    if (cashFlowChartData[i-1].cumulativeCashFlow < 0 && 
-        cashFlowChartData[i].cumulativeCashFlow >= 0) {
-      // Interpolate to find exact break-even point
-      const prev = cashFlowChartData[i-1];
-      const curr = cashFlowChartData[i];
-      const fraction = -prev.cumulativeCashFlow / (curr.cumulativeCashFlow - prev.cumulativeCashFlow);
-      breakEvenYear = prev.year + fraction;
-      breakEvenValue = 0;
-      break;
-    }
-  }
-  
-  // Create yearly details chart data
-  const revenueType = financialMetrics.summary.revenue_type.toLowerCase();
-  
-  const yearlyChartData = financialMetrics.yearly_details.map(detail => {
-    return {
-      year: detail.year,
-      [revenueType]: detail[revenueType],
-      expenses: detail.om_cost,
-      netCashFlow: detail.net_cash_flow
-    };
-  });
-  
+
+  // Calculate cumulative cash flows
+  const cumulativeCashFlows = financialMetrics.cash_flows.reduce(
+    (acc: number[], val, idx) => {
+      const prevTotal = idx > 0 ? acc[idx - 1] : 0;
+      acc.push(prevTotal + val);
+      return acc;
+    },
+    []
+  );
+
+  const cumulativeCashFlowData = cumulativeCashFlows.map((value, index) => ({
+    year: index,
+    cumulativeCashFlow: value
+  }));
+
+  // Extract yearly details for charts
+  const revenueKey = revenueType.toLowerCase() === 'revenue' ? 'revenue' : 'savings';
+  const yearlyDetailsData = financialMetrics.yearly_details.map(detail => ({
+    year: detail.year,
+    [revenueKey]: detail[revenueKey as keyof typeof detail] as number,
+    omCost: detail.om_cost,
+    netCashFlow: detail.net_cash_flow
+  }));
+
+  // Find break-even point (for chart annotation)
+  const breakEvenYear = cumulativeCashFlows.findIndex((value, index) => 
+    index > 0 && cumulativeCashFlows[index - 1] < 0 && value >= 0
+  );
+
+  // Format IRR and ROI with appropriate precision
+  const formatPercentage = (value: number) => {
+    if (value > 100) return value.toFixed(0) + '%';
+    if (value > 10) return value.toFixed(1) + '%';
+    return value.toFixed(2) + '%';
+  };
+
   return (
-    <div className="space-y-8">
-      <h2 className="text-2xl font-bold">Financial Analysis Results</h2>
-      
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-3 mb-4">
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="charts">Charts</TabsTrigger>
-          <TabsTrigger value="details">Yearly Details</TabsTrigger>
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* NPV Card */}
+        <Card className="bg-white dark:bg-zinc-900">
+          <CardContent className="p-4">
+            <div className="flex flex-col items-center justify-center space-y-2 text-center">
+              <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-full">
+                <DollarSign className="h-6 w-6 text-green-600 dark:text-green-400" />
+              </div>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Net Present Value</CardTitle>
+              <p className="text-2xl font-bold">
+                {financialMetrics.npv >= 0 ? '+' : ''}
+                {currencySymbol}{formatNumber(financialMetrics.npv)}
+              </p>
+              <Badge variant={financialMetrics.npv >= 0 ? "success" : "destructive"} className="mt-1">
+                {financialMetrics.npv >= 0 ? 'Profitable' : 'Not Profitable'}
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* IRR Card */}
+        <Card className="bg-white dark:bg-zinc-900">
+          <CardContent className="p-4">
+            <div className="flex flex-col items-center justify-center space-y-2 text-center">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-full">
+                <TrendingUp className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              </div>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Internal Rate of Return</CardTitle>
+              <p className="text-2xl font-bold">
+                {formatPercentage(financialMetrics.irr)}
+              </p>
+              <Badge variant={financialMetrics.irr >= 8 ? "success" : 
+                          (financialMetrics.irr >= 5 ? "outline" : "destructive")} className="mt-1">
+                {financialMetrics.irr >= 8 ? 'Strong' : 
+                 (financialMetrics.irr >= 5 ? 'Moderate' : 'Weak')}
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ROI Card */}
+        <Card className="bg-white dark:bg-zinc-900">
+          <CardContent className="p-4">
+            <div className="flex flex-col items-center justify-center space-y-2 text-center">
+              <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-full">
+                <BarChart3 className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+              </div>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Annual Avg. ROI</CardTitle>
+              <p className="text-2xl font-bold">
+                {formatPercentage(financialMetrics.roi)}
+              </p>
+              <Badge variant={financialMetrics.roi >= 8 ? "success" : 
+                          (financialMetrics.roi >= 5 ? "outline" : "destructive")} className="mt-1">
+                {financialMetrics.roi >= 8 ? 'Strong' : 
+                 (financialMetrics.roi >= 5 ? 'Moderate' : 'Weak')}
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Payback Period Card */}
+        <Card className="bg-white dark:bg-zinc-900">
+          <CardContent className="p-4">
+            <div className="flex flex-col items-center justify-center space-y-2 text-center">
+              <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-full">
+                <Clock className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+              </div>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Payback Period</CardTitle>
+              <p className="text-2xl font-bold whitespace-nowrap overflow-hidden text-ellipsis">
+                {Math.floor(financialMetrics.payback_period) < 100 ? paybackText : "N/A"}
+              </p>
+              <Badge variant={financialMetrics.payback_period <= 10 ? "success" : 
+                          (financialMetrics.payback_period <= 15 ? "outline" : "destructive")} className="mt-1">
+                {financialMetrics.payback_period <= 10 ? 'Quick' : 
+                 (financialMetrics.payback_period <= 15 ? 'Moderate' : 'Long')}
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Summary Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>25-Year Performance Summary</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-4 bg-muted/40 rounded-lg">
+              <h4 className="text-sm font-medium text-muted-foreground">Total Energy</h4>
+              <p className="text-2xl font-bold mt-1">{formatNumber(financialMetrics.summary.total_energy_25yr)} kWh</p>
+              <p className="text-xs text-muted-foreground mt-1">Including 0.6% annual degradation</p>
+            </div>
+            
+            <div className="p-4 bg-muted/40 rounded-lg">
+              <h4 className="text-sm font-medium text-muted-foreground">Total {revenueType}</h4>
+              <p className="text-2xl font-bold mt-1">{currencySymbol}{formatNumber(financialMetrics.summary.total_revenue_25yr)}</p>
+              <p className="text-xs text-muted-foreground mt-1">Over 25-year project lifetime</p>
+            </div>
+            
+            <div className="p-4 bg-muted/40 rounded-lg">
+              <h4 className="text-sm font-medium text-muted-foreground">O&M Costs</h4>
+              <p className="text-2xl font-bold mt-1">{currencySymbol}{formatNumber(financialMetrics.summary.total_om_cost_25yr)}</p>
+              <p className="text-xs text-muted-foreground mt-1">Maintenance and operational expenses</p>
+            </div>
+            
+            <div className="p-4 bg-muted/40 rounded-lg">
+              <h4 className="text-sm font-medium text-muted-foreground">Net {revenueType}</h4>
+              <p className="text-2xl font-bold mt-1">{currencySymbol}{formatNumber(financialMetrics.summary.net_revenue_25yr)}</p>
+              <p className="text-xs text-muted-foreground mt-1">Total {revenueType.toLowerCase()} minus O&M costs</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Charts */}
+      <Tabs defaultValue="payback">
+        <TabsList className="mb-4">
+          <TabsTrigger value="payback">Payback Analysis</TabsTrigger>
+          <TabsTrigger value="cashflow">Cash Flow Analysis</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="dashboard" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center">
-                  Net Present Value 
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="sm" className="ml-1 h-5 w-5 p-0">
-                          <Info className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="max-w-xs">Present value of all future cash flows</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold">{formatCurrency(financialMetrics.npv)}</p>
-                <p className="text-sm text-muted-foreground">At 8% discount rate</p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center">
-                  Internal Rate of Return
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="sm" className="ml-1 h-5 w-5 p-0">
-                          <Info className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="max-w-xs">Discount rate that makes NPV zero</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold">{formatNumber(financialMetrics.irr)}%</p>
-                <p className="text-sm text-muted-foreground">Annual return rate</p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center">
-                  Payback Period
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="sm" className="ml-1 h-5 w-5 p-0">
-                          <Info className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="max-w-xs">Time to recover initial investment</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold">
-                  {isPaybackReached
-                    ? `${Math.floor(financialMetrics.payback_period)} years and ${Math.round((financialMetrics.payback_period % 1) * 12)} months`
-                    : "Not within 25 years"}
-                </p>
-                <p className="text-sm text-muted-foreground">Simple payback</p>
-              </CardContent>
-            </Card>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>25-Year Energy Production</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex justify-between items-center border-b pb-2">
-                  <span>Total Energy Production:</span>
-                  <span className="font-bold">{formatNumber(financialMetrics.summary.total_energy_25yr, 0)} kWh</span>
-                </div>
-                <div className="flex justify-between items-center border-b pb-2">
-                  <span>System Type:</span>
-                  <span className="font-bold">{financialMetrics.system_type}</span>
-                </div>
-                <div className="flex justify-between items-center border-b pb-2">
-                  <span>Yearly Average:</span>
-                  <span className="font-bold">
-                    {formatNumber(financialMetrics.summary.total_energy_25yr / 25, 0)} kWh/year
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>25-Year Financial Summary</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex justify-between items-center border-b pb-2">
-                  <span>Total {financialMetrics.summary.revenue_type}:</span>
-                  <span className="font-bold text-green-600">{formatCurrency(financialMetrics.summary.total_revenue_25yr)}</span>
-                </div>
-                <div className="flex justify-between items-center border-b pb-2">
-                  <span>Total O&M Costs:</span>
-                  <span className="font-bold text-red-600">{formatCurrency(financialMetrics.summary.total_om_cost_25yr)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span>Net {financialMetrics.summary.revenue_type}:</span>
-                  <span className="font-bold">{formatCurrency(financialMetrics.summary.net_revenue_25yr)}</span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-          
-          {!isPaybackReached && (
-            <Card className="bg-yellow-50 border-yellow-300">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-yellow-800">Note About Payback Period</CardTitle>
-              </CardHeader>
-              <CardContent className="text-yellow-800">
-                <p>The project does not reach payback within the 25-year analysis period. This could be due to:</p>
-                <ul className="list-disc pl-5 mt-2 space-y-1">
-                  <li>High initial costs</li>
-                  <li>Low energy production</li>
-                  <li>Low electricity {financialMetrics.system_type === "Grid Export Only" ? "tariff" : "savings"}</li>
-                  <li>High O&M costs</li>
-                </ul>
-                <p className="mt-2">Consider adjusting these parameters to improve financial viability.</p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-        
-        <TabsContent value="charts" className="space-y-6">
+        <TabsContent value="payback">
           <Card>
-            <CardHeader>
-              <CardTitle>Payback Period & Cumulative Cash Flow</CardTitle>
-              <CardDescription>
-                This chart shows when your investment breaks even and your total returns over time
-              </CardDescription>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center">
+                <LineChart className="h-5 w-5 mr-2 text-solar" />
+                Payback Period & Cumulative Cash Flow
+              </CardTitle>
             </CardHeader>
-            <CardContent className="h-80">
+            <CardContent>
               <SolarChart
-                data={cashFlowChartData}
+                data={cumulativeCashFlowData}
                 xKey="year"
                 yKey="cumulativeCashFlow"
                 title=""
-                type="area"
-                color="#0496FF"
-                xLabel="Year"
-                yLabel={`Amount (${currencySymbol})`}
-                height={320}
-                areaFillOpacity={0.2}
-                yTickFormatter={(value) => formatCurrency(value)}
+                type="line"
+                color="#2ca02c"
+                xLabel="Years"
+                yLabel={`Cash Flow (${currencySymbol})`}
+                height={300}
+                yTickFormatter={(value) => `${currencySymbol}${formatNumber(value)}`}
+                extraMarkers={breakEvenYear > 0 && breakEvenYear < 25 ? [
+                  {
+                    x: breakEvenYear,
+                    y: cumulativeCashFlows[breakEvenYear],
+                    color: "red",
+                    size: 12,
+                    symbol: "star",
+                    label: `Break-even: ${breakEvenYear.toFixed(1)} years`
+                  }
+                ] : undefined}
+                referenceLines={[
+                  {
+                    y: 0,
+                    stroke: '#666',
+                    strokeDasharray: '3 3',
+                    label: 'Break-even line'
+                  },
+                  ...(breakEvenYear > 0 && breakEvenYear < 25 ? [
+                    {
+                      x: breakEvenYear,
+                      stroke: 'red',
+                      strokeDasharray: '3 3',
+                      label: `Year ${breakEvenYear}`
+                    }
+                  ] : [])
+                ]}
               />
+              {!isFinite(financialMetrics.payback_period) || financialMetrics.payback_period > 25 ? (
+                <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <p className="text-amber-800 dark:text-amber-400">
+                    ⚠️ The project does not reach payback within the 25-year analysis period. Consider:
+                  </p>
+                  <ul className="list-disc list-inside text-sm mt-2 text-amber-700 dark:text-amber-300">
+                    <li>Reducing initial costs</li>
+                    <li>Increasing system size or production</li>
+                    <li>Exploring available incentives</li>
+                    <li>Finding better electricity rates</li>
+                  </ul>
+                </div>
+              ) : null}
             </CardContent>
           </Card>
-          
+        </TabsContent>
+        
+        <TabsContent value="cashflow">
           <Card>
-            <CardHeader>
-              <CardTitle>{financialMetrics.summary.revenue_type} vs Expenses</CardTitle>
-              <CardDescription>
-                Annual breakdown of revenue/savings and operation & maintenance costs
-              </CardDescription>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center">
+                <BarChart3 className="h-5 w-5 mr-2 text-solar" />
+                25-Year {revenueType} vs Expenses
+              </CardTitle>
             </CardHeader>
-            <CardContent className="h-80">
+            <CardContent>
               <SolarChart
-                data={yearlyChartData}
+                data={yearlyDetailsData}
                 xKey="year"
-                barKeys={[revenueType, "expenses"]}
-                lineKey="netCashFlow"
+                yKey={[revenueKey, "omCost", "netCashFlow"]}
                 title=""
                 type="composed"
-                colors={["#3366cc", "#ff9900", "#2ca02c"]}
+                multiColor={{
+                  [revenueKey]: "#3366cc",
+                  "omCost": "#ff9900",
+                  "netCashFlow": "#2ca02c"
+                }}
+                chartTypes={{
+                  [revenueKey]: "bar",
+                  "omCost": "bar",
+                  "netCashFlow": "line"
+                }}
+                stacked={false}
                 xLabel="Year"
                 yLabel={`Amount (${currencySymbol})`}
-                height={320}
-                yTickFormatter={(value) => formatCurrency(value)}
+                height={300}
+                yTickFormatter={(value) => `${currencySymbol}${formatNumber(value)}`}
                 legend={[
-                  { key: revenueType, label: financialMetrics.summary.revenue_type, color: "#3366cc" },
-                  { key: "expenses", label: "O&M Expenses", color: "#ff9900" },
-                  { key: "netCashFlow", label: "Net Cash Flow", color: "#2ca02c" }
+                  { name: revenueType, color: "#3366cc" },
+                  { name: "O&M Expenses", color: "#ff9900" },
+                  { name: "Net Cash Flow", color: "#2ca02c" }
                 ]}
               />
             </CardContent>
           </Card>
         </TabsContent>
-        
-        <TabsContent value="details">
-          <Card>
-            <CardHeader>
-              <CardTitle>Year-by-Year Financial Details</CardTitle>
-              <CardDescription>
-                Detailed breakdown of energy production, revenue/savings, costs, and cash flow for each year
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="max-h-[500px] overflow-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Year</TableHead>
-                    <TableHead>Energy Output (kWh)</TableHead>
-                    <TableHead>{financialMetrics.summary.revenue_type} ({currencySymbol})</TableHead>
-                    <TableHead>O&M Cost ({currencySymbol})</TableHead>
-                    <TableHead>Net Cash Flow ({currencySymbol})</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {financialMetrics.yearly_details.map((year) => (
-                    <TableRow key={year.year}>
-                      <TableCell>{year.year}</TableCell>
-                      <TableCell>{formatNumber(year.energy_output, 0)}</TableCell>
-                      <TableCell>{formatCurrency(year[revenueType])}</TableCell>
-                      <TableCell>{formatCurrency(year.om_cost)}</TableCell>
-                      <TableCell 
-                        className={year.net_cash_flow >= 0 ? "text-green-600" : "text-red-600"}
-                      >
-                        {formatCurrency(year.net_cash_flow)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
-      
-      <div className="flex justify-end">
-        <Button 
-          onClick={() => window.print()} 
-          className="bg-solar hover:bg-solar-dark text-white"
-        >
-          <Download className="h-4 w-4 mr-2" />
-          Export Financial Analysis
-        </Button>
-      </div>
+
+      {/* Yearly Details Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Year-by-Year Details</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="bg-muted">
+                  <th className="border px-3 py-2 text-left">Year</th>
+                  <th className="border px-3 py-2 text-left">Performance Ratio</th>
+                  <th className="border px-3 py-2 text-left">Energy Output (kWh)</th>
+                  <th className="border px-3 py-2 text-left">{revenueType} ({currencySymbol})</th>
+                  <th className="border px-3 py-2 text-left">O&M Cost ({currencySymbol})</th>
+                  <th className="border px-3 py-2 text-left">Net Cash Flow ({currencySymbol})</th>
+                </tr>
+              </thead>
+              <tbody>
+                {financialMetrics.yearly_details.map((detail, index) => (
+                  <tr key={index} className={index % 2 === 0 ? 'bg-background' : 'bg-muted/50'}>
+                    <td className="border px-3 py-2">{detail.year}</td>
+                    <td className="border px-3 py-2">{(detail.degradation_factor * 100).toFixed(1)}%</td>
+                    <td className="border px-3 py-2">{formatNumber(detail.energy_output)}</td>
+                    <td className="border px-3 py-2">
+                      {formatNumber(detail[revenueKey === 'revenue' ? 'revenue' : 'savings'] as number)}
+                    </td>
+                    <td className="border px-3 py-2">{formatNumber(detail.om_cost)}</td>
+                    <td className="border px-3 py-2 font-medium">{formatNumber(detail.net_cash_flow)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
