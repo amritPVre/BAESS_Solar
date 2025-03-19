@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { fabric } from "fabric";
 import { calculatePanelArea, estimateKwCapacity, createDrawingHandlers } from "./CanvasDrawingHandlers";
 
@@ -23,6 +23,7 @@ export const CanvasOverlay: React.FC<CanvasOverlayProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricCanvasRef = useRef<fabric.Canvas | null>(null);
+  const [statsInitialized, setStatsInitialized] = useState(false);
   
   const isDrawingRef = useRef(false);
   const startPointRef = useRef<{ x: number; y: number } | null>(null);
@@ -43,6 +44,7 @@ export const CanvasOverlay: React.FC<CanvasOverlayProps> = ({
     
     console.log(`Setting canvas size to: ${width}x${height}`);
     
+    // Create fabric canvas
     const canvasInstance = new fabric.Canvas(canvasRef.current, {
       width: width,
       height: height,
@@ -188,57 +190,63 @@ export const CanvasOverlay: React.FC<CanvasOverlayProps> = ({
     const canvas = fabricCanvasRef.current;
     if (!canvas || !onStatsUpdate) return;
     
-    const updateStats = () => {
-      const objects = canvas.getObjects();
+    // Only update stats when there are actual changes, not on every render
+    if (!statsInitialized) {
+      setStatsInitialized(true);
       
-      // Count buildings and panels
-      let buildingCount = 0;
-      let panelCount = 0;
-      let totalPanelArea = 0;
-      
-      objects.forEach(obj => {
-        // Skip text objects
-        if (obj instanceof fabric.Text) return;
+      const updateStats = () => {
+        const objects = canvas.getObjects();
         
-        const objectType = obj.get('objectType');
-        if (objectType === 'building') {
-          buildingCount++;
-        } else if (objectType === 'panel') {
-          panelCount++;
+        // Count buildings and panels
+        let buildingCount = 0;
+        let panelCount = 0;
+        let totalPanelArea = 0;
+        
+        objects.forEach(obj => {
+          // Skip text objects
+          if (obj instanceof fabric.Text) return;
           
-          // Calculate panel area if it has width and height
-          if (obj.width && obj.height) {
-            const area = calculatePanelArea(obj.width, obj.height);
-            totalPanelArea += area;
+          const objectType = obj.get('objectType');
+          if (objectType === 'building') {
+            buildingCount++;
+          } else if (objectType === 'panel') {
+            panelCount++;
+            
+            // Calculate panel area if it has width and height
+            if (obj.width && obj.height) {
+              const area = calculatePanelArea(obj.width, obj.height);
+              totalPanelArea += area;
+            }
           }
-        }
-      });
+        });
+        
+        // Calculate estimated capacity
+        const estimatedCapacity = estimateKwCapacity(totalPanelArea);
+        
+        // Update stats
+        onStatsUpdate({
+          totalPanelArea,
+          estimatedCapacity,
+          buildingCount,
+          panelCount
+        });
+      };
       
-      // Calculate estimated capacity
-      const estimatedCapacity = estimateKwCapacity(totalPanelArea);
+      // Add event listeners for object modifications
+      canvas.on('object:added', updateStats);
+      canvas.on('object:removed', updateStats);
+      canvas.on('object:modified', updateStats);
       
-      onStatsUpdate({
-        totalPanelArea,
-        estimatedCapacity,
-        buildingCount,
-        panelCount
-      });
-    };
-    
-    // Add event listeners for object modifications
-    canvas.on('object:added', updateStats);
-    canvas.on('object:removed', updateStats);
-    canvas.on('object:modified', updateStats);
-    
-    // Initial update
-    updateStats();
-    
-    return () => {
-      canvas.off('object:added', updateStats);
-      canvas.off('object:removed', updateStats);
-      canvas.off('object:modified', updateStats);
-    };
-  }, [onStatsUpdate]);
+      // Initial update
+      updateStats();
+      
+      return () => {
+        canvas.off('object:added', updateStats);
+        canvas.off('object:removed', updateStats);
+        canvas.off('object:modified', updateStats);
+      };
+    }
+  }, [onStatsUpdate, fabricCanvasRef.current, statsInitialized]);
 
   return (
     <canvas 

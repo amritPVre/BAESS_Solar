@@ -44,7 +44,7 @@ export const createDrawingHandlers = (
     
     console.log("Starting to draw", activeTool, options.pointer);
     
-    // Prevent event propagation to Google Maps
+    // Prevent event propagation to Leaflet map
     if (options.e) {
       options.e.preventDefault();
       options.e.stopPropagation();
@@ -89,7 +89,7 @@ export const createDrawingHandlers = (
       return;
     }
     
-    // Prevent event propagation to Google Maps
+    // Prevent event propagation to Leaflet map
     if (options.e) {
       options.e.preventDefault();
       options.e.stopPropagation();
@@ -120,7 +120,7 @@ export const createDrawingHandlers = (
       return;
     }
     
-    // Prevent event propagation to Google Maps
+    // Prevent event propagation to Leaflet map
     if (options.e) {
       options.e.preventDefault();
       options.e.stopPropagation();

@@ -25,12 +25,17 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
   
+  // Generate a unique ID for the map div to be used by Leaflet
   useEffect(() => {
-    // Generate a unique ID for the map div to be used by Leaflet
     if (mapRef.current) {
       mapRef.current.id = "solar-designer-map";
     }
   }, []);
+  
+  const handleMapLoaded = () => {
+    console.log("Map loaded callback triggered");
+    setMapLoaded(true);
+  };
   
   return (
     <div className="design-canvas-container relative w-full h-[600px] overflow-hidden rounded-md border-2 border-gray-200 shadow-sm">
@@ -42,17 +47,18 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
       {/* Map container */}
       <div 
         ref={mapRef} 
+        id="solar-designer-map"
         className="w-full h-full"
       />
       
       {/* Map initialization functionality */}
       <MapContainer 
         mapRef={mapRef} 
-        onMapLoaded={() => setMapLoaded(true)} 
+        onMapLoaded={handleMapLoaded} 
         onMapError={setMapError} 
       />
       
-      {/* Canvas overlay */}
+      {/* Canvas overlay - only render when map is confirmed loaded */}
       {mapLoaded && (
         <CanvasOverlay 
           mapRef={mapRef} 

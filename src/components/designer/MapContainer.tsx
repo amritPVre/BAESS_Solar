@@ -21,10 +21,15 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     if (!mapRef.current) return;
     
     try {
+      // Ensure the element has an ID
+      if (!mapRef.current.id) {
+        mapRef.current.id = "solar-designer-map";
+      }
+      
       // Create map instance
       const map = L.map(mapRef.current.id, {
         center: { lat: 37.7749, lng: -122.4194 }, // Default to San Francisco
-        zoom: 19, // Higher zoom level for better detail
+        zoom: 13, // Start with a lower zoom level for stability
         zoomControl: true,
         attributionControl: true,
       });
@@ -60,16 +65,12 @@ export const MapContainer: React.FC<MapContainerProps> = ({
       window.solarDesignerMap = map as any;
       leafletMapRef.current = map;
       
-      // Trigger loaded event
-      map.on("load", () => {
-        console.log("Leaflet map fully loaded");
-        onMapLoaded();
-      });
-      
-      // Fire the load event manually as Leaflet doesn't have a dedicated load event
+      // Give map time to initialize completely
       setTimeout(() => {
+        console.log("Map initialization complete");
+        map.invalidateSize();
         onMapLoaded();
-      }, 500);
+      }, 1000);
       
     } catch (error) {
       console.error("Error initializing map:", error);
