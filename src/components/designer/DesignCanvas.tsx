@@ -18,8 +18,14 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
   const [mapError, setMapError] = useState<string | null>(null);
   const [address, setAddress] = useState("");
   const [searchingAddress, setSearchingAddress] = useState(false);
-  const [apiKey, setApiKey] = useState<string>("");
-  const [apiKeyEntered, setApiKeyEntered] = useState(false);
+  const [apiKey, setApiKey] = useState<string>(() => {
+    // Try to get API key from sessionStorage
+    return sessionStorage.getItem("gmapsApiKey") || "";
+  });
+  const [apiKeyEntered, setApiKeyEntered] = useState(() => {
+    // Check if API key exists in sessionStorage
+    return !!sessionStorage.getItem("gmapsApiKey");
+  });
   
   const isDrawingRef = useRef(false);
   const startPointRef = useRef<{ x: number; y: number } | null>(null);
@@ -126,12 +132,19 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
   useEffect(() => {
     if (!mapLoaded || !canvasRef.current) return;
     
+    // Make sure the canvas is properly sized and positioned
+    if (mapRef.current) {
+      canvasRef.current.width = mapRef.current.clientWidth;
+      canvasRef.current.height = mapRef.current.clientHeight;
+    }
+    
     const canvasInstance = new fabric.Canvas(canvasRef.current, {
       width: mapRef.current?.clientWidth || 800,
       height: mapRef.current?.clientHeight || 600,
       backgroundColor: 'rgba(0,0,0,0)',
       selection: true,
       fireRightClick: true,
+      renderOnAddRemove: true,
     });
     
     // Ensure canvas matches map dimensions
@@ -152,6 +165,9 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
     
     setCanvas(canvasInstance);
     
+    // Log canvas creation
+    console.log("Canvas created successfully", canvasInstance);
+    
     return () => {
       window.removeEventListener('resize', resizeCanvas);
       canvasInstance.dispose();
@@ -162,9 +178,16 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
   useEffect(() => {
     if (!canvas) return;
     
+    console.log("Tool changed to:", activeTool);
+    
     // Clear any ongoing operations
     isDrawingRef.current = false;
     startPointRef.current = null;
+    
+    // Remove existing event listeners to avoid duplicates
+    canvas.off("mouse:down");
+    canvas.off("mouse:move");
+    canvas.off("mouse:up");
     
     // Set selection mode based on active tool
     canvas.selection = activeTool === "select";
@@ -188,8 +211,6 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
     // Set up delete tool
     if (activeTool === "delete") {
       canvas.on("mouse:down", deleteObject);
-    } else {
-      canvas.off("mouse:down", deleteObject);
     }
     
     // Set up drawing tools
@@ -197,18 +218,17 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
       canvas.on("mouse:down", startDrawing);
       canvas.on("mouse:move", drawObject);
       canvas.on("mouse:up", finishDrawing);
-    } else {
-      canvas.off("mouse:down", startDrawing);
-      canvas.off("mouse:move", drawObject);
-      canvas.off("mouse:up", finishDrawing);
+      
+      console.log("Drawing event listeners added for", activeTool);
     }
+    
+    canvas.renderAll();
     
     return () => {
       if (canvas) {
-        canvas.off("mouse:down", startDrawing);
-        canvas.off("mouse:move", drawObject);
-        canvas.off("mouse:up", finishDrawing);
-        canvas.off("mouse:down", deleteObject);
+        canvas.off("mouse:down");
+        canvas.off("mouse:move");
+        canvas.off("mouse:up");
       }
     };
   }, [activeTool, canvas]);
@@ -223,7 +243,12 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
   
   // Start drawing
   const startDrawing = (options: fabric.IEvent<MouseEvent>) => {
-    if (!canvas || !options.pointer) return;
+    if (!canvas || !options.pointer) {
+      console.error("Cannot start drawing: Canvas or pointer is null");
+      return;
+    }
+    
+    console.log("Starting to draw", activeTool, options.pointer);
     
     const pointer = options.pointer;
     const snappedPoint = snapToGrid(pointer);
@@ -253,6 +278,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
     
     tempRectRef.current = new fabric.Rect(rectOptions);
     canvas.add(tempRectRef.current);
+    canvas.renderAll();
     
     // Show toast to provide feedback on what tool is being used
     toast.info(`Drawing ${activeTool === "building" ? "building" : "solar panel"}...`);
@@ -263,6 +289,8 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
     if (!canvas || !isDrawingRef.current || !startPointRef.current || !tempRectRef.current || !options.pointer) {
       return;
     }
+    
+    console.log("Drawing in progress", options.pointer);
     
     const pointer = options.pointer;
     const snappedPoint = snapToGrid(pointer);
@@ -284,8 +312,11 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
   // Finish drawing
   const finishDrawing = (options: fabric.IEvent<MouseEvent>) => {
     if (!canvas || !isDrawingRef.current || !tempRectRef.current) {
+      console.error("Cannot finish drawing: Missing canvas, drawing state, or temp rectangle");
       return;
     }
+    
+    console.log("Finishing drawing", tempRectRef.current);
     
     if (tempRectRef.current.width && tempRectRef.current.height && 
         tempRectRef.current.width > 0 && tempRectRef.current.height > 0) {
@@ -395,6 +426,8 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
       return;
     }
     
+    // Save API key to sessionStorage
+    sessionStorage.setItem("gmapsApiKey", apiKey);
     setApiKeyEntered(true);
     toast.success("API key saved");
   };
@@ -467,11 +500,11 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
       {/* Canvas overlay */}
       <canvas 
         ref={canvasRef} 
-        className="absolute top-0 left-0 w-full h-full pointer-events-auto"
+        className="absolute top-0 left-0 w-full h-full pointer-events-auto z-[5]"
       />
       
       {/* Legend */}
-      <div className="absolute bottom-2 right-2 bg-white p-2 rounded-md shadow-sm text-sm text-gray-600">
+      <div className="absolute bottom-2 right-2 bg-white p-2 rounded-md shadow-sm text-sm text-gray-600 z-10">
         <p className="flex items-center">
           <span className="inline-block w-3 h-3 bg-[#7f8c8d] mr-2 rounded-sm"></span>
           Building
@@ -484,18 +517,27 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
       
       {/* Error display */}
       {mapError && (
-        <div className="absolute bottom-0 left-0 right-0 bg-red-100 text-red-800 p-2 text-sm">
+        <div className="absolute bottom-0 left-0 right-0 bg-red-100 text-red-800 p-2 text-sm z-10">
           {mapError}
         </div>
       )}
       
       {/* Loading indicator */}
       {apiKeyEntered && !mapLoaded && !mapError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-white/80">
+        <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10">
           <div className="flex flex-col items-center">
             <Loader2 className="h-8 w-8 animate-spin text-solar" />
             <p className="mt-2 text-solar-dark">Loading map...</p>
           </div>
+        </div>
+      )}
+      
+      {/* Active tool indicator */}
+      {apiKeyEntered && mapLoaded && (
+        <div className="absolute top-2 right-2 bg-white p-2 rounded-md shadow-sm text-sm z-10">
+          <p className="font-medium">
+            Active Tool: <span className="text-solar">{activeTool.charAt(0).toUpperCase() + activeTool.slice(1)}</span>
+          </p>
         </div>
       )}
     </div>

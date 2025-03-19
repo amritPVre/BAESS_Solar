@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Helmet } from "react-helmet";
 import { Button } from "@/components/ui/button";
 import SectionHeader from "@/components/ui/SectionHeader";
@@ -11,6 +11,11 @@ import { toast } from "sonner";
 
 const SolarDesigner: React.FC = () => {
   const [activeTool, setActiveTool] = useState<"select" | "building" | "panel" | "delete">("select");
+  const [designStats, setDesignStats] = useState({
+    totalPanelArea: 0,
+    estimatedCapacity: 0,
+    buildingCount: 0
+  });
   
   const handleSaveDesign = () => {
     // This would be expanded to actually save the design
@@ -69,17 +74,28 @@ const SolarDesigner: React.FC = () => {
                 <div className="bg-muted p-3 rounded-md text-sm">
                   <p className="flex justify-between">
                     <span>Total Panel Area:</span>
-                    <span className="font-medium">0 m²</span>
+                    <span className="font-medium">{designStats.totalPanelArea.toFixed(1)} m²</span>
                   </p>
                   <p className="flex justify-between mt-1">
                     <span>Estimated Capacity:</span>
-                    <span className="font-medium">0 kW</span>
+                    <span className="font-medium">{designStats.estimatedCapacity.toFixed(2)} kW</span>
                   </p>
                   <p className="flex justify-between mt-1">
                     <span>Buildings:</span>
-                    <span className="font-medium">0</span>
+                    <span className="font-medium">{designStats.buildingCount}</span>
                   </p>
                 </div>
+              </div>
+              
+              <div className="mt-8 p-3 border border-yellow-200 bg-yellow-50 rounded-md">
+                <h3 className="font-medium text-sm mb-1 text-yellow-800">How to Use</h3>
+                <ol className="text-xs text-yellow-700 list-decimal pl-4 space-y-1">
+                  <li>Search for a location using the search box</li>
+                  <li>Select "Building" tool to draw building outlines</li>
+                  <li>Select "Solar Panel" tool to place panels on rooftops</li>
+                  <li>Use "Select" tool to move or resize objects</li>
+                  <li>Use "Delete" tool to remove objects</li>
+                </ol>
               </div>
             </CardContent>
           </Card>
