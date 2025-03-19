@@ -77,6 +77,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
           streetViewControl: false,
           rotateControl: false,
           fullscreenControl: true,
+          gestureHandling: 'cooperative' // This helps with preventing gesture conflicts
         });
         
         // Store map in window for access
@@ -115,6 +116,13 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
           }, 500);
         });
         
+        // Disable map controls when drawing
+        map.addListener('dragstart', () => {
+          if (isDrawingRef.current && canvas) {
+            map.setOptions({ draggable: false });
+          }
+        });
+        
         setMapLoaded(true);
         setMapError(null);
         toast.success("Map loaded successfully");
@@ -145,6 +153,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
       selection: true,
       fireRightClick: true,
       renderOnAddRemove: true,
+      stopContextMenu: true // Prevent context menu from opening
     });
     
     // Ensure canvas matches map dimensions
@@ -174,7 +183,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
     };
   }, [mapLoaded]);
   
-  // Handle tool changes
+  // Handle tool changes and set up drawing events
   useEffect(() => {
     if (!canvas) return;
     
@@ -215,11 +224,21 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
     
     // Set up drawing tools
     if (activeTool === "building" || activeTool === "panel") {
+      // Disable Google Maps dragging when in drawing mode
+      if (window.solarDesignerMap) {
+        window.solarDesignerMap.setOptions({ draggable: false });
+      }
+      
       canvas.on("mouse:down", startDrawing);
       canvas.on("mouse:move", drawObject);
       canvas.on("mouse:up", finishDrawing);
       
       console.log("Drawing event listeners added for", activeTool);
+    } else {
+      // Re-enable Google Maps dragging when not in drawing mode
+      if (window.solarDesignerMap) {
+        window.solarDesignerMap.setOptions({ draggable: true });
+      }
     }
     
     canvas.renderAll();
@@ -249,6 +268,10 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
     }
     
     console.log("Starting to draw", activeTool, options.pointer);
+    
+    // Prevent event propagation to Google Maps
+    options.e.preventDefault();
+    options.e.stopPropagation();
     
     const pointer = options.pointer;
     const snappedPoint = snapToGrid(pointer);
@@ -290,6 +313,12 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
       return;
     }
     
+    // Prevent event propagation to Google Maps
+    if (options.e) {
+      options.e.preventDefault();
+      options.e.stopPropagation();
+    }
+    
     console.log("Drawing in progress", options.pointer);
     
     const pointer = options.pointer;
@@ -314,6 +343,12 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
     if (!canvas || !isDrawingRef.current || !tempRectRef.current) {
       console.error("Cannot finish drawing: Missing canvas, drawing state, or temp rectangle");
       return;
+    }
+    
+    // Prevent event propagation to Google Maps
+    if (options.e) {
+      options.e.preventDefault();
+      options.e.stopPropagation();
     }
     
     console.log("Finishing drawing", tempRectRef.current);
@@ -500,8 +535,15 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
       {/* Canvas overlay */}
       <canvas 
         ref={canvasRef} 
-        className="absolute top-0 left-0 w-full h-full pointer-events-auto z-[5]"
+        className="absolute top-0 left-0 w-full h-full pointer-events-auto z-10"
       />
+      
+      {/* Drawing mode indicator */}
+      {apiKeyEntered && mapLoaded && activeTool !== 'select' && (
+        <div className="absolute bottom-2 left-2 bg-red-500 text-white px-3 py-1 rounded-md shadow-sm text-sm z-20 animate-pulse">
+          Drawing Mode: {activeTool.charAt(0).toUpperCase() + activeTool.slice(1)}
+        </div>
+      )}
       
       {/* Legend */}
       <div className="absolute bottom-2 right-2 bg-white p-2 rounded-md shadow-sm text-sm text-gray-600 z-10">
@@ -538,6 +580,18 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
           <p className="font-medium">
             Active Tool: <span className="text-solar">{activeTool.charAt(0).toUpperCase() + activeTool.slice(1)}</span>
           </p>
+        </div>
+      )}
+      
+      {/* Instructions overlay when drawing mode is active */}
+      {apiKeyEntered && mapLoaded && (activeTool === 'building' || activeTool === 'panel') && (
+        <div className="absolute top-14 right-2 bg-yellow-50 p-2 rounded-md shadow-sm text-sm z-10 border border-yellow-200 max-w-xs">
+          <p className="font-medium text-yellow-800">Drawing Instructions:</p>
+          <ol className="text-xs text-yellow-700 list-decimal pl-4 mt-1 space-y-1">
+            <li>Click and drag to draw a {activeTool === 'building' ? 'building' : 'solar panel'}</li>
+            <li>Release mouse button to finish</li>
+            <li>Use the Select tool to move or resize later</li>
+          </ol>
         </div>
       )}
     </div>

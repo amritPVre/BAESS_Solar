@@ -6,7 +6,7 @@ import SectionHeader from "@/components/ui/SectionHeader";
 import { DesignCanvas } from "@/components/designer/DesignCanvas";
 import { DesignToolbar } from "@/components/designer/DesignToolbar";
 import { Card, CardContent } from "@/components/ui/card";
-import { Square, Laptop, SunMedium, Save, FileDown } from "lucide-react";
+import { Square, Laptop, SunMedium, Save, FileDown, Info } from "lucide-react";
 import { toast } from "sonner";
 
 const SolarDesigner: React.FC = () => {
@@ -14,8 +14,17 @@ const SolarDesigner: React.FC = () => {
   const [designStats, setDesignStats] = useState({
     totalPanelArea: 0,
     estimatedCapacity: 0,
-    buildingCount: 0
+    buildingCount: 0,
+    panelCount: 0
   });
+  
+  // Function to update stats based on canvas objects (will be passed down to DesignCanvas)
+  const updateDesignStats = (stats: Partial<typeof designStats>) => {
+    setDesignStats(prev => ({
+      ...prev,
+      ...stats
+    }));
+  };
   
   const handleSaveDesign = () => {
     // This would be expanded to actually save the design
@@ -71,24 +80,31 @@ const SolarDesigner: React.FC = () => {
               
               <div className="mt-8">
                 <h3 className="font-medium text-lg mb-2">Design Statistics</h3>
-                <div className="bg-muted p-3 rounded-md text-sm">
+                <div className="bg-muted p-3 rounded-md text-sm space-y-2">
                   <p className="flex justify-between">
                     <span>Total Panel Area:</span>
                     <span className="font-medium">{designStats.totalPanelArea.toFixed(1)} m²</span>
                   </p>
-                  <p className="flex justify-between mt-1">
+                  <p className="flex justify-between">
                     <span>Estimated Capacity:</span>
                     <span className="font-medium">{designStats.estimatedCapacity.toFixed(2)} kW</span>
                   </p>
-                  <p className="flex justify-between mt-1">
+                  <p className="flex justify-between">
                     <span>Buildings:</span>
                     <span className="font-medium">{designStats.buildingCount}</span>
+                  </p>
+                  <p className="flex justify-between">
+                    <span>Solar Panels:</span>
+                    <span className="font-medium">{designStats.panelCount}</span>
                   </p>
                 </div>
               </div>
               
               <div className="mt-8 p-3 border border-yellow-200 bg-yellow-50 rounded-md">
-                <h3 className="font-medium text-sm mb-1 text-yellow-800">How to Use</h3>
+                <h3 className="font-medium text-sm mb-1 text-yellow-800 flex items-center">
+                  <Info className="h-4 w-4 mr-1 text-yellow-600" /> 
+                  How to Use
+                </h3>
                 <ol className="text-xs text-yellow-700 list-decimal pl-4 space-y-1">
                   <li>Search for a location using the search box</li>
                   <li>Select "Building" tool to draw building outlines</li>
@@ -110,7 +126,7 @@ const SolarDesigner: React.FC = () => {
           
           <div className="mt-4 flex justify-between items-center">
             <div className="text-sm text-muted-foreground">
-              Tip: Search for a location, then use the toolbar to draw buildings and place solar panels
+              Tip: When using drawing tools, you need to click and drag to create objects. The map panning is disabled while drawing.
             </div>
           </div>
         </div>
