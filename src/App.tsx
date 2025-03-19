@@ -41,6 +41,12 @@ const App = () => (
                   <ProjectDetails />
                 </AuthGuard>
               } />
+              <Route path="/solar-calculator" element={
+                <AuthGuard>
+                  <SolarCalculator />
+                </AuthGuard>
+              } />
+              {/* For backward compatibility - maintain both routes */}
               <Route path="/calculator" element={
                 <AuthGuard>
                   <SolarCalculator />
