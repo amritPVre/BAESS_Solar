@@ -12,7 +12,7 @@ import { SolarProject } from "@/types/solarProject";
 import { toast } from "sonner";
 import { formatCurrency, formatNumber } from "@/utils/calculations";
 import { motion } from "framer-motion";
-import { Sun, Plus, Calculator, BarChart3 } from "lucide-react";
+import { Sun, Plus, Calculator, BarChart3, PanelTop } from "lucide-react";
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
@@ -88,6 +88,13 @@ const Dashboard: React.FC = () => {
             <Button variant="outline" className="flex gap-2">
               <Calculator className="h-4 w-4" />
               Advanced Calculator
+            </Button>
+          </Link>
+          
+          <Link to="/solar-designer">
+            <Button variant="outline" className="flex gap-2">
+              <PanelTop className="h-4 w-4" />
+              Solar Designer
             </Button>
           </Link>
           
