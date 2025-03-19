@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Canvas as FabricCanvas, Rect, util, fabric } from "fabric";
+import { fabric } from "fabric";
 import { toast } from "sonner";
 
 interface DesignCanvasProps {
@@ -8,16 +8,16 @@ interface DesignCanvasProps {
 
 export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [canvas, setCanvas] = useState<FabricCanvas | null>(null);
+  const [canvas, setCanvas] = useState<fabric.Canvas | null>(null);
   const isDrawingRef = useRef(false);
   const startPointRef = useRef<{ x: number; y: number } | null>(null);
-  const tempRectRef = useRef<any>(null);
+  const tempRectRef = useRef<fabric.Rect | null>(null);
   
   // Initialize canvas
   useEffect(() => {
     if (!canvasRef.current) return;
     
-    const canvasInstance = new FabricCanvas(canvasRef.current, {
+    const canvasInstance = new fabric.Canvas(canvasRef.current, {
       width: 800,
       height: 600,
       backgroundColor: "#f8f9fa",
@@ -91,7 +91,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
   }, [activeTool, canvas]);
   
   // Create grid
-  const createGrid = (canvas: FabricCanvas) => {
+  const createGrid = (canvas: fabric.Canvas) => {
     const gridSize = 20;
     const width = canvas.width || 800;
     const height = canvas.height || 600;
@@ -127,7 +127,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
   };
   
   // Start drawing
-  const startDrawing = (options: any) => {
+  const startDrawing = (options: fabric.IEvent) => {
     if (!canvas || !options.pointer) return;
     
     const pointer = options.pointer;
@@ -152,12 +152,12 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
       evented: false,
     };
     
-    tempRectRef.current = new Rect(rectOptions);
+    tempRectRef.current = new fabric.Rect(rectOptions);
     canvas.add(tempRectRef.current);
   };
   
   // Draw object while mouse moves
-  const drawObject = (options: any) => {
+  const drawObject = (options: fabric.IEvent) => {
     if (!canvas || !isDrawingRef.current || !startPointRef.current || !tempRectRef.current || !options.pointer) {
       return;
     }
@@ -197,14 +197,11 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
         strokeWidth: 2,
         selectable: activeTool === "select",
         objectType: activeTool === "building" ? "building" : "panel",
-        metadata: {
-          type: activeTool === "building" ? "building" : "panel",
-          createdAt: new Date().toISOString(),
-        }
       };
       
-      const finalObject = new Rect(objectOptions);
-      canvas.add(finalObject);
+      const finalRect = new fabric.Rect(objectOptions);
+      finalRect.set('objectType', activeTool === "building" ? "building" : "panel");
+      canvas.add(finalRect);
       
       // Show toast based on what was created
       if (activeTool === "building") {
@@ -225,13 +222,14 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
   };
   
   // Delete object
-  const deleteObject = (options: any) => {
+  const deleteObject = (options: fabric.IEvent) => {
     if (!canvas || activeTool !== "delete") return;
     
     const target = options.target;
     if (target) {
+      const objectType = target.get('objectType') || "Object";
       canvas.remove(target);
-      toast.success(`${target.objectType || "Object"} deleted`);
+      toast.success(`${objectType} deleted`);
       canvas.renderAll();
     }
   };
