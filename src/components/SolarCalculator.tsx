@@ -4,14 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ClientDetails from "@/components/ClientDetails";
 import CompanyDetails from "@/components/CompanyDetails";
-import SolarPVDetails from "@/components/SolarPVDetails";
 import FinancialDetails from "@/components/FinancialDetails";
 import ResultsDisplay from "@/components/ResultsDisplay";
 import EnvironmentalBenefits from "@/components/EnvironmentalBenefits";
 import AnnualEnergyCheck from "@/components/AnnualEnergyCheck";
-import AdvancedSolarInputs from "@/components/AdvancedSolarInputs";
 import ElectricityDetails from "@/components/ElectricityDetails";
 import FinancialMetricsDisplay from "@/components/FinancialMetricsDisplay";
+import AdvancedSolarInputs from "@/components/AdvancedSolarInputs";
 import { 
   calculateLevelizedCostOfEnergy, 
   calculateAnnualRevenue, 
@@ -512,7 +511,7 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSavePr
       toast.error("Failed to save project");
     }
   };
-  
+
   return (
     <div className="w-full max-w-7xl mx-auto">
       <div className="mb-8 text-center">
@@ -754,7 +753,15 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSavePr
                 
                 {/* Display calculated results */}
                 <div className="space-y-8">
-                  {/* Legacy Results Display for now */}
+                  {/* New Financial Metrics Display */}
+                  {financialMetrics && (
+                    <FinancialMetricsDisplay 
+                      financialMetrics={financialMetrics}
+                      currencySymbol={financialCalculator.current_settings.currency_symbol}
+                    />
+                  )}
+
+                  {/* Legacy Results Display for comparison */}
                   <ResultsDisplay
                     lcoe={lcoe}
                     annualRevenue={annualRevenue}
@@ -780,14 +787,6 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSavePr
                     country={country}
                     city={city}
                   />
-
-                  {/* New Financial Metrics Display */}
-                  {financialMetrics && (
-                    <FinancialMetricsDisplay 
-                      financialMetrics={financialMetrics}
-                      currencySymbol={financialCalculator.current_settings.currency_symbol}
-                    />
-                  )}
 
                   <EnvironmentalBenefits
                     co2Reduction={co2Reduction}

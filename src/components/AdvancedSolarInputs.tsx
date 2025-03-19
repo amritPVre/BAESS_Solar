@@ -1,29 +1,27 @@
 
-import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { Slider } from "@/components/ui/slider";
-import { Button } from "@/components/ui/button";
-import { InverterParams, SolarCalculationResult, SolarParams } from "@/types/solarCalculations";
+import { toast } from "sonner";
+import { SolarCalculationResult, SolarParams } from "@/types/solarCalculations";
 import { calculateSolarEnergy } from "@/utils/solarEnergyCalculation";
 import InverterConfiguration from "./InverterConfiguration";
-import { toast } from "sonner";
-import { Calculator, Sun } from "lucide-react";
+import { InverterParams } from "@/types/solarCalculations";
 
 interface AdvancedSolarInputsProps {
   latitude: number;
   longitude: number;
-  setLatitude: (value: number) => void;
-  setLongitude: (value: number) => void;
+  setLatitude: (lat: number) => void;
+  setLongitude: (lng: number) => void;
   timezone: string;
-  setTimezone: (value: string) => void;
+  setTimezone: (tz: string) => void;
   capacity: number;
-  setCapacity: (value: number) => void;
+  setCapacity: (capacity: number) => void;
   onCalculationComplete: (results: SolarCalculationResult) => void;
-  country: string;
-  city: string;
+  country?: string;
+  city?: string;
 }
 
 const AdvancedSolarInputs: React.FC<AdvancedSolarInputsProps> = ({
@@ -36,10 +34,10 @@ const AdvancedSolarInputs: React.FC<AdvancedSolarInputsProps> = ({
   capacity,
   setCapacity,
   onCalculationComplete,
-  country,
-  city
+  country = "United States",
+  city = "New York"
 }) => {
-  // PV system parameters
+  // System parameters
   const [tilt, setTilt] = useState(30);
   const [azimuth, setAzimuth] = useState(180); // 180 = south
   const [moduleEfficiency, setModuleEfficiency] = useState(0.2); // 20%
@@ -50,7 +48,7 @@ const AdvancedSolarInputs: React.FC<AdvancedSolarInputsProps> = ({
   // Inverter configuration
   const [inverterParams, setInverterParams] = useState<InverterParams | null>(null);
   
-  // Calculate state
+  // Calculation state
   const [calculating, setCalculating] = useState(false);
 
   const handleCalculate = () => {
@@ -74,6 +72,11 @@ const AdvancedSolarInputs: React.FC<AdvancedSolarInputsProps> = ({
       
       // Calculate solar energy
       const calculationResults = calculateSolarEnergy(params);
+      
+      // Update capacity to match calculated capacity
+      setCapacity(calculationResults.system.calculated_capacity);
+      
+      // Pass results to parent
       onCalculationComplete(calculationResults);
       
       toast.success("Solar energy calculations completed!");
@@ -84,33 +87,23 @@ const AdvancedSolarInputs: React.FC<AdvancedSolarInputsProps> = ({
       setCalculating(false);
     }
   };
-
+  
   return (
-    <div className="glass-card rounded-xl p-6 shadow-sm transition-all duration-300 hover:shadow-md">
-      <h2 className="section-title flex items-center">
-        <Sun className="w-6 h-6 mr-2 text-solar" />
-        Advanced Solar System Details
-      </h2>
+    <div className="w-full">
+      <h2 className="text-2xl font-bold mb-4">Advanced Solar Energy Calculator</h2>
       <p className="text-muted-foreground mb-6">
-        Configure the detailed parameters of your solar PV system for precise energy production estimates
+        Calculate your solar energy production based on location and system parameters
       </p>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Location Parameters</CardTitle>
+            <CardDescription>
+              Enter the geographic coordinates of the installation site
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="location">Location</Label>
-              <Input 
-                id="location" 
-                value={`${city}, ${country}`} 
-                readOnly 
-                disabled
-                className="bg-muted"
-              />
-            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="latitude">Latitude (°)</Label>
@@ -145,12 +138,34 @@ const AdvancedSolarInputs: React.FC<AdvancedSolarInputsProps> = ({
                 placeholder="e.g., America/New_York"
               />
             </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="country">Country</Label>
+                <Input
+                  id="country"
+                  value={country}
+                  disabled
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="city">City</Label>
+                <Input
+                  id="city"
+                  value={city}
+                  disabled
+                />
+              </div>
+            </div>
           </CardContent>
         </Card>
         
         <Card>
           <CardHeader>
             <CardTitle>Installation Parameters</CardTitle>
+            <CardDescription>
+              Specify the orientation and tilt of the solar panels
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -189,6 +204,9 @@ const AdvancedSolarInputs: React.FC<AdvancedSolarInputsProps> = ({
         <Card>
           <CardHeader>
             <CardTitle>System Specifications</CardTitle>
+            <CardDescription>
+              Enter the technical details of your solar PV system
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -271,10 +289,9 @@ const AdvancedSolarInputs: React.FC<AdvancedSolarInputsProps> = ({
       <div className="mt-6 flex justify-end">
         <Button
           onClick={handleCalculate}
-          className="bg-solar hover:bg-solar-dark text-white w-full sm:w-auto"
+          className="bg-solar hover:bg-solar-dark text-white"
           disabled={calculating}
         >
-          <Calculator className="w-4 h-4 mr-2" />
           {calculating ? "Calculating..." : "Calculate Solar Energy"}
         </Button>
       </div>

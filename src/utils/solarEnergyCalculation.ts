@@ -4,7 +4,9 @@ import {
   tiltEfficiencyByLatitude,
   getSeasonalAdjustments,
   calculateTemperatureDerating,
-  getSolarRadiationData
+  getSolarRadiationData,
+  getOrientationKey,
+  getOrientationFactor
 } from './solarIrradianceCalculation';
 import { InverterParams, SolarCalculationResult, SolarParams } from '@/types/solarCalculations';
 
@@ -201,31 +203,3 @@ export const calculateSolarEnergy = (params: SolarParams): SolarCalculationResul
     yearlyProduction: yearly_production
   };
 };
-
-// Define orientation factors map
-const orientationFactorsMap: Record<string, number> = {
-  'south': 1.0,
-  'southeast': 0.97,
-  'southwest': 0.97,
-  'east': 0.93,
-  'west': 0.93,
-  'northeast': 0.88,
-  'northwest': 0.88,
-  'north': 0.85
-};
-
-// Helper functions for orientation
-function getOrientationKey(azimuth: number): string {
-  // Convert azimuth angle to cardinal direction
-  if (azimuth >= -45 && azimuth < 45) return 'south';
-  if (azimuth >= 45 && azimuth < 135) return 'east';
-  if (azimuth >= 135 || azimuth < -135) return 'north';
-  if (azimuth >= -135 && azimuth < -45) return 'west';
-  return 'south'; // Default
-}
-
-function getOrientationFactor(orientation: string): number {
-  return orientation in orientationFactorsMap 
-    ? orientationFactorsMap[orientation]
-    : 0.9; // Default factor
-}
