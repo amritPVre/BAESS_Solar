@@ -1,10 +1,23 @@
-
 import React, { useEffect, useState } from "react";
 import { formatCurrency, formatNumber } from "@/utils/calculations";
 import DataCard from "@/components/ui/DataCard";
 import SolarChart from "@/components/ui/SolarChart";
 import PDFReport from "@/components/PDFReport";
-import { DollarSign, LineChart, BarChart3, TrendingUp, CalendarClock, Sun, MapPin, Download, ArrowDown, ArrowUp } from "lucide-react";
+import { 
+  DollarSign, 
+  LineChart, 
+  BarChart3, 
+  TrendingUp, 
+  CalendarClock, 
+  Sun, 
+  MapPin, 
+  Download, 
+  ArrowDown, 
+  ArrowUp,
+  Cloud,
+  TreePine,
+  Car
+} from "lucide-react";
 import SolarLocationMap from "@/components/SolarLocationMap";
 import ProductionCashflowTable from "@/components/ProductionCashflowTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,7 +32,6 @@ interface ResultsDisplayProps {
   yearlyProduction: number[];
   yearlyCashFlow: number[];
   cumulativeCashFlow: number[];
-  // Client & company info for PDF report
   clientName?: string;
   clientEmail?: string;
   clientAddress?: string;
@@ -46,7 +58,6 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
   yearlyProduction,
   yearlyCashFlow,
   cumulativeCashFlow,
-  // Client & company info for PDF report
   clientName = "Client",
   clientEmail = "",
   clientAddress = "",
@@ -70,7 +81,6 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
     setTimeout(() => setIsVisible(true), 100);
   }, []);
 
-  // Prepare data for charts
   const productionData = yearlyProduction.map((production, index) => ({
     year: index + 1,
     production: production
@@ -309,7 +319,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
             </div>
             
             <div className="bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 flex flex-col items-center justify-center text-center">
-              <Trees className="h-12 w-12 mb-2 text-green-500" />
+              <TreePine className="h-12 w-12 mb-2 text-green-500" />
               <p className="text-sm text-muted-foreground">Trees Equivalent</p>
               <p className="text-xl font-bold">{formatNumber(treesEquivalent)}</p>
             </div>
@@ -360,7 +370,6 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
         </TabsContent>
       </Tabs>
       
-      {/* PDF Report Section */}
       <div className="mb-8 bg-gradient-to-r from-solar-light/30 to-solar-blue/10 p-6 rounded-xl shadow-sm">
         <h3 className="text-xl font-bold mb-4 flex items-center">
           <Download className="h-5 w-5 mr-2 text-solar" />
