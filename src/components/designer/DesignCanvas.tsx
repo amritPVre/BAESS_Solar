@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import { fabric } from "fabric";
 import { toast } from "sonner";
@@ -140,13 +141,17 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
       canvas.remove(tempRectRef.current);
     }
     
+    // Use more visible colors for buildings and panels
+    const fillColor = activeTool === "building" ? 'rgba(149, 165, 166, 0.7)' : 'rgba(52, 152, 219, 0.7)';
+    const strokeColor = activeTool === "building" ? '#7f8c8d' : '#2980b9';
+    
     const rectOptions = {
       left: snappedPoint.x,
       top: snappedPoint.y,
       width: 0,
       height: 0,
-      fill: activeTool === "building" ? 'rgba(200, 200, 200, 0.5)' : 'rgba(65, 105, 225, 0.7)',
-      stroke: activeTool === "building" ? '#888888' : '#2762c5',
+      fill: fillColor,
+      stroke: strokeColor,
       strokeWidth: 2,
       selectable: false,
       evented: false,
@@ -154,6 +159,9 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
     
     tempRectRef.current = new fabric.Rect(rectOptions);
     canvas.add(tempRectRef.current);
+    
+    // Show toast to provide feedback on what tool is being used
+    toast.info(`Drawing ${activeTool === "building" ? "building" : "solar panel"}...`);
   };
   
   // Draw object while mouse moves
@@ -186,14 +194,18 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
     }
     
     if (tempRectRef.current.width > 0 && tempRectRef.current.height > 0) {
+      // Use more visible colors for buildings and panels
+      const fillColor = activeTool === "building" ? 'rgba(149, 165, 166, 0.7)' : 'rgba(52, 152, 219, 0.7)';
+      const strokeColor = activeTool === "building" ? '#7f8c8d' : '#2980b9';
+      
       // Create the actual object
       const objectOptions = {
         left: tempRectRef.current.left,
         top: tempRectRef.current.top,
         width: tempRectRef.current.width,
         height: tempRectRef.current.height,
-        fill: activeTool === "building" ? 'rgba(200, 200, 200, 0.5)' : 'rgba(65, 105, 225, 0.7)',
-        stroke: activeTool === "building" ? '#888888' : '#2762c5',
+        fill: fillColor,
+        stroke: strokeColor,
         strokeWidth: 2,
         selectable: activeTool === "select",
         objectType: activeTool === "building" ? "building" : "panel",
@@ -202,6 +214,17 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
       const finalRect = new fabric.Rect(objectOptions);
       finalRect.set('objectType', activeTool === "building" ? "building" : "panel");
       canvas.add(finalRect);
+      
+      // Add a label to identify the object type
+      const label = new fabric.Text(activeTool === "building" ? "Building" : "Solar Panel", {
+        left: tempRectRef.current.left + 5,
+        top: tempRectRef.current.top + 5,
+        fontSize: 12,
+        fill: activeTool === "building" ? '#333333' : '#ffffff',
+        selectable: false,
+        evented: false,
+      });
+      canvas.add(label);
       
       // Show toast based on what was created
       if (activeTool === "building") {
@@ -240,6 +263,16 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
         ref={canvasRef} 
         className="border-2 border-gray-200 rounded-md shadow-sm bg-white"
       />
+      <div className="absolute bottom-2 right-2 bg-white p-2 rounded-md shadow-sm text-sm text-gray-600">
+        <p className="flex items-center">
+          <span className="inline-block w-3 h-3 bg-[#7f8c8d] mr-2 rounded-sm"></span>
+          Building
+        </p>
+        <p className="flex items-center">
+          <span className="inline-block w-3 h-3 bg-[#2980b9] mr-2 rounded-sm"></span>
+          Solar Panel
+        </p>
+      </div>
     </div>
   );
 };
