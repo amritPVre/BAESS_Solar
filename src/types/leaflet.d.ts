@@ -187,3 +187,8 @@ declare module 'leaflet' {
     [key: string]: any;
   }
 }
+
+// Add HTMLElement extension for Leaflet properties
+interface HTMLElement {
+  _leaflet_id?: number;
+}

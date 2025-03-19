@@ -28,6 +28,21 @@ export const MapContainer: React.FC<MapContainerProps> = ({
       // First check if a map already exists and remove it
       if (leafletMapRef.current) {
         leafletMapRef.current.remove();
+        leafletMapRef.current = null;
+      }
+      
+      // Also check global reference and clear it
+      if (window.solarDesignerMap) {
+        window.solarDesignerMap.remove();
+        window.solarDesignerMap = undefined;
+      }
+      
+      // Check if there's already a Leaflet instance on this container
+      const mapContainer = document.getElementById(mapId);
+      if (mapContainer && mapContainer._leaflet_id) {
+        // If the container has a _leaflet_id, it means Leaflet is already initialized on it
+        console.log("Container already has Leaflet instance, cleaning up...");
+        delete mapContainer._leaflet_id;
       }
       
       // Wait for DOM to be fully ready
@@ -91,7 +106,11 @@ export const MapContainer: React.FC<MapContainerProps> = ({
         leafletMapRef.current.remove();
         leafletMapRef.current = null;
       }
-      delete window.solarDesignerMap;
+      
+      if (window.solarDesignerMap) {
+        window.solarDesignerMap.remove();
+        window.solarDesignerMap = undefined;
+      }
     };
   }, [mapRef, onMapLoaded, onMapError]);
   

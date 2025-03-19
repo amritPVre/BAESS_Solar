@@ -30,6 +30,11 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   useEffect(() => {
     if (mapRef.current) {
       mapRef.current.id = "solar-designer-map";
+      
+      // Clean up any existing leaflet instances on this element
+      if (mapRef.current._leaflet_id) {
+        delete mapRef.current._leaflet_id;
+      }
     }
   }, []);
   
@@ -49,7 +54,10 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   useEffect(() => {
     return () => {
       // Clean up global references
-      window.solarDesignerMap = undefined;
+      if (window.solarDesignerMap) {
+        window.solarDesignerMap.remove();
+        window.solarDesignerMap = undefined;
+      }
       window.designCanvas = null;
       window.isDrawingMode = false;
     };
