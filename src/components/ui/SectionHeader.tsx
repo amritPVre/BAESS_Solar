@@ -7,6 +7,7 @@ interface SectionHeaderProps {
   description?: string;
   icon?: React.ReactNode;
   className?: string;
+  action?: React.ReactNode;
 }
 
 const SectionHeader: React.FC<SectionHeaderProps> = ({
@@ -14,12 +15,16 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
   description,
   icon,
   className,
+  action,
 }) => {
   return (
     <div className={cn("mb-6", className)}>
-      <div className="flex items-center gap-3 mb-2">
-        {icon && <div className="text-solar">{icon}</div>}
-        <h2 className="text-2xl font-bold tracking-tight">{title}</h2>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3 mb-2">
+          {icon && <div className="text-solar">{icon}</div>}
+          <h2 className="text-2xl font-bold tracking-tight">{title}</h2>
+        </div>
+        {action && <div>{action}</div>}
       </div>
       {description && (
         <p className="text-muted-foreground text-base max-w-3xl">{description}</p>
