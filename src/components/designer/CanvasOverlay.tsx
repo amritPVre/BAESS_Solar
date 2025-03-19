@@ -139,10 +139,17 @@ export const CanvasOverlay: React.FC<CanvasOverlayProps> = ({
     
     // Set up drawing tools
     if (activeTool === "building" || activeTool === "panel") {
-      // Disable Google Maps dragging when in drawing mode
+      // Disable map dragging when in drawing mode
       if (window.solarDesignerMap) {
-        window.solarDesignerMap.setOptions({ draggable: false });
-        console.log("Map dragging disabled for drawing mode");
+        try {
+          // For Leaflet maps
+          window.solarDesignerMap.dragging.disable();
+          window.solarDesignerMap.doubleClickZoom.disable();
+          window.solarDesignerMap.scrollWheelZoom.disable();
+          console.log("Map dragging disabled for drawing mode");
+        } catch (error) {
+          console.error("Error disabling map interactions:", error);
+        }
       }
       
       canvas.on("mouse:down", startDrawing);
@@ -151,10 +158,17 @@ export const CanvasOverlay: React.FC<CanvasOverlayProps> = ({
       
       console.log("Drawing event listeners added for", activeTool);
     } else {
-      // Re-enable Google Maps dragging when not in drawing mode
+      // Re-enable map dragging when not in drawing mode
       if (window.solarDesignerMap) {
-        window.solarDesignerMap.setOptions({ draggable: true });
-        console.log("Map dragging re-enabled");
+        try {
+          // For Leaflet maps
+          window.solarDesignerMap.dragging.enable();
+          window.solarDesignerMap.doubleClickZoom.enable();
+          window.solarDesignerMap.scrollWheelZoom.enable();
+          console.log("Map dragging re-enabled");
+        } catch (error) {
+          console.error("Error enabling map interactions:", error);
+        }
       }
     }
     

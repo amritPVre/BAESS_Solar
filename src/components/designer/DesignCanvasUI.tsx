@@ -18,7 +18,7 @@ export const DesignCanvasUI: React.FC<DesignCanvasUIProps> = ({
   return (
     <>
       {/* Drawing mode indicator */}
-      {apiKeyEntered && mapLoaded && activeTool !== 'select' && (
+      {mapLoaded && activeTool !== 'select' && (
         <div className="absolute bottom-2 left-2 bg-red-500 text-white px-3 py-1 rounded-md shadow-sm text-sm z-20 animate-pulse">
           Drawing Mode: {activeTool.charAt(0).toUpperCase() + activeTool.slice(1)}
         </div>
@@ -44,7 +44,7 @@ export const DesignCanvasUI: React.FC<DesignCanvasUIProps> = ({
       )}
       
       {/* Loading indicator */}
-      {apiKeyEntered && !mapLoaded && !mapError && (
+      {!mapLoaded && !mapError && (
         <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10">
           <div className="flex flex-col items-center">
             <Loader2 className="h-8 w-8 animate-spin text-solar" />
@@ -54,7 +54,7 @@ export const DesignCanvasUI: React.FC<DesignCanvasUIProps> = ({
       )}
       
       {/* Active tool indicator */}
-      {apiKeyEntered && mapLoaded && (
+      {mapLoaded && (
         <div className="absolute top-2 right-2 bg-white p-2 rounded-md shadow-sm text-sm z-10">
           <p className="font-medium">
             Active Tool: <span className="text-solar">{activeTool.charAt(0).toUpperCase() + activeTool.slice(1)}</span>
@@ -63,7 +63,7 @@ export const DesignCanvasUI: React.FC<DesignCanvasUIProps> = ({
       )}
       
       {/* Instructions overlay when drawing mode is active */}
-      {apiKeyEntered && mapLoaded && (activeTool === 'building' || activeTool === 'panel') && (
+      {mapLoaded && (activeTool === 'building' || activeTool === 'panel') && (
         <div className="absolute top-14 right-2 bg-yellow-50 p-2 rounded-md shadow-sm text-sm z-10 border border-yellow-200 max-w-xs">
           <p className="font-medium text-yellow-800">Drawing Instructions:</p>
           <ol className="text-xs text-yellow-700 list-decimal pl-4 mt-1 space-y-1">
@@ -73,6 +73,11 @@ export const DesignCanvasUI: React.FC<DesignCanvasUIProps> = ({
           </ol>
         </div>
       )}
+      
+      {/* OpenStreetMap attribution notice */}
+      <div className="absolute bottom-8 left-2 bg-white/80 px-2 py-1 rounded-md text-xs text-gray-600 z-10">
+        Powered by OpenStreetMap
+      </div>
     </>
   );
 };

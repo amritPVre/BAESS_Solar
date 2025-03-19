@@ -1,8 +1,7 @@
 
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { GoogleMapsKeyInput } from "./GoogleMapsKeyInput";
 import { MapSearchControls } from "./MapSearchControls";
 import { MapContainer } from "./MapContainer";
 import { CanvasOverlay } from "./CanvasOverlay";
@@ -25,29 +24,18 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   const mapRef = useRef<HTMLDivElement>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
-  const [apiKey, setApiKey] = useState<string>(() => {
-    // Try to get API key from sessionStorage
-    return sessionStorage.getItem("gmapsApiKey") || "";
-  });
-  const [apiKeyEntered, setApiKeyEntered] = useState(() => {
-    // Check if API key exists in sessionStorage
-    return !!sessionStorage.getItem("gmapsApiKey");
-  });
   
-  // Handle API key submission
-  const handleApiKeySubmit = (newApiKey: string) => {
-    setApiKey(newApiKey);
-    setApiKeyEntered(true);
-  };
+  useEffect(() => {
+    // Generate a unique ID for the map div to be used by Leaflet
+    if (mapRef.current) {
+      mapRef.current.id = "solar-designer-map";
+    }
+  }, []);
   
   return (
     <div className="design-canvas-container relative w-full h-[600px] overflow-hidden rounded-md border-2 border-gray-200 shadow-sm">
-      {!apiKeyEntered ? (
-        <GoogleMapsKeyInput onApiKeySubmit={handleApiKeySubmit} />
-      ) : null}
-      
       {/* Map search controls */}
-      {apiKeyEntered && (
+      {mapLoaded && (
         <MapSearchControls mapLoaded={mapLoaded} />
       )}
       
@@ -58,17 +46,14 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
       />
       
       {/* Map initialization functionality */}
-      {apiKeyEntered && (
-        <MapContainer 
-          apiKey={apiKey} 
-          mapRef={mapRef} 
-          onMapLoaded={() => setMapLoaded(true)} 
-          onMapError={setMapError} 
-        />
-      )}
+      <MapContainer 
+        mapRef={mapRef} 
+        onMapLoaded={() => setMapLoaded(true)} 
+        onMapError={setMapError} 
+      />
       
       {/* Canvas overlay */}
-      {apiKeyEntered && mapLoaded && (
+      {mapLoaded && (
         <CanvasOverlay 
           mapRef={mapRef} 
           mapLoaded={mapLoaded} 
@@ -82,18 +67,16 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
         mapLoaded={mapLoaded} 
         mapError={mapError} 
         activeTool={activeTool} 
-        apiKeyEntered={apiKeyEntered} 
+        apiKeyEntered={true} 
       />
     </div>
   );
 };
 
-// Add Window interface extension for Google Maps and Canvas
+// Add Window interface extension for Leaflet Map and Canvas
 declare global {
   interface Window {
-    google: any;
-    initMap: () => void;
-    solarDesignerMap: google.maps.Map;
+    solarDesignerMap: any; // Will hold our Leaflet map instance
     designCanvas: fabric.Canvas | null;
     isDrawingMode: boolean;
   }

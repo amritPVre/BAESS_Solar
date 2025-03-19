@@ -1,32 +1,70 @@
 
 import React, { useEffect, useRef } from 'react';
+import * as L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 interface SolarLocationMapProps {
   location: { lat: number; lng: number };
 }
 
 const SolarLocationMap: React.FC<SolarLocationMapProps> = ({ location }) => {
-  const mapRef = useRef<HTMLIFrameElement>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
   
   useEffect(() => {
-    // When location changes, we update the map
-    // This would be more interactive with a proper mapping library like Mapbox or Leaflet
+    if (!mapContainerRef.current) return;
+    
+    // Initialize the map if it doesn't exist
+    if (!mapRef.current) {
+      mapRef.current = L.map(mapContainerRef.current, {
+        center: [location.lat, location.lng],
+        zoom: 15,
+        zoomControl: true,
+        attributionControl: true,
+      });
+      
+      // Add OpenStreetMap tile layer
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19
+      }).addTo(mapRef.current);
+      
+      // Add a marker at the location
+      L.marker([location.lat, location.lng])
+        .addTo(mapRef.current)
+        .bindPopup('Solar Installation Location')
+        .openPopup();
+    } else {
+      // Update the map view and marker if it already exists
+      mapRef.current.setView([location.lat, location.lng], 15);
+      
+      // Clear existing markers and add a new one
+      mapRef.current.eachLayer((layer) => {
+        if (layer instanceof L.Marker) {
+          mapRef.current?.removeLayer(layer);
+        }
+      });
+      
+      L.marker([location.lat, location.lng])
+        .addTo(mapRef.current)
+        .bindPopup('Solar Installation Location')
+        .openPopup();
+    }
+    
+    // Cleanup function
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
   }, [location]);
-  
-  // Build the Google Maps embed URL with the marker at the specified coordinates
-  const mapUrl = `https://maps.google.com/maps?q=${location.lat},${location.lng}&z=15&output=embed`;
   
   return (
     <div className="w-full h-full min-h-[300px] rounded-lg overflow-hidden border border-gray-200 shadow-sm">
-      <iframe 
-        ref={mapRef}
-        src={mapUrl}
-        width="100%" 
-        height="100%" 
-        style={{ border: 0, minHeight: '300px' }} 
-        loading="lazy"
-        title="Solar Installation Location"
-        className="w-full h-full"
+      <div 
+        ref={mapContainerRef}
+        className="w-full h-full min-h-[300px]"
       />
     </div>
   );

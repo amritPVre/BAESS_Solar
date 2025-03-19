@@ -1,88 +1,90 @@
 
-import React, { useEffect } from "react";
-import { Loader } from "lucide-react";
+import React, { useEffect, useRef } from "react";
+import * as L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
 interface MapContainerProps {
-  apiKey: string;
   mapRef: React.RefObject<HTMLDivElement>;
   onMapLoaded: () => void;
   onMapError: (error: string) => void;
 }
 
 export const MapContainer: React.FC<MapContainerProps> = ({
-  apiKey,
   mapRef,
   onMapLoaded,
   onMapError
 }) => {
-  // Load Google Maps API and initialize map
+  const leafletMapRef = useRef<L.Map | null>(null);
+
+  // Load OpenStreetMap and initialize map
   useEffect(() => {
-    if (!apiKey || !mapRef.current) return;
+    if (!mapRef.current) return;
     
-    // Define init function in global scope for Google Maps callback
-    window.initMap = () => {
-      try {
-        if (!mapRef.current) {
-          throw new Error("Map container not found");
-        }
-        
-        // Create map instance
-        const map = new window.google.maps.Map(mapRef.current, {
-          center: { lat: 37.7749, lng: -122.4194 }, // Default to San Francisco
-          zoom: 19, // Higher zoom level for better detail
-          mapTypeId: window.google.maps.MapTypeId.HYBRID, // Satellite with labels
-          tilt: 0, // No 3D tilt for better drawing surface
-          disableDefaultUI: false,
-          zoomControl: true,
-          mapTypeControl: true,
-          scaleControl: true,
-          rotateControl: false,
-          fullscreenControl: true,
-          streetViewControl: false,
-          clickableIcons: false,
-          gestureHandling: "greedy", // Allow one-finger pan on mobile
-          draggable: true, // Will be disabled during drawing mode
-        });
-        
-        // Make map instance available globally
-        window.solarDesignerMap = map;
-        
-        // Add event listener for when the map is fully loaded
-        window.google.maps.event.addListenerOnce(map, "idle", () => {
-          console.log("Google Maps fully loaded");
-          onMapLoaded();
-        });
-        
-      } catch (error) {
-        console.error("Error initializing map:", error);
-        onMapError(error.message || "Failed to initialize map");
-      }
-    };
-    
-    // Load Google Maps API
     try {
-      if (!window.google || !window.google.maps) {
-        const script = document.createElement("script");
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap&libraries=places`;
-        script.async = true;
-        script.defer = true;
-        script.onerror = () => onMapError("Failed to load Google Maps API");
-        document.head.appendChild(script);
-      } else {
-        // API already loaded, initialize map directly
-        window.initMap();
-      }
+      // Create map instance
+      const map = L.map(mapRef.current.id, {
+        center: { lat: 37.7749, lng: -122.4194 }, // Default to San Francisco
+        zoom: 19, // Higher zoom level for better detail
+        zoomControl: true,
+        attributionControl: true,
+      });
+      
+      // Add OpenStreetMap tile layer
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19
+      }).addTo(map);
+      
+      // Add satellite view option
+      const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+        maxZoom: 19
+      });
+      
+      // Add layer control
+      const baseMaps = {
+        "Street": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+          maxZoom: 19
+        }),
+        "Satellite": satelliteLayer
+      };
+      
+      // Add the street layer by default
+      baseMaps["Street"].addTo(map);
+      
+      // Add layer control
+      L.control.layers(baseMaps).addTo(map);
+      
+      // Make map instance available globally
+      window.solarDesignerMap = map as any;
+      leafletMapRef.current = map;
+      
+      // Trigger loaded event
+      map.on("load", () => {
+        console.log("Leaflet map fully loaded");
+        onMapLoaded();
+      });
+      
+      // Fire the load event manually as Leaflet doesn't have a dedicated load event
+      setTimeout(() => {
+        onMapLoaded();
+      }, 500);
+      
     } catch (error) {
-      console.error("Error loading Google Maps API:", error);
-      onMapError(error.message || "Failed to load Google Maps API");
+      console.error("Error initializing map:", error);
+      onMapError(error instanceof Error ? error.message : "Failed to initialize map");
     }
     
     return () => {
       // Clean up
-      delete window.initMap;
+      if (leafletMapRef.current) {
+        leafletMapRef.current.remove();
+        leafletMapRef.current = null;
+      }
       delete window.solarDesignerMap;
     };
-  }, [apiKey, mapRef, onMapLoaded, onMapError]);
+  }, [mapRef, onMapLoaded, onMapError]);
   
   return null; // No visible component, just functionality
 };

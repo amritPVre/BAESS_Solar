@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 
 interface MapSearchControlsProps {
@@ -17,19 +17,28 @@ export const MapSearchControls: React.FC<MapSearchControlsProps> = ({ mapLoaded 
     
     setSearchingAddress(true);
     
-    const geocoder = new window.google.maps.Geocoder();
-    geocoder.geocode({ address }, (results, status) => {
-      setSearchingAddress(false);
-      
-      if (status === 'OK' && results && results[0]) {
-        const location = results[0].geometry.location;
-        window.solarDesignerMap.setCenter(location);
-        window.solarDesignerMap.setZoom(20); // Zoom in for better detail
-        toast.success(`Location found: ${results[0].formatted_address}`);
-      } else {
-        toast.error(`Could not find location: ${status}`);
-      }
-    });
+    // Using Nominatim search API (OpenStreetMap's free geocoding service)
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`)
+      .then(response => response.json())
+      .then(data => {
+        setSearchingAddress(false);
+        
+        if (data && data.length > 0) {
+          const location = {
+            lat: parseFloat(data[0].lat),
+            lng: parseFloat(data[0].lon)
+          };
+          
+          window.solarDesignerMap.setView(location, 19);
+          toast.success(`Location found: ${data[0].display_name}`);
+        } else {
+          toast.error("Could not find location");
+        }
+      })
+      .catch(error => {
+        setSearchingAddress(false);
+        toast.error(`Error searching for location: ${error.message}`);
+      });
   };
 
   if (!mapLoaded) return null;
@@ -52,7 +61,9 @@ export const MapSearchControls: React.FC<MapSearchControlsProps> = ({ mapLoaded 
       >
         {searchingAddress ? (
           <Loader2 className="h-4 w-4 animate-spin mr-1" />
-        ) : null}
+        ) : (
+          <Search className="h-4 w-4 mr-1" />
+        )}
         Search
       </Button>
     </div>
