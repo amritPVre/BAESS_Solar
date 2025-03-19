@@ -1,7 +1,8 @@
-
 import React, { useEffect, useRef, useState } from "react";
 import { fabric } from "fabric";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 
 interface DesignCanvasProps {
   activeTool: "select" | "building" | "panel" | "delete";
@@ -9,32 +10,128 @@ interface DesignCanvasProps {
 
 export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const mapRef = useRef<HTMLDivElement>(null);
   const [canvas, setCanvas] = useState<fabric.Canvas | null>(null);
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const [address, setAddress] = useState("");
+  const [searchingAddress, setSearchingAddress] = useState(false);
+  
   const isDrawingRef = useRef(false);
   const startPointRef = useRef<{ x: number; y: number } | null>(null);
   const tempRectRef = useRef<fabric.Rect | null>(null);
   
-  // Initialize canvas
+  // Initialize Google Maps
   useEffect(() => {
-    if (!canvasRef.current) return;
+    // Load Google Maps API
+    const loadGoogleMaps = () => {
+      if (!window.google) {
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=&libraries=places&callback=initMap`;
+        script.async = true;
+        script.defer = true;
+        window.initMap = initializeMap;
+        document.head.appendChild(script);
+      } else {
+        initializeMap();
+      }
+    };
+
+    // Initialize map
+    const initializeMap = () => {
+      if (!mapRef.current) return;
+      
+      const defaultLocation = { lat: 37.773972, lng: -122.431297 }; // San Francisco
+      
+      const map = new window.google.maps.Map(mapRef.current, {
+        center: defaultLocation,
+        zoom: 20,
+        mapTypeId: 'satellite',
+        disableDefaultUI: false,
+        zoomControl: true,
+        mapTypeControl: true,
+        streetViewControl: false,
+        rotateControl: false,
+        fullscreenControl: true,
+      });
+      
+      // Store map in window for access
+      window.solarDesignerMap = map;
+      
+      // Add search box for locations
+      const searchBox = new window.google.maps.places.SearchBox(
+        document.getElementById('map-search-input') as HTMLInputElement
+      );
+      
+      // Bias search box to current map bounds
+      map.addListener('bounds_changed', () => {
+        searchBox.setBounds(map.getBounds() as google.maps.LatLngBounds);
+      });
+      
+      // Listen for search box events
+      searchBox.addListener('places_changed', () => {
+        const places = searchBox.getPlaces();
+        if (!places || places.length === 0) return;
+        
+        const bounds = new window.google.maps.LatLngBounds();
+        places.forEach(place => {
+          if (!place.geometry || !place.geometry.location) return;
+          
+          if (place.geometry.viewport) {
+            bounds.union(place.geometry.viewport);
+          } else {
+            bounds.extend(place.geometry.location);
+          }
+        });
+        
+        map.fitBounds(bounds);
+        // Zoom in more for better satellite detail
+        setTimeout(() => {
+          map.setZoom(20);
+        }, 500);
+      });
+      
+      setMapLoaded(true);
+      toast.success("Map loaded successfully");
+    };
+    
+    loadGoogleMaps();
+  }, []);
+  
+  // Initialize canvas after map is loaded
+  useEffect(() => {
+    if (!mapLoaded || !canvasRef.current) return;
     
     const canvasInstance = new fabric.Canvas(canvasRef.current, {
-      width: 800,
-      height: 600,
-      backgroundColor: "#f8f9fa",
+      width: mapRef.current?.clientWidth || 800,
+      height: mapRef.current?.clientHeight || 600,
+      backgroundColor: 'rgba(0,0,0,0)',
       selection: true,
       fireRightClick: true,
     });
     
-    // Add grid pattern
-    createGrid(canvasInstance);
+    // Ensure canvas matches map dimensions
+    const resizeCanvas = () => {
+      if (!canvasInstance || !mapRef.current) return;
+      
+      const width = mapRef.current.clientWidth;
+      const height = mapRef.current.clientHeight;
+      
+      canvasInstance.setWidth(width);
+      canvasInstance.setHeight(height);
+      canvasInstance.renderAll();
+    };
+    
+    // Set initial size and add resize listener
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
     
     setCanvas(canvasInstance);
     
     return () => {
+      window.removeEventListener('resize', resizeCanvas);
       canvasInstance.dispose();
     };
-  }, []);
+  }, [mapLoaded]);
   
   // Handle tool changes
   useEffect(() => {
@@ -90,34 +187,6 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
       }
     };
   }, [activeTool, canvas]);
-  
-  // Create grid
-  const createGrid = (canvas: fabric.Canvas) => {
-    const gridSize = 20;
-    const width = canvas.width || 800;
-    const height = canvas.height || 600;
-    
-    // Create gridlines
-    for (let i = 0; i < width / gridSize; i++) {
-      const lineX = new fabric.Line([i * gridSize, 0, i * gridSize, height], {
-        stroke: "#e0e0e0",
-        selectable: false,
-        evented: false,
-      });
-      canvas.add(lineX);
-    }
-    
-    for (let i = 0; i < height / gridSize; i++) {
-      const lineY = new fabric.Line([0, i * gridSize, width, i * gridSize], {
-        stroke: "#e0e0e0",
-        selectable: false,
-        evented: false,
-      });
-      canvas.add(lineY);
-    }
-    
-    canvas.renderAll();
-  };
   
   // Snap point to grid
   const snapToGrid = (point: { x: number; y: number }, gridSize = 20) => {
@@ -226,11 +295,12 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
       });
       canvas.add(label);
       
-      // Show toast based on what was created
-      if (activeTool === "building") {
+      // Calculate area if it's a solar panel
+      if (activeTool === "panel") {
+        const areaInSquareMeters = calculatePanelArea(finalRect.width, finalRect.height);
+        toast.success(`Solar panel placed: ${areaInSquareMeters.toFixed(1)} m² (${estimateKwCapacity(areaInSquareMeters).toFixed(2)} kW)`);
+      } else {
         toast.success("Building created");
-      } else if (activeTool === "panel") {
-        toast.success("Solar panel placed");
       }
     }
     
@@ -257,12 +327,78 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
     }
   };
   
+  // Helper function to calculate solar panel area (approximate)
+  const calculatePanelArea = (widthPixels: number, heightPixels: number): number => {
+    // Assuming 1 pixel = 0.05 meters at zoom level 20 (approximate)
+    const scaleFactor = 0.05;
+    return widthPixels * heightPixels * scaleFactor * scaleFactor;
+  };
+  
+  // Estimate kW capacity based on area
+  const estimateKwCapacity = (areaInSquareMeters: number): number => {
+    // Rough estimate: 1 kW requires about 7 m² of space
+    return areaInSquareMeters / 7;
+  };
+  
+  // Handle address search
+  const handleSearchAddress = () => {
+    if (!address.trim() || !window.solarDesignerMap) return;
+    
+    setSearchingAddress(true);
+    
+    const geocoder = new window.google.maps.Geocoder();
+    geocoder.geocode({ address }, (results, status) => {
+      setSearchingAddress(false);
+      
+      if (status === 'OK' && results && results[0]) {
+        const location = results[0].geometry.location;
+        window.solarDesignerMap.setCenter(location);
+        window.solarDesignerMap.setZoom(20); // Zoom in for better detail
+        toast.success(`Location found: ${results[0].formatted_address}`);
+      } else {
+        toast.error(`Could not find location: ${status}`);
+      }
+    });
+  };
+  
   return (
-    <div className="canvas-container h-[600px] w-full relative overflow-hidden">
+    <div className="design-canvas-container relative w-full h-[600px] overflow-hidden rounded-md border-2 border-gray-200 shadow-sm">
+      {/* Map search controls */}
+      <div className="absolute top-2 left-2 z-10 bg-white p-2 rounded-md shadow-sm flex gap-2 items-center">
+        <input
+          id="map-search-input"
+          type="text"
+          placeholder="Enter location or address"
+          className="px-3 py-1.5 border border-gray-300 rounded-md text-sm w-60"
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSearchAddress()}
+        />
+        <Button 
+          size="sm" 
+          onClick={handleSearchAddress}
+          disabled={searchingAddress}
+        >
+          {searchingAddress ? (
+            <Loader2 className="h-4 w-4 animate-spin mr-1" />
+          ) : null}
+          Search
+        </Button>
+      </div>
+      
+      {/* Map container */}
+      <div 
+        ref={mapRef} 
+        className="w-full h-full"
+      />
+      
+      {/* Canvas overlay */}
       <canvas 
         ref={canvasRef} 
-        className="border-2 border-gray-200 rounded-md shadow-sm bg-white"
+        className="absolute top-0 left-0 w-full h-full pointer-events-auto"
       />
+      
+      {/* Legend */}
       <div className="absolute bottom-2 right-2 bg-white p-2 rounded-md shadow-sm text-sm text-gray-600">
         <p className="flex items-center">
           <span className="inline-block w-3 h-3 bg-[#7f8c8d] mr-2 rounded-sm"></span>
@@ -273,6 +409,25 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({ activeTool }) => {
           Solar Panel
         </p>
       </div>
+      
+      {/* Loading indicator */}
+      {!mapLoaded && (
+        <div className="absolute inset-0 flex items-center justify-center bg-white/80">
+          <div className="flex flex-col items-center">
+            <Loader2 className="h-8 w-8 animate-spin text-solar" />
+            <p className="mt-2 text-solar-dark">Loading map...</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
+// Add Window interface extension for Google Maps
+declare global {
+  interface Window {
+    google: typeof google;
+    initMap: () => void;
+    solarDesignerMap: google.maps.Map;
+  }
+}
