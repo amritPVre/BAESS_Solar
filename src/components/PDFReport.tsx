@@ -1,7 +1,7 @@
 
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Download, FileText, Sun, Trees, Car, Cloud, LineChart, MapPin, BarChart3 } from "lucide-react";
+import { Download, FileText, Sun, Trees, Car, Cloud, LineChart, MapPin, BarChart3, Loader2 } from "lucide-react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { formatCurrency, formatNumber } from "@/utils/calculations";
@@ -60,6 +60,7 @@ const PDFReport: React.FC<PDFReportProps> = ({
   const page3Ref = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const { user } = useAuth();
+  const [generating, setGenerating] = useState(false);
 
   // Calculate yearly production sum
   const totalProduction = yearlyProduction.reduce((sum, val) => sum + val, 0);
@@ -95,6 +96,9 @@ const PDFReport: React.FC<PDFReportProps> = ({
     }
 
     try {
+      // Set generating state to true
+      setGenerating(true);
+      
       // Show loading toast
       toast({
         title: "Generating PDF",
@@ -112,19 +116,25 @@ const PDFReport: React.FC<PDFReportProps> = ({
       const pageWidth = 210; // A4 width in mm
       const pageHeight = 297; // A4 height in mm
       
-      // Ensure all container elements are visible for capture
-      const displayBackup = {
-        report: reportRef.current.style.display,
-        page2: page2Ref.current.style.display,
-        page3: page3Ref.current.style.display
-      };
-
-      reportRef.current.style.display = 'block';
-      page2Ref.current.style.display = 'block';
-      page3Ref.current.style.display = 'block';
+      // Make all report sections visible but move them off-screen
+      const containerDiv = document.createElement('div');
+      containerDiv.style.position = 'absolute';
+      containerDiv.style.left = '-9999px';
+      containerDiv.style.top = '0';
+      containerDiv.style.width = '800px'; // Fixed width for consistent rendering
+      document.body.appendChild(containerDiv);
+      
+      // Clone the report sections to avoid manipulating the original DOM
+      const reportClone = reportRef.current.cloneNode(true) as HTMLDivElement;
+      const page2Clone = page2Ref.current.cloneNode(true) as HTMLDivElement;
+      const page3Clone = page3Ref.current.cloneNode(true) as HTMLDivElement;
+      
+      // Append clones to the container
+      containerDiv.appendChild(reportClone);
+      reportClone.style.display = 'block';
       
       // Capture first page
-      const canvas1 = await html2canvas(reportRef.current, {
+      const canvas1 = await html2canvas(reportClone, {
         scale: 2,
         useCORS: true,
         allowTaint: true,
@@ -132,12 +142,17 @@ const PDFReport: React.FC<PDFReportProps> = ({
         logging: false,
       });
       
-      // Add first page
+      // Add first page to PDF
       const imgData1 = canvas1.toDataURL('image/png', 1.0);
       pdf.addImage(imgData1, 'PNG', 0, 0, pageWidth, pageHeight);
       
+      // Clear container and add second page
+      containerDiv.innerHTML = '';
+      containerDiv.appendChild(page2Clone);
+      page2Clone.style.display = 'block';
+      
       // Capture second page
-      const canvas2 = await html2canvas(page2Ref.current, {
+      const canvas2 = await html2canvas(page2Clone, {
         scale: 2,
         useCORS: true,
         allowTaint: true,
@@ -145,13 +160,18 @@ const PDFReport: React.FC<PDFReportProps> = ({
         logging: false,
       });
       
-      // Add second page
+      // Add second page to PDF
       pdf.addPage();
       const imgData2 = canvas2.toDataURL('image/png', 1.0);
       pdf.addImage(imgData2, 'PNG', 0, 0, pageWidth, pageHeight);
       
+      // Clear container and add third page
+      containerDiv.innerHTML = '';
+      containerDiv.appendChild(page3Clone);
+      page3Clone.style.display = 'block';
+      
       // Capture third page
-      const canvas3 = await html2canvas(page3Ref.current, {
+      const canvas3 = await html2canvas(page3Clone, {
         scale: 2,
         useCORS: true,
         allowTaint: true,
@@ -159,15 +179,13 @@ const PDFReport: React.FC<PDFReportProps> = ({
         logging: false,
       });
       
-      // Add third page
+      // Add third page to PDF
       pdf.addPage();
       const imgData3 = canvas3.toDataURL('image/png', 1.0);
       pdf.addImage(imgData3, 'PNG', 0, 0, pageWidth, pageHeight);
       
-      // Restore original display styles
-      reportRef.current.style.display = displayBackup.report;
-      page2Ref.current.style.display = displayBackup.page2;
-      page3Ref.current.style.display = displayBackup.page3;
+      // Clean up - remove the temporary container
+      document.body.removeChild(containerDiv);
       
       // Save the PDF
       pdf.save(`${clientName.replace(/\s+/g, '-')}-Solar-Report.pdf`);
@@ -187,6 +205,8 @@ const PDFReport: React.FC<PDFReportProps> = ({
         description: "There was an error generating the PDF. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -194,10 +214,20 @@ const PDFReport: React.FC<PDFReportProps> = ({
     <div className="w-full">
       <Button 
         onClick={generatePDF} 
-        className="mb-8 bg-solar hover:bg-solar-dark text-white"
+        className="mb-8 bg-gradient-to-r from-solar to-solar-blue hover:from-solar-dark hover:to-solar-blue/90 text-white transition-all duration-300 transform hover:scale-105 shadow-lg"
+        disabled={generating}
       >
-        <Download className="mr-2 h-4 w-4" />
-        Generate PDF Report
+        {generating ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Generating PDF...
+          </>
+        ) : (
+          <>
+            <Download className="mr-2 h-4 w-4" />
+            Generate PDF Report
+          </>
+        )}
       </Button>
 
       {/* Hidden PDF templates - only rendered when generating the PDF */}
@@ -209,7 +239,7 @@ const PDFReport: React.FC<PDFReportProps> = ({
           style={{ width: "800px", height: "1123px", position: "relative" }}
         >
           {/* Header */}
-          <div className="bg-[#4CB571] p-6 rounded-lg text-white flex justify-between items-center mb-6">
+          <div className="bg-gradient-to-r from-solar to-solar-blue p-6 rounded-lg text-white flex justify-between items-center mb-6">
             <div>
               <h1 className="text-3xl font-bold">Solar PV System Report</h1>
               <p className="text-lg">Financial Analysis & Environmental Benefits</p>
@@ -219,7 +249,7 @@ const PDFReport: React.FC<PDFReportProps> = ({
 
           {/* Client & System Info */}
           <div className="grid grid-cols-1 gap-6 mb-8">
-            <div className="bg-[#F1F0FB] p-5 rounded-lg">
+            <div className="bg-[#F1F0FB] p-5 rounded-lg shadow-sm">
               <h2 className="text-xl font-semibold mb-3 text-[#1A1F2C] flex items-center">
                 <FileText className="h-5 w-5 mr-2 text-[#8B5CF6]" />
                 Client Information
@@ -235,7 +265,7 @@ const PDFReport: React.FC<PDFReportProps> = ({
           </div>
           
           {/* System Specifications */}
-          <div className="mb-8 bg-[#E5DEFF] p-5 rounded-lg">
+          <div className="mb-8 bg-[#E5DEFF] p-5 rounded-lg shadow-sm">
             <h2 className="text-xl font-semibold mb-3 text-[#1A1F2C] flex items-center">
               <Sun className="h-5 w-5 mr-2 text-[#8B5CF6]" />
               System Specifications
@@ -260,7 +290,7 @@ const PDFReport: React.FC<PDFReportProps> = ({
 
           {/* Location Information */}
           {location && (
-            <div className="mb-8 bg-[#E1EFF6] p-5 rounded-lg">
+            <div className="mb-8 bg-[#E1EFF6] p-5 rounded-lg shadow-sm">
               <h2 className="text-xl font-semibold mb-3 text-[#1A1F2C] flex items-center">
                 <MapPin className="h-5 w-5 mr-2 text-[#2563EB]" />
                 Location Information
@@ -272,7 +302,7 @@ const PDFReport: React.FC<PDFReportProps> = ({
                 </div>
                 <div className="h-48 rounded-lg overflow-hidden border-2 border-[#2563EB]/20">
                   {/* Map Placeholder */}
-                  <div className="bg-blue-100 h-full w-full flex items-center justify-center">
+                  <div className="bg-gradient-to-br from-blue-100 to-blue-50 h-full w-full flex items-center justify-center">
                     <MapPin className="h-12 w-12 text-[#2563EB]" />
                   </div>
                 </div>
@@ -281,26 +311,26 @@ const PDFReport: React.FC<PDFReportProps> = ({
           )}
 
           {/* Environmental Benefits */}
-          <div className="bg-[#D3E4FD] p-6 rounded-lg mb-8">
+          <div className="bg-gradient-to-br from-[#D3E4FD] to-[#E1F5FE] p-6 rounded-lg mb-8 shadow-sm">
             <h2 className="text-xl font-semibold mb-4 text-[#1A1F2C] flex items-center">
               <Trees className="h-5 w-5 mr-2 text-[#4CB571]" />
               Environmental Benefits (Annual)
             </h2>
             
             <div className="grid grid-cols-3 gap-4">
-              <div className="bg-white/80 p-4 rounded-lg text-center flex flex-col items-center">
+              <div className="bg-white/80 p-4 rounded-lg text-center flex flex-col items-center shadow-sm hover:shadow-md transition-all duration-300">
                 <Cloud className="h-8 w-8 mb-2 text-[#0EA5E9]" />
                 <p className="text-sm text-[#8E9196]">CO2 Reduction</p>
                 <p className="text-xl font-bold text-[#1A1F2C]">{formatNumber(co2Reduction)} kg/year</p>
               </div>
               
-              <div className="bg-white/80 p-4 rounded-lg text-center flex flex-col items-center">
+              <div className="bg-white/80 p-4 rounded-lg text-center flex flex-col items-center shadow-sm hover:shadow-md transition-all duration-300">
                 <Trees className="h-8 w-8 mb-2 text-[#4CB571]" />
                 <p className="text-sm text-[#8E9196]">Trees Equivalent</p>
                 <p className="text-xl font-bold text-[#1A1F2C]">{formatNumber(treesEquivalent)}</p>
               </div>
               
-              <div className="bg-white/80 p-4 rounded-lg text-center flex flex-col items-center">
+              <div className="bg-white/80 p-4 rounded-lg text-center flex flex-col items-center shadow-sm hover:shadow-md transition-all duration-300">
                 <Car className="h-8 w-8 mb-2 text-[#D946EF]" />
                 <p className="text-sm text-[#8E9196]">Vehicle Miles Offset</p>
                 <p className="text-xl font-bold text-[#1A1F2C]">{formatNumber(vehicleMilesOffset)}</p>
@@ -323,7 +353,7 @@ const PDFReport: React.FC<PDFReportProps> = ({
           style={{ width: "800px", height: "1123px", position: "relative" }}
         >
           {/* Header */}
-          <div className="bg-[#4CB571] p-6 rounded-lg text-white flex justify-between items-center mb-6">
+          <div className="bg-gradient-to-r from-solar to-solar-blue p-6 rounded-lg text-white flex justify-between items-center mb-6">
             <div>
               <h1 className="text-3xl font-bold">Financial Performance</h1>
               <p className="text-lg">Payback Period and Energy Production Charts</p>
@@ -332,24 +362,24 @@ const PDFReport: React.FC<PDFReportProps> = ({
           </div>
 
           {/* Financial Summary */}
-          <div className="bg-[#FDE1D3] p-6 rounded-lg mb-8">
+          <div className="bg-gradient-to-br from-[#FDE1D3] to-[#FFF5EB] p-6 rounded-lg mb-8 shadow-sm">
             <h2 className="text-xl font-semibold mb-4 text-[#1A1F2C] flex items-center">
               <LineChart className="h-5 w-5 mr-2 text-[#F97316]" />
               Financial Summary
             </h2>
             
             <div className="grid grid-cols-3 gap-4">
-              <div className="bg-white/80 p-4 rounded-lg text-center">
+              <div className="bg-white/80 p-4 rounded-lg text-center shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-105">
                 <p className="text-sm text-[#8E9196]">Net Present Value</p>
                 <p className="text-2xl font-bold text-[#1A1F2C]">{currencySymbol}{formatNumber(netPresentValue)}</p>
               </div>
               
-              <div className="bg-white/80 p-4 rounded-lg text-center">
+              <div className="bg-white/80 p-4 rounded-lg text-center shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-105">
                 <p className="text-sm text-[#8E9196]">Internal Rate of Return</p>
                 <p className="text-2xl font-bold text-[#1A1F2C]">{formatNumber(irr)}%</p>
               </div>
               
-              <div className="bg-white/80 p-4 rounded-lg text-center">
+              <div className="bg-white/80 p-4 rounded-lg text-center shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-105">
                 <p className="text-sm text-[#8E9196]">Payback Period</p>
                 <p className="text-2xl font-bold text-[#1A1F2C]">{paybackPeriod.years} years {paybackPeriod.months} months</p>
               </div>
@@ -362,7 +392,7 @@ const PDFReport: React.FC<PDFReportProps> = ({
               <BarChart3 className="h-5 w-5 mr-2 text-[#8B5CF6]" />
               Payback Period Visualization
             </h2>
-            <div className="bg-white p-4 rounded-lg border border-gray-200 mb-4">
+            <div className="bg-white p-4 rounded-lg border border-gray-200 mb-4 shadow-sm">
               <div className="h-64 rounded-lg overflow-hidden">
                 {/* Placeholder for Payback Period Chart */}
                 <div className="bg-gradient-to-r from-solar-light to-solar/10 h-full w-full flex items-center justify-center">
@@ -381,7 +411,7 @@ const PDFReport: React.FC<PDFReportProps> = ({
               <Sun className="h-5 w-5 mr-2 text-[#F97316]" />
               25-Year Energy Production
             </h2>
-            <div className="bg-white p-4 rounded-lg border border-gray-200 mb-4">
+            <div className="bg-white p-4 rounded-lg border border-gray-200 mb-4 shadow-sm">
               <div className="h-64 rounded-lg overflow-hidden">
                 {/* Placeholder for Energy Production Chart */}
                 <div className="bg-gradient-to-r from-solar-light to-blue-50 h-full w-full flex items-center justify-center">
@@ -409,7 +439,7 @@ const PDFReport: React.FC<PDFReportProps> = ({
           style={{ width: "800px", height: "1123px", position: "relative" }}
         >
           {/* Header */}
-          <div className="bg-[#4CB571] p-6 rounded-lg text-white flex justify-between items-center mb-6">
+          <div className="bg-gradient-to-r from-solar to-solar-blue p-6 rounded-lg text-white flex justify-between items-center mb-6">
             <div>
               <h1 className="text-3xl font-bold">25-Year Financial Performance</h1>
               <p className="text-lg">Detailed Yearly Production and Cash Flow</p>
@@ -422,10 +452,10 @@ const PDFReport: React.FC<PDFReportProps> = ({
             <h2 className="text-xl font-semibold mb-3 text-[#1A1F2C]">
               25-Year Production & Cash Flow
             </h2>
-            <div className="bg-white p-4 rounded-lg border border-gray-200 overflow-auto">
+            <div className="bg-white p-4 rounded-lg border border-gray-200 overflow-auto shadow-sm">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-gray-50">
+                  <tr className="bg-gradient-to-r from-solar-light/30 to-blue-50">
                     <th className="py-2 px-3 text-left border-b">Year</th>
                     <th className="py-2 px-3 text-left border-b">Energy Production (kWh)</th>
                     <th className="py-2 px-3 text-left border-b">Cash Flow ({currencySymbol})</th>
@@ -434,7 +464,7 @@ const PDFReport: React.FC<PDFReportProps> = ({
                 </thead>
                 <tbody>
                   {yearlyProduction.slice(0, 25).map((production, index) => (
-                    <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                    <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50 hover:bg-solar-light/10 transition-colors'}>
                       <td className="py-2 px-3 border-b">{index + 1}</td>
                       <td className="py-2 px-3 border-b">{formatNumber(production)}</td>
                       <td className="py-2 px-3 border-b">
@@ -443,7 +473,7 @@ const PDFReport: React.FC<PDFReportProps> = ({
                           : 0)}
                       </td>
                       <td className={`py-2 px-3 border-b ${
-                        cumulativeCashFlow[index] >= 0 ? 'text-green-600' : 'text-red-600'
+                        cumulativeCashFlow[index] >= 0 ? 'text-solar-dark font-medium' : 'text-red-600 font-medium'
                       }`}>
                         {currencySymbol}{formatNumber(cumulativeCashFlow[index])}
                       </td>

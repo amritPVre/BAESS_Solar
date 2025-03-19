@@ -64,6 +64,23 @@ const SolarChart: React.FC<SolarChartProps> = ({
     return <div className="text-center text-muted-foreground">No data available</div>;
   }
   
+  // Custom tooltip styles
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="custom-tooltip bg-white p-3 rounded-md shadow-md border border-gray-100">
+          <p className="font-medium mb-1">{`${label}`}</p>
+          {payload.map((entry: any, index: number) => (
+            <p key={index} style={{ color: entry.color }}>
+              {entry.name}: {yTickFormatter(entry.value)}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+  
   const renderChart = () => {
     switch (type) {
       case "line":
@@ -78,13 +95,15 @@ const SolarChart: React.FC<SolarChartProps> = ({
               label={{ value: yLabel, angle: -90, position: 'insideLeft' }} 
               tickFormatter={yTickFormatter}
             />
-            <Tooltip formatter={(value) => yTickFormatter(Number(value))} />
+            <Tooltip formatter={(value) => yTickFormatter(Number(value))} content={<CustomTooltip />} />
             <Line 
               type="monotone" 
               dataKey={yKey} 
               stroke={color} 
               activeDot={{ r: 8 }} 
               name={yKey}
+              strokeWidth={2}
+              dot={{ strokeWidth: 2 }}
             />
             {yKey2 && (
               <Line 
@@ -93,6 +112,8 @@ const SolarChart: React.FC<SolarChartProps> = ({
                 stroke={color2 || "#82ca9d"} 
                 activeDot={{ r: 8 }} 
                 name={yKey2}
+                strokeWidth={2}
+                dot={{ strokeWidth: 2 }}
               />
             )}
             {yKey3 && (
@@ -102,6 +123,8 @@ const SolarChart: React.FC<SolarChartProps> = ({
                 stroke={color3 || "#ffc658"} 
                 activeDot={{ r: 8 }} 
                 name={yKey3}
+                strokeWidth={2}
+                dot={{ strokeWidth: 2 }}
               />
             )}
             <ReferenceLine y={0} stroke="black" />
@@ -119,17 +142,21 @@ const SolarChart: React.FC<SolarChartProps> = ({
               label={{ value: yLabel, angle: -90, position: 'insideLeft' }} 
               tickFormatter={yTickFormatter}
             />
-            <Tooltip formatter={(value) => yTickFormatter(Number(value))} />
+            <Tooltip formatter={(value) => yTickFormatter(Number(value))} content={<CustomTooltip />} />
             <Bar 
               dataKey={yKey} 
               fill={color} 
               name={yKey}
+              radius={[4, 4, 0, 0]}
+              animationDuration={1500}
             />
             {yKey2 && (
               <Bar 
                 dataKey={yKey2} 
                 fill={color2 || "#82ca9d"} 
                 name={yKey2}
+                radius={[4, 4, 0, 0]}
+                animationDuration={1500}
               />
             )}
             {yKey3 && (
@@ -137,6 +164,8 @@ const SolarChart: React.FC<SolarChartProps> = ({
                 dataKey={yKey3} 
                 fill={color3 || "#ffc658"} 
                 name={yKey3}
+                radius={[4, 4, 0, 0]}
+                animationDuration={1500}
               />
             )}
           </BarChart>
@@ -144,6 +173,12 @@ const SolarChart: React.FC<SolarChartProps> = ({
       case "area":
         return (
           <AreaChart data={data}>
+            <defs>
+              <linearGradient id={`colorGradient-${yKey}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={color} stopOpacity={0.8}/>
+                <stop offset="95%" stopColor={color} stopOpacity={0}/>
+              </linearGradient>
+            </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
             <XAxis 
               dataKey={xKey} 
@@ -153,14 +188,15 @@ const SolarChart: React.FC<SolarChartProps> = ({
               label={{ value: yLabel, angle: -90, position: 'insideLeft' }} 
               tickFormatter={yTickFormatter}
             />
-            <Tooltip formatter={(value) => yTickFormatter(Number(value))} />
+            <Tooltip formatter={(value) => yTickFormatter(Number(value))} content={<CustomTooltip />} />
             <Area 
               type="monotone" 
               dataKey={yKey} 
               stroke={color} 
-              fill={color} 
-              fillOpacity={areaFillOpacity}
+              fill={`url(#colorGradient-${yKey})`}
+              fillOpacity={1}
               name={yKey}
+              animationDuration={1500}
             />
             <ReferenceLine y={0} stroke="black" />
           </AreaChart>
@@ -177,9 +213,16 @@ const SolarChart: React.FC<SolarChartProps> = ({
               label={{ value: yLabel, angle: -90, position: 'insideLeft' }} 
               tickFormatter={yTickFormatter}
             />
-            <Tooltip formatter={(value) => yTickFormatter(Number(value))} />
+            <Tooltip formatter={(value) => yTickFormatter(Number(value))} content={<CustomTooltip />} />
             {barKeys && barKeys.map((key, index) => (
-              <Bar key={key} dataKey={key} fill={colors[index % colors.length]} stackId="a" />
+              <Bar 
+                key={key} 
+                dataKey={key} 
+                fill={colors[index % colors.length]} 
+                stackId="a" 
+                radius={[4, 4, 0, 0]}
+                animationDuration={1500}
+              />
             ))}
             {lineKey && (
               <Line 
@@ -187,6 +230,8 @@ const SolarChart: React.FC<SolarChartProps> = ({
                 dataKey={lineKey} 
                 stroke={colors[barKeys.length % colors.length]} 
                 strokeWidth={2}
+                activeDot={{ r: 6 }}
+                dot={{ strokeWidth: 2 }}
               />
             )}
             {legend && <Legend />}
@@ -198,7 +243,7 @@ const SolarChart: React.FC<SolarChartProps> = ({
             <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
             <XAxis dataKey={xKey} />
             <YAxis />
-            <Tooltip />
+            <Tooltip content={<CustomTooltip />} />
             <Line type="monotone" dataKey={yKey} stroke={color} activeDot={{ r: 8 }} />
           </LineChart>
         );
@@ -207,7 +252,7 @@ const SolarChart: React.FC<SolarChartProps> = ({
 
   return (
     <div className="w-full">
-      {title && <h3 className="text-center text-lg font-medium mb-4">{title}</h3>}
+      {title && <h3 className="text-center text-lg font-semibold mb-4 text-solar-dark">{title}</h3>}
       <div style={{ width: '100%', height }}>
         <ResponsiveContainer width="100%" height="100%">
           {renderChart()}
@@ -217,9 +262,9 @@ const SolarChart: React.FC<SolarChartProps> = ({
       {legend && (
         <div className="flex flex-wrap justify-center mt-4 gap-4">
           {legend.map((item) => (
-            <div key={item.key} className="flex items-center">
+            <div key={item.key} className="flex items-center bg-white px-2 py-1 rounded-full shadow-sm">
               <div 
-                className="w-3 h-3 mr-1"
+                className="w-3 h-3 mr-1 rounded-full"
                 style={{ backgroundColor: item.color }}
               />
               <span className="text-sm">{item.label}</span>
