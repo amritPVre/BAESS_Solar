@@ -22,12 +22,14 @@ interface SolarChartProps {
   xKey: string;
   yKey?: string;
   yKey2?: string;
+  yKey3?: string; // Added third y-key support
   barKeys?: string[];
   lineKey?: string;
   title: string;
   type: "line" | "bar" | "area" | "composed";
   color?: string;
   color2?: string;
+  color3?: string; // Added color for third data series
   colors?: string[];
   xLabel?: string;
   yLabel?: string;
@@ -42,12 +44,14 @@ const SolarChart: React.FC<SolarChartProps> = ({
   xKey, 
   yKey = 'value', 
   yKey2,
+  yKey3, // Added third y-key
   barKeys = [],
   lineKey,
   title, 
   type, 
   color = "#8884d8", 
   color2,
+  color3, // Added color3
   colors = ["#8884d8", "#82ca9d", "#ffc658"],
   xLabel = "", 
   yLabel = "", 
@@ -91,6 +95,15 @@ const SolarChart: React.FC<SolarChartProps> = ({
                 name={yKey2}
               />
             )}
+            {yKey3 && (
+              <Line 
+                type="monotone" 
+                dataKey={yKey3} 
+                stroke={color3 || "#ffc658"} 
+                activeDot={{ r: 8 }} 
+                name={yKey3}
+              />
+            )}
             <ReferenceLine y={0} stroke="black" />
           </LineChart>
         );
@@ -112,6 +125,20 @@ const SolarChart: React.FC<SolarChartProps> = ({
               fill={color} 
               name={yKey}
             />
+            {yKey2 && (
+              <Bar 
+                dataKey={yKey2} 
+                fill={color2 || "#82ca9d"} 
+                name={yKey2}
+              />
+            )}
+            {yKey3 && (
+              <Bar 
+                dataKey={yKey3} 
+                fill={color3 || "#ffc658"} 
+                name={yKey3}
+              />
+            )}
           </BarChart>
         );
       case "area":
