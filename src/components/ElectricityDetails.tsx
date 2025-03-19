@@ -1,146 +1,171 @@
 
 import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { ElectricityData } from "@/types/solarCalculations";
-import { Separator } from "@/components/ui/separator";
-import { AlertCircle, Check, DollarSign, Zap } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { ElectricityData } from "@/utils/financialCalculator";
+import SectionHeader from "@/components/ui/SectionHeader";
+import { Zap, Gauge, Plus, Minus, Battery, PanelRight, ArrowUpRight } from "lucide-react";
 
 interface ElectricityDetailsProps {
+  onSave: (electricityData: ElectricityData) => void;
   currency: string;
   currencySymbol: string;
   defaultTariff: number;
-  onSave: (data: ElectricityData) => void;
   yearlyGeneration: number;
 }
 
 const ElectricityDetails: React.FC<ElectricityDetailsProps> = ({
+  onSave,
   currency,
   currencySymbol,
   defaultTariff,
-  onSave,
-  yearlyGeneration
+  yearlyGeneration,
 }) => {
-  // System type
-  const [systemType, setSystemType] = useState<string>("Captive Consumption");
+  const [systemType, setSystemType] = useState<"Captive Consumption" | "Grid Export Only">("Captive Consumption");
+  const [consumption, setConsumption] = useState<"average" | "detailed">("average");
+  const [monthlyConsumption, setMonthlyConsumption] = useState(1000);
+  const [tariffType, setTariffType] = useState<"flat" | "slab">("flat");
+  const [tariffRate, setTariffRate] = useState(defaultTariff);
   
-  // Consumption data
-  const [consumptionEnabled, setConsumptionEnabled] = useState<boolean>(true);
-  const [consumptionMethod, setConsumptionMethod] = useState<string>("Monthly Average");
-  const [monthlyConsumption, setMonthlyConsumption] = useState<number>(1000);
+  // State for detailed consumption
+  const [monthlyData, setMonthlyData] = useState({
+    Jan: 1000, Feb: 1000, Mar: 1000, Apr: 1000, May: 1000, Jun: 1000,
+    Jul: 1000, Aug: 1000, Sep: 1000, Oct: 1000, Nov: 1000, Dec: 1000
+  });
   
-  // Monthly detailed consumption
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const [monthlyData, setMonthlyData] = useState<Record<string, number>>(
-    months.reduce((acc, month) => ({ ...acc, [month]: 1000 }), {})
-  );
+  // State for slabs
+  const [slabs, setSlabs] = useState([{ units: 500, rate: defaultTariff }]);
   
-  // Tariff structure
-  const [tariffType, setTariffType] = useState<string>("Flat Rate");
-  const [flatRate, setFlatRate] = useState<number>(defaultTariff);
-  
-  // Slab-based tariff
-  const [slabs, setSlabs] = useState<{ units: number; rate: number }[]>([
-    { units: 100, rate: defaultTariff }
-  ]);
-  
-  const handleMonthlyDataChange = (month: string, value: number) => {
-    setMonthlyData(prev => ({
-      ...prev,
-      [month]: value
-    }));
+  const handleMonthlyDataChange = (month: keyof typeof monthlyData, value: number) => {
+    setMonthlyData(prev => ({ ...prev, [month]: value }));
   };
   
   const addSlab = () => {
-    const lastSlab = slabs[slabs.length - 1];
-    setSlabs([...slabs, { units: lastSlab.units + 100, rate: lastSlab.rate }]);
+    setSlabs(prev => [...prev, { units: prev[prev.length - 1].units + 500, rate: prev[prev.length - 1].rate }]);
   };
   
-  const updateSlab = (index: number, field: keyof typeof slabs[0], value: number) => {
-    const newSlabs = [...slabs];
-    newSlabs[index] = { ...newSlabs[index], [field]: value };
-    setSlabs(newSlabs);
-  };
-  
-  const calculateYearlyAmount = (): number => {
-    if (systemType === "Grid Export Only") {
-      if (tariffType === "Flat Rate") {
-        return yearlyGeneration * flatRate;
-      } else {
-        // For slab-based tariff with grid export - rough estimation
-        const monthlyGeneration = yearlyGeneration / 12;
-        return calculateSlabCost(monthlyGeneration) * 12;
-      }
-    } else if (consumptionEnabled) {
-      if (tariffType === "Flat Rate") {
-        if (consumptionMethod === "Monthly Average") {
-          return monthlyConsumption * 12 * flatRate;
-        } else {
-          return Object.values(monthlyData).reduce((sum, val) => sum + val, 0) * flatRate;
-        }
-      } else {
-        if (consumptionMethod === "Monthly Average") {
-          return calculateSlabCost(monthlyConsumption) * 12;
-        } else {
-          return Object.values(monthlyData).reduce((sum, val) => sum + calculateSlabCost(val), 0);
-        }
-      }
+  const removeSlab = (index: number) => {
+    if (slabs.length > 1) {
+      setSlabs(prev => prev.filter((_, i) => i !== index));
     }
-    
-    return 0;
   };
   
-  const calculateSlabCost = (consumption: number): number => {
-    let totalCost = 0;
-    let remainingUnits = consumption;
-    
-    for (let i = 0; i < slabs.length; i++) {
-      const currentSlab = slabs[i];
-      const previousLimit = i > 0 ? slabs[i-1].units : 0;
-      const slabSize = currentSlab.units - previousLimit;
-      
-      const unitsInThisSlab = Math.min(remainingUnits, slabSize);
-      totalCost += unitsInThisSlab * currentSlab.rate;
-      remainingUnits -= unitsInThisSlab;
-      
-      if (remainingUnits <= 0) break;
-      
-      // If this is the last slab and there are still remaining units
-      if (i === slabs.length - 1 && remainingUnits > 0) {
-        totalCost += remainingUnits * currentSlab.rate;
-      }
-    }
-    
-    return totalCost;
+  const updateSlab = (index: number, field: "units" | "rate", value: number) => {
+    setSlabs(prev => prev.map((slab, i) => 
+      i === index ? { ...slab, [field]: value } : slab
+    ));
   };
   
   const handleSave = () => {
-    // Prepare consumption data
-    let consumption = null;
-    if (systemType === "Captive Consumption" && consumptionEnabled) {
-      if (consumptionMethod === "Monthly Average") {
-        consumption = { type: "average", value: monthlyConsumption };
+    // Calculate yearly amount
+    let yearlyAmount = 0;
+    
+    if (systemType === "Grid Export Only") {
+      if (tariffType === "flat") {
+        yearlyAmount = yearlyGeneration * tariffRate;
       } else {
-        consumption = { type: "detailed", values: monthlyData };
+        // Calculate slab-based for grid export
+        const monthlyGeneration = yearlyGeneration / 12;
+        let monthlyRevenue = 0;
+        let remainingUnits = monthlyGeneration;
+        
+        for (let i = 0; i < slabs.length; i++) {
+          const currentSlab = slabs[i];
+          const prevUnits = i > 0 ? slabs[i - 1].units : 0;
+          const slabSize = currentSlab.units - prevUnits;
+          
+          const unitsInSlab = Math.min(remainingUnits, slabSize);
+          monthlyRevenue += unitsInSlab * currentSlab.rate;
+          remainingUnits -= unitsInSlab;
+          
+          if (remainingUnits <= 0) break;
+        }
+        
+        // If there are units remaining after all slabs, use the last slab rate
+        if (remainingUnits > 0) {
+          monthlyRevenue += remainingUnits * slabs[slabs.length - 1].rate;
+        }
+        
+        yearlyAmount = monthlyRevenue * 12;
+      }
+    } else { // Captive Consumption
+      if (tariffType === "flat") {
+        // For average consumption
+        if (consumption === "average") {
+          yearlyAmount = monthlyConsumption * 12 * tariffRate;
+        } else {
+          // For detailed consumption
+          yearlyAmount = Object.values(monthlyData).reduce((sum, val) => sum + val, 0) * tariffRate;
+        }
+      } else {
+        // Calculate slab-based for captive consumption
+        if (consumption === "average") {
+          let monthlyCost = 0;
+          let remainingUnits = monthlyConsumption;
+          
+          for (let i = 0; i < slabs.length; i++) {
+            const currentSlab = slabs[i];
+            const prevUnits = i > 0 ? slabs[i - 1].units : 0;
+            const slabSize = currentSlab.units - prevUnits;
+            
+            const unitsInSlab = Math.min(remainingUnits, slabSize);
+            monthlyCost += unitsInSlab * currentSlab.rate;
+            remainingUnits -= unitsInSlab;
+            
+            if (remainingUnits <= 0) break;
+          }
+          
+          // If there are units remaining after all slabs, use the last slab rate
+          if (remainingUnits > 0) {
+            monthlyCost += remainingUnits * slabs[slabs.length - 1].rate;
+          }
+          
+          yearlyAmount = monthlyCost * 12;
+        } else {
+          // For detailed consumption
+          let yearlyCost = 0;
+          
+          Object.values(monthlyData).forEach(monthConsumption => {
+            let monthlyCost = 0;
+            let remainingUnits = monthConsumption;
+            
+            for (let i = 0; i < slabs.length; i++) {
+              const currentSlab = slabs[i];
+              const prevUnits = i > 0 ? slabs[i - 1].units : 0;
+              const slabSize = currentSlab.units - prevUnits;
+              
+              const unitsInSlab = Math.min(remainingUnits, slabSize);
+              monthlyCost += unitsInSlab * currentSlab.rate;
+              remainingUnits -= unitsInSlab;
+              
+              if (remainingUnits <= 0) break;
+            }
+            
+            // If there are units remaining after all slabs, use the last slab rate
+            if (remainingUnits > 0) {
+              monthlyCost += remainingUnits * slabs[slabs.length - 1].rate;
+            }
+            
+            yearlyCost += monthlyCost;
+          });
+          
+          yearlyAmount = yearlyCost;
+        }
       }
     }
     
-    // Prepare tariff data
-    const tariff = tariffType === "Flat Rate"
-      ? { type: "flat", rate: flatRate }
-      : { type: "slab", slabs };
-    
-    // Calculate yearly amount
-    const yearlyAmount = calculateYearlyAmount();
-    
-    // Prepare the complete electricity data
     const electricityData: ElectricityData = {
       system_type: systemType,
-      consumption,
-      tariff,
+      consumption: consumption === "average" 
+        ? { type: "average", value: monthlyConsumption }
+        : { type: "detailed", values: monthlyData },
+      tariff: tariffType === "flat" 
+        ? { type: "flat", rate: tariffRate }
+        : { type: "slab", slabs: slabs },
       yearly_amount: yearlyAmount
     };
     
@@ -148,254 +173,259 @@ const ElectricityDetails: React.FC<ElectricityDetailsProps> = ({
   };
   
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Zap className="h-5 w-5 text-solar" />
-            <span>Electricity Details</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div>
-            <h3 className="text-lg font-medium mb-4">System Type</h3>
-            <RadioGroup 
-              defaultValue="Captive Consumption"
-              value={systemType}
-              onValueChange={setSystemType}
-              className="flex flex-col space-y-2"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="Captive Consumption" id="captive" />
-                <Label htmlFor="captive">Captive Consumption (Self-Use)</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="Grid Export Only" id="grid" />
-                <Label htmlFor="grid">Grid Export Only (Feed-in Tariff)</Label>
-              </div>
-            </RadioGroup>
-            
-            {systemType === "Grid Export Only" && (
-              <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-md flex items-start">
-                <AlertCircle className="h-5 w-5 text-amber-500 mr-2 mt-0.5" />
-                <p className="text-sm text-amber-800">
-                  System configured for direct grid export. Only tariff information will be used for financial calculations.
-                </p>
-              </div>
-            )}
-          </div>
-          
-          {systemType === "Captive Consumption" && (
-            <div>
-              <div className="flex items-center space-x-2 mb-4">
-                <Label htmlFor="consumption-enabled" className="text-lg font-medium">
-                  Consumption Data
-                </Label>
-                <div className="flex-1"></div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="consumption-enabled"
-                    checked={consumptionEnabled}
-                    onChange={e => setConsumptionEnabled(e.target.checked)}
-                    className="rounded border-gray-300 text-solar focus:ring-solar"
-                  />
-                  <Label htmlFor="consumption-enabled">Include consumption data</Label>
+    <div className="animate-fade-in">
+      <SectionHeader 
+        title="Electricity Details" 
+        description="Configure electricity consumption and tariff settings"
+        icon={<Zap className="h-6 w-6" />}
+      />
+      
+      <Card className="bg-gradient-to-br from-white to-amber-50 shadow-sm hover:shadow-md transition-all duration-300">
+        <CardContent className="p-6">
+          {/* System Type Selection */}
+          <div className="mb-6">
+            <Label className="text-lg font-medium mb-3 block">System Configuration</Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div
+                className={`flex items-start p-4 rounded-lg border-2 transition-all cursor-pointer ${
+                  systemType === "Captive Consumption"
+                    ? "border-solar bg-solar/5"
+                    : "border-muted hover:border-muted-foreground"
+                }`}
+                onClick={() => setSystemType("Captive Consumption")}
+              >
+                <Battery className="h-6 w-6 mr-3 mt-1 text-solar" />
+                <div>
+                  <h3 className="font-medium">Captive Consumption</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    The system is primarily for self-consumption
+                  </p>
                 </div>
               </div>
               
-              {consumptionEnabled && (
-                <div className="space-y-4">
-                  <RadioGroup 
-                    defaultValue="Monthly Average"
-                    value={consumptionMethod}
-                    onValueChange={setConsumptionMethod}
-                    className="flex flex-col space-y-2"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="Monthly Average" id="monthly-avg" />
-                      <Label htmlFor="monthly-avg">Monthly Average</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="Month-wise Details" id="monthly-detail" />
-                      <Label htmlFor="monthly-detail">Month-wise Details</Label>
-                    </div>
-                  </RadioGroup>
-                  
-                  {consumptionMethod === "Monthly Average" ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label htmlFor="monthly-consumption">Average monthly consumption (kWh)</Label>
-                        <Input
-                          id="monthly-consumption"
-                          type="number"
-                          min="0"
-                          step="100"
-                          value={monthlyConsumption}
-                          onChange={e => setMonthlyConsumption(Number(e.target.value))}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Yearly Consumption</Label>
-                        <div className="h-10 bg-gray-100 rounded-md flex items-center px-3 font-medium">
-                          {(monthlyConsumption * 12).toLocaleString()} kWh
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div>
-                      <h4 className="font-medium mb-2">Enter month-wise consumption:</h4>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {months.map(month => (
-                          <div key={month} className="space-y-1">
-                            <Label htmlFor={`month-${month}`}>{month} (kWh)</Label>
-                            <Input
-                              id={`month-${month}`}
-                              type="number"
-                              min="0"
-                              step="100"
-                              value={monthlyData[month]}
-                              onChange={e => handleMonthlyDataChange(month, Number(e.target.value))}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                      <div className="mt-4 text-right">
-                        <span className="font-medium">Total yearly consumption: </span>
-                        {Object.values(monthlyData).reduce((sum, val) => sum + val, 0).toLocaleString()} kWh
-                      </div>
-                    </div>
-                  )}
+              <div
+                className={`flex items-start p-4 rounded-lg border-2 transition-all cursor-pointer ${
+                  systemType === "Grid Export Only"
+                    ? "border-solar-blue bg-solar-blue/5"
+                    : "border-muted hover:border-muted-foreground"
+                }`}
+                onClick={() => setSystemType("Grid Export Only")}
+              >
+                <PanelRight className="h-6 w-6 mr-3 mt-1 text-solar-blue" />
+                <div>
+                  <h3 className="font-medium">Grid Export Only</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    All generated power is exported to the grid
+                  </p>
                 </div>
-              )}
+              </div>
+            </div>
+          </div>
+          
+          {/* Consumption Data (Only for Captive Consumption) */}
+          {systemType === "Captive Consumption" && (
+            <div className="mb-6 animate-fade-in">
+              <div className="flex items-center justify-between mb-4">
+                <Label className="text-lg font-medium">Electricity Consumption</Label>
+                <div className="flex items-center space-x-2">
+                  <Label htmlFor="consumption-data" className="cursor-pointer">Include consumption data</Label>
+                  <Switch id="consumption-data" checked={true} disabled />
+                </div>
+              </div>
+              
+              <Tabs value={consumption} onValueChange={(v) => setConsumption(v as any)} className="mb-6">
+                <TabsList className="grid w-full grid-cols-2 mb-4">
+                  <TabsTrigger value="average">Monthly Average</TabsTrigger>
+                  <TabsTrigger value="detailed">Month-by-Month</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="average" className="mt-0">
+                  <div className="flex flex-col space-y-2 bg-white p-5 rounded-lg border">
+                    <Label htmlFor="monthly-consumption" className="flex items-center gap-2">
+                      <Gauge className="h-4 w-4 text-solar" />
+                      Average Monthly Consumption (kWh)
+                    </Label>
+                    <Input
+                      id="monthly-consumption"
+                      type="number"
+                      min={0}
+                      step={100}
+                      value={monthlyConsumption}
+                      onChange={(e) => setMonthlyConsumption(Number(e.target.value))}
+                      className="border-solar/20 focus-visible:ring-solar"
+                    />
+                    <div className="flex items-center justify-between mt-2 text-sm">
+                      <span className="text-muted-foreground">Your typical monthly electricity usage</span>
+                      <span className="font-medium text-solar">Yearly: {monthlyConsumption * 12} kWh</span>
+                    </div>
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="detailed" className="mt-0">
+                  <div className="bg-white p-5 rounded-lg border">
+                    <h3 className="font-medium mb-3 flex items-center gap-2">
+                      <Gauge className="h-4 w-4 text-solar" />
+                      Monthly Consumption (kWh)
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                      {Object.entries(monthlyData).map(([month, value]) => (
+                        <div key={month} className="space-y-1">
+                          <Label htmlFor={`month-${month}`} className="text-sm font-medium">
+                            {month}
+                          </Label>
+                          <Input
+                            id={`month-${month}`}
+                            type="number"
+                            min={0}
+                            step={100}
+                            value={value}
+                            onChange={(e) => handleMonthlyDataChange(month as keyof typeof monthlyData, Number(e.target.value))}
+                            className="border-solar/20 focus-visible:ring-solar"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-4 flex justify-end">
+                      <div className="bg-green-50 px-4 py-2 rounded-lg border border-green-200">
+                        <span className="text-sm text-green-800">
+                          Yearly Total: {Object.values(monthlyData).reduce((sum, val) => sum + val, 0)} kWh
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
             </div>
           )}
           
-          <Separator />
-          
-          <div>
-            <h3 className="text-lg font-medium mb-4">Electricity Tariff Structure</h3>
-            <RadioGroup 
-              defaultValue="Flat Rate"
-              value={tariffType}
-              onValueChange={setTariffType}
-              className="flex flex-col space-y-2 mb-4"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="Flat Rate" id="flat-rate" />
-                <Label htmlFor="flat-rate">Flat Rate</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="Slab-based" id="slab-rate" />
-                <Label htmlFor="slab-rate">Slab-based</Label>
-              </div>
-            </RadioGroup>
+          {/* Tariff Structure */}
+          <div className="animate-fade-in" style={{animationDelay: "150ms"}}>
+            <div className="border-t pt-6 mb-4">
+              <Label className="text-lg font-medium mb-3 block">Electricity Tariff Structure</Label>
+            </div>
             
-            {tariffType === "Flat Rate" ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="flat-rate-value">Electricity rate ({currencySymbol}/kWh)</Label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                      <DollarSign className="h-4 w-4 text-gray-500" />
-                    </div>
-                    <Input
-                      id="flat-rate-value"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={flatRate}
-                      onChange={e => setFlatRate(Number(e.target.value))}
-                      className="pl-10"
-                    />
+            <Tabs value={tariffType} onValueChange={(v) => setTariffType(v as any)} className="mb-6">
+              <TabsList className="grid w-full grid-cols-2 mb-4">
+                <TabsTrigger value="flat">Flat Rate</TabsTrigger>
+                <TabsTrigger value="slab">Slab-based</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="flat" className="mt-0">
+                <div className="flex flex-col space-y-2 bg-white p-5 rounded-lg border">
+                  <Label htmlFor="flat-rate" className="flex items-center gap-2">
+                    <ArrowUpRight className="h-4 w-4 text-solar" />
+                    Electricity Rate ({currencySymbol}/kWh)
+                  </Label>
+                  <Input
+                    id="flat-rate"
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={tariffRate}
+                    onChange={(e) => setTariffRate(Number(e.target.value))}
+                    className="border-solar/20 focus-visible:ring-solar"
+                  />
+                  
+                  {/* Revenue or Savings Preview */}
+                  <div className="flex items-center justify-between mt-2 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                    <span className="text-sm text-blue-800">
+                      Estimated Yearly {systemType === "Grid Export Only" ? "Revenue" : "Savings"}:
+                    </span>
+                    <span className="font-medium text-blue-800">
+                      {currencySymbol}{(
+                        systemType === "Grid Export Only" 
+                          ? yearlyGeneration * tariffRate
+                          : (consumption === "average"
+                              ? monthlyConsumption * 12 * tariffRate
+                              : Object.values(monthlyData).reduce((sum, val) => sum + val, 0) * tariffRate
+                            )
+                      ).toLocaleString(undefined, {maximumFractionDigits: 2})}
+                    </span>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Estimated Yearly {systemType === "Grid Export Only" ? "Revenue" : "Cost"}</Label>
-                  <div className="h-10 bg-gray-100 rounded-md flex items-center px-3 font-medium">
-                    {currencySymbol}{calculateYearlyAmount().toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                <h4 className="font-medium">Enter slab-wise rates:</h4>
-                {slabs.map((slab, index) => (
-                  <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 border border-gray-200 rounded-md">
-                    <div className="space-y-2">
-                      <Label htmlFor={`slab-${index}-units`}>
-                        {index === 0 ? "First slab up to:" : `From ${index > 0 ? slabs[index-1].units : 0} to:`}
-                      </Label>
-                      <div className="flex items-center space-x-2">
+              </TabsContent>
+              
+              <TabsContent value="slab" className="mt-0">
+                <div className="bg-white p-5 rounded-lg border">
+                  <h3 className="font-medium mb-4">Slab-wise Rates</h3>
+                  
+                  {slabs.map((slab, index) => (
+                    <div key={index} className="grid grid-cols-12 gap-4 mb-4 items-end">
+                      <div className="col-span-5 space-y-1">
+                        <Label htmlFor={`slab-${index}-units`} className="text-sm">
+                          {index === 0 ? "Units up to" : `From ${slabs[index-1].units} to`}
+                        </Label>
                         <Input
                           id={`slab-${index}-units`}
                           type="number"
-                          min={index > 0 ? slabs[index-1].units + 1 : 0}
+                          min={index === 0 ? 0 : slabs[index-1].units + 1}
                           value={slab.units}
-                          onChange={e => updateSlab(index, 'units', Number(e.target.value))}
+                          onChange={(e) => updateSlab(index, "units", Number(e.target.value))}
+                          className="border-solar/20 focus-visible:ring-solar"
                         />
-                        <span className="text-gray-500">kWh</span>
                       </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor={`slab-${index}-rate`}>Rate ({currencySymbol}/kWh)</Label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                          <DollarSign className="h-4 w-4 text-gray-500" />
-                        </div>
+                      
+                      <div className="col-span-5 space-y-1">
+                        <Label htmlFor={`slab-${index}-rate`} className="text-sm">
+                          Rate ({currencySymbol}/kWh)
+                        </Label>
                         <Input
                           id={`slab-${index}-rate`}
                           type="number"
-                          min="0"
-                          step="0.01"
+                          min={0}
+                          step={0.01}
                           value={slab.rate}
-                          onChange={e => updateSlab(index, 'rate', Number(e.target.value))}
-                          className="pl-10"
+                          onChange={(e) => updateSlab(index, "rate", Number(e.target.value))}
+                          className="border-solar/20 focus-visible:ring-solar"
                         />
                       </div>
+                      
+                      <div className="col-span-2 flex space-x-1">
+                        {index === slabs.length - 1 && (
+                          <Button 
+                            type="button" 
+                            size="icon" 
+                            variant="ghost"
+                            onClick={addSlab}
+                            className="h-10 w-10 rounded-full hover:bg-green-100 hover:text-green-600"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        )}
+                        
+                        {slabs.length > 1 && (
+                          <Button 
+                            type="button" 
+                            size="icon" 
+                            variant="ghost"
+                            onClick={() => removeSlab(index)}
+                            className="h-10 w-10 rounded-full hover:bg-red-100 hover:text-red-600"
+                          >
+                            <Minus className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
-                
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={addSlab}
-                  className="mt-2"
-                >
-                  Add Another Slab
-                </Button>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label>Monthly Consumption</Label>
-                    <div className="h-10 bg-gray-100 rounded-md flex items-center px-3 font-medium">
-                      {systemType === "Grid Export Only" 
-                        ? (yearlyGeneration / 12).toLocaleString(undefined, { maximumFractionDigits: 0 }) 
-                        : (consumptionMethod === "Monthly Average" 
-                            ? monthlyConsumption 
-                            : (Object.values(monthlyData).reduce((sum, val) => sum + val, 0) / 12)
-                          ).toLocaleString(undefined, { maximumFractionDigits: 0 })
-                      } kWh
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Estimated Yearly {systemType === "Grid Export Only" ? "Revenue" : "Cost"}</Label>
-                    <div className="h-10 bg-gray-100 rounded-md flex items-center px-3 font-medium">
-                      {currencySymbol}{calculateYearlyAmount().toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                  ))}
+                  
+                  <div className="mt-4 flex justify-end">
+                    <div className="bg-blue-50 px-4 py-2 rounded-lg border border-blue-100">
+                      <span className="text-sm text-blue-800">
+                        Note: For consumption beyond the highest slab, the last slab rate will be used
+                      </span>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
+              </TabsContent>
+            </Tabs>
           </div>
           
-          <div className="pt-4">
+          {/* Save Button */}
+          <div className="mt-8 flex justify-end">
             <Button 
               onClick={handleSave}
               className="bg-solar hover:bg-solar-dark text-white"
             >
-              <Check className="h-4 w-4 mr-2" />
               Save Electricity Data
             </Button>
           </div>

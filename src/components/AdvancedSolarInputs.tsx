@@ -9,6 +9,8 @@ import { SolarCalculationResult, SolarParams } from "@/types/solarCalculations";
 import { calculateSolarEnergy } from "@/utils/solarEnergyCalculation";
 import InverterConfiguration from "./InverterConfiguration";
 import { InverterParams } from "@/types/solarCalculations";
+import SectionHeader from "@/components/ui/SectionHeader";
+import { MapPin, Sun, Compass, Ruler, Settings, RotateCw } from "lucide-react";
 
 interface AdvancedSolarInputsProps {
   onCalculationComplete: (results: SolarCalculationResult) => void;
@@ -111,24 +113,31 @@ const AdvancedSolarInputs: React.FC<AdvancedSolarInputsProps> = ({
   };
   
   return (
-    <div className="w-full">
-      <h2 className="text-2xl font-bold mb-4">Advanced Solar Energy Calculator</h2>
-      <p className="text-muted-foreground mb-6">
-        Calculate your solar energy production based on location and system parameters
-      </p>
+    <div className="w-full animate-fade-in">
+      <SectionHeader 
+        title="Advanced Solar Energy Calculator" 
+        description="Calculate your solar energy production based on location and system parameters"
+        icon={<Sun className="h-6 w-6" />}
+      />
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Location Parameters</CardTitle>
+        <Card className="bg-gradient-to-br from-white to-amber-50 shadow-sm hover:shadow-md transition-all duration-300 border-t-4 border-t-amber-400">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-amber-600" />
+              Location Parameters
+            </CardTitle>
             <CardDescription>
               Enter the geographic coordinates of the installation site
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-0">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="latitude">Latitude (°)</Label>
+                <Label htmlFor="latitude" className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-amber-600" />
+                  Latitude (°)
+                </Label>
                 <Input
                   id="latitude"
                   type="number"
@@ -136,10 +145,14 @@ const AdvancedSolarInputs: React.FC<AdvancedSolarInputsProps> = ({
                   value={latitude}
                   onChange={(e) => setLatitude(Number(e.target.value))}
                   placeholder="e.g., 40.7128"
+                  className="border-amber-200 focus-visible:ring-amber-500"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="longitude">Longitude (°)</Label>
+                <Label htmlFor="longitude" className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-amber-600" />
+                  Longitude (°)
+                </Label>
                 <Input
                   id="longitude"
                   type="number"
@@ -147,52 +160,71 @@ const AdvancedSolarInputs: React.FC<AdvancedSolarInputsProps> = ({
                   value={longitude}
                   onChange={(e) => setLongitude(Number(e.target.value))}
                   placeholder="e.g., -74.0060"
+                  className="border-amber-200 focus-visible:ring-amber-500"
                 />
               </div>
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="timezone">Timezone</Label>
+              <Label htmlFor="timezone" className="flex items-center gap-2">
+                <Settings className="h-4 w-4 text-amber-600" />
+                Timezone
+              </Label>
               <Input
                 id="timezone"
                 value={timezone}
                 onChange={(e) => setTimezone(e.target.value)}
                 placeholder="e.g., America/New_York"
+                className="border-amber-200 focus-visible:ring-amber-500"
               />
             </div>
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="country">Country</Label>
+                <Label htmlFor="country" className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-amber-600" />
+                  Country
+                </Label>
                 <Input
                   id="country"
                   value={country}
                   disabled
+                  className="bg-amber-50/50"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="city">City</Label>
+                <Label htmlFor="city" className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-amber-600" />
+                  City
+                </Label>
                 <Input
                   id="city"
                   value={city}
                   disabled
+                  className="bg-amber-50/50"
                 />
               </div>
             </div>
           </CardContent>
         </Card>
         
-        <Card>
-          <CardHeader>
-            <CardTitle>Installation Parameters</CardTitle>
+        <Card className="bg-gradient-to-br from-white to-blue-50 shadow-sm hover:shadow-md transition-all duration-300 border-t-4 border-t-blue-400">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2">
+              <Compass className="h-5 w-5 text-blue-600" />
+              Installation Parameters
+            </CardTitle>
             <CardDescription>
               Specify the orientation and tilt of the solar panels
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-0">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="tilt">Panel Tilt (°)</Label>
+                <Label htmlFor="tilt" className="flex items-center gap-2">
+                  <RotateCw className="h-4 w-4 text-blue-600" />
+                  Panel Tilt (°)
+                </Label>
                 <Input
                   id="tilt"
                   type="number"
@@ -200,13 +232,17 @@ const AdvancedSolarInputs: React.FC<AdvancedSolarInputsProps> = ({
                   max="90"
                   value={tilt}
                   onChange={(e) => setTilt(Number(e.target.value))}
+                  className="border-blue-200 focus-visible:ring-blue-500"
                 />
                 <p className="text-xs text-muted-foreground">
                   0° = horizontal, 90° = vertical
                 </p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="azimuth">Azimuth (°)</Label>
+                <Label htmlFor="azimuth" className="flex items-center gap-2">
+                  <Compass className="h-4 w-4 text-blue-600" />
+                  Azimuth (°)
+                </Label>
                 <Input
                   id="azimuth"
                   type="number"
@@ -214,6 +250,7 @@ const AdvancedSolarInputs: React.FC<AdvancedSolarInputsProps> = ({
                   max="360"
                   value={azimuth}
                   onChange={(e) => setAzimuth(Number(e.target.value))}
+                  className="border-blue-200 focus-visible:ring-blue-500"
                 />
                 <p className="text-xs text-muted-foreground">
                   0° = North, 90° = East, 180° = South, 270° = West
@@ -223,17 +260,23 @@ const AdvancedSolarInputs: React.FC<AdvancedSolarInputsProps> = ({
           </CardContent>
         </Card>
         
-        <Card>
-          <CardHeader>
-            <CardTitle>System Specifications</CardTitle>
+        <Card className="bg-gradient-to-br from-white to-green-50 shadow-sm hover:shadow-md transition-all duration-300 border-t-4 border-t-green-400">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5 text-green-600" />
+              System Specifications
+            </CardTitle>
             <CardDescription>
               Enter the technical details of your solar PV system
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-0">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="capacity">System Capacity (kW)</Label>
+                <Label htmlFor="capacity" className="flex items-center gap-2">
+                  <Sun className="h-4 w-4 text-green-600" />
+                  System Capacity (kW)
+                </Label>
                 <Input
                   id="capacity"
                   type="number"
@@ -241,10 +284,14 @@ const AdvancedSolarInputs: React.FC<AdvancedSolarInputsProps> = ({
                   step="0.1"
                   value={capacity}
                   onChange={(e) => setCapacity(Number(e.target.value))}
+                  className="border-green-200 focus-visible:ring-green-500"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="moduleEfficiency">Module Efficiency</Label>
+                <Label htmlFor="moduleEfficiency" className="flex items-center gap-2">
+                  <Settings className="h-4 w-4 text-green-600" />
+                  Module Efficiency
+                </Label>
                 <Input
                   id="moduleEfficiency"
                   type="number"
@@ -253,6 +300,7 @@ const AdvancedSolarInputs: React.FC<AdvancedSolarInputsProps> = ({
                   step="0.01"
                   value={moduleEfficiency}
                   onChange={(e) => setModuleEfficiency(Number(e.target.value))}
+                  className="border-green-200 focus-visible:ring-green-500"
                 />
                 <p className="text-xs text-muted-foreground">
                   Typical range: 0.15-0.23 (15-23%)
@@ -262,7 +310,10 @@ const AdvancedSolarInputs: React.FC<AdvancedSolarInputsProps> = ({
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="performanceRatio">Performance Ratio</Label>
+                <Label htmlFor="performanceRatio" className="flex items-center gap-2">
+                  <Settings className="h-4 w-4 text-green-600" />
+                  Performance Ratio
+                </Label>
                 <Input
                   id="performanceRatio"
                   type="number"
@@ -271,25 +322,33 @@ const AdvancedSolarInputs: React.FC<AdvancedSolarInputsProps> = ({
                   step="0.01"
                   value={performanceRatio}
                   onChange={(e) => setPerformanceRatio(Number(e.target.value))}
+                  className="border-green-200 focus-visible:ring-green-500"
                 />
                 <p className="text-xs text-muted-foreground">
                   Typical range: 0.7-0.85 (70-85%)
                 </p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="moduleWattPeak">Module Watt Peak (Wp)</Label>
+                <Label htmlFor="moduleWattPeak" className="flex items-center gap-2">
+                  <Sun className="h-4 w-4 text-green-600" />
+                  Module Watt Peak (Wp)
+                </Label>
                 <Input
                   id="moduleWattPeak"
                   type="number"
                   min="1"
                   value={moduleWattPeak}
                   onChange={(e) => setModuleWattPeak(Number(e.target.value))}
+                  className="border-green-200 focus-visible:ring-green-500"
                 />
               </div>
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="moduleArea">Module Area (m²)</Label>
+              <Label htmlFor="moduleArea" className="flex items-center gap-2">
+                <Ruler className="h-4 w-4 text-green-600" />
+                Module Area (m²)
+              </Label>
               <Input
                 id="moduleArea"
                 type="number"
@@ -297,6 +356,7 @@ const AdvancedSolarInputs: React.FC<AdvancedSolarInputsProps> = ({
                 step="0.1"
                 value={moduleArea}
                 onChange={(e) => setModuleArea(Number(e.target.value))}
+                className="border-green-200 focus-visible:ring-green-500"
               />
             </div>
           </CardContent>
@@ -311,10 +371,20 @@ const AdvancedSolarInputs: React.FC<AdvancedSolarInputsProps> = ({
       <div className="mt-6 flex justify-end">
         <Button
           onClick={handleCalculate}
-          className="bg-solar hover:bg-solar-dark text-white"
+          className="bg-gradient-to-r from-solar to-solar-dark text-white hover:from-solar-dark hover:to-solar-dark transition-all shadow-md hover:shadow-lg"
           disabled={calculating}
         >
-          {calculating ? "Calculating..." : "Calculate Solar Energy"}
+          {calculating ? (
+            <>
+              <RotateCw className="h-4 w-4 mr-2 animate-spin" />
+              Calculating...
+            </>
+          ) : (
+            <>
+              <Sun className="h-4 w-4 mr-2" />
+              Calculate Solar Energy
+            </>
+          )}
         </Button>
       </div>
     </div>

@@ -2,7 +2,10 @@
 import React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import SectionHeader from "@/components/ui/SectionHeader";
+import { Zap, Calculator, Lightbulb } from "lucide-react";
 
 interface AnnualEnergyCheckProps {
   knowsAnnualEnergy: boolean | null;
@@ -15,52 +18,77 @@ const AnnualEnergyCheck: React.FC<AnnualEnergyCheckProps> = ({
   knowsAnnualEnergy,
   setKnowsAnnualEnergy,
   manualAnnualEnergy,
-  setManualAnnualEnergy
+  setManualAnnualEnergy,
 }) => {
   return (
-    <div className="glass-card rounded-xl p-6 shadow-sm transition-all duration-300 hover:shadow-md">
-      <h2 className="section-title">Annual Energy Generation</h2>
+    <div className="animate-fade-in">
+      <SectionHeader 
+        title="Energy Production Check" 
+        description="Do you already know your expected annual energy production?"
+        icon={<Zap className="h-6 w-6" />}
+      />
       
-      <div className="space-y-6">
-        <div className="space-y-3">
-          <Label>Do you know the estimated annual energy generation for your solar system?</Label>
-          <RadioGroup value={knowsAnnualEnergy === null ? undefined : knowsAnnualEnergy ? "yes" : "no"} onValueChange={(value) => setKnowsAnnualEnergy(value === "yes")}>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="yes" id="yes" />
-              <Label htmlFor="yes" className="cursor-pointer">Yes, I know the estimated annual energy generation</Label>
+      <Card className="bg-gradient-to-br from-white to-sky-50 shadow-sm hover:shadow-md transition-all duration-300">
+        <CardContent className="p-6">
+          <RadioGroup
+            value={knowsAnnualEnergy === null ? undefined : knowsAnnualEnergy ? "yes" : "no"}
+            onValueChange={(value) => setKnowsAnnualEnergy(value === "yes")}
+            className="space-y-6"
+          >
+            <div className="flex items-center space-x-2 rounded-lg border p-4 transition-all hover:bg-muted/50">
+              <RadioGroupItem value="yes" id="knows-yes" />
+              <Label
+                htmlFor="knows-yes"
+                className="flex-1 cursor-pointer flex items-center gap-2"
+              >
+                <Lightbulb className="h-5 w-5 text-yellow-500" />
+                <div>
+                  <span className="text-base font-medium">Yes, I know the annual energy production</span>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    I already have an estimated value for my solar system's yearly output
+                  </p>
+                </div>
+              </Label>
             </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="no" id="no" />
-              <Label htmlFor="no" className="cursor-pointer">No, I need help estimating it</Label>
+            
+            <div className="flex items-center space-x-2 rounded-lg border p-4 transition-all hover:bg-muted/50">
+              <RadioGroupItem value="no" id="knows-no" />
+              <Label
+                htmlFor="knows-no"
+                className="flex-1 cursor-pointer flex items-center gap-2"
+              >
+                <Calculator className="h-5 w-5 text-blue-500" />
+                <div>
+                  <span className="text-base font-medium">No, help me calculate it</span>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    I need the calculator to estimate my solar system's yearly output
+                  </p>
+                </div>
+              </Label>
             </div>
           </RadioGroup>
-        </div>
-        
-        {knowsAnnualEnergy && (
-          <div className="space-y-2 animate-fade-in">
-            <Label htmlFor="manualAnnualEnergy">Annual Energy Generation (kWh/year)</Label>
-            <Input
-              id="manualAnnualEnergy"
-              type="number"
-              min={0}
-              value={manualAnnualEnergy}
-              onChange={(e) => setManualAnnualEnergy(Number(e.target.value))}
-              className="input-field"
-            />
-            <p className="text-sm text-muted-foreground mt-1">
-              Enter your estimated annual energy generation in kilowatt-hours per year.
-            </p>
-          </div>
-        )}
-        
-        {knowsAnnualEnergy === false && (
-          <div className="bg-muted/40 p-4 rounded-lg animate-fade-in">
-            <p className="text-sm">
-              We'll help you estimate your solar system's energy production based on the system details and location information you provide in the next step.
-            </p>
-          </div>
-        )}
-      </div>
+          
+          {knowsAnnualEnergy && (
+            <div className="mt-6 space-y-2 bg-white p-5 rounded-lg border border-solar/20 animate-fade-in">
+              <Label htmlFor="annualEnergy" className="flex items-center gap-2">
+                <Zap className="h-4 w-4 text-solar" />
+                Annual Energy Production (kWh)
+              </Label>
+              <Input
+                id="annualEnergy"
+                type="number"
+                min={1}
+                value={manualAnnualEnergy}
+                onChange={(e) => setManualAnnualEnergy(Number(e.target.value))}
+                className="border-solar/20 focus-visible:ring-solar"
+              />
+              <p className="text-sm text-muted-foreground">
+                Enter your expected annual energy production in kilowatt-hours (kWh)
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

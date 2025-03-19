@@ -2,242 +2,295 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
+ 
 @layer base {
   :root {
-    --background: 210 40% 98%;
-    --foreground: 222 47% 11%;
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-
+    --card-foreground: 222.2 84% 4.9%;
+ 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-
-    --primary: 142 42% 42%;
+    --popover-foreground: 222.2 84% 4.9%;
+ 
+    --primary: 222.2 47.4% 11.2%;
     --primary-foreground: 210 40% 98%;
-
+ 
     --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222 47% 11%;
-
+    --secondary-foreground: 222.2 47.4% 11.2%;
+ 
     --muted: 210 40% 96.1%;
-    --muted-foreground: 215 16% 47%;
-
+    --muted-foreground: 215.4 16.3% 46.9%;
+ 
     --accent: 210 40% 96.1%;
-    --accent-foreground: 222 47% 11%;
-
-    --destructive: 0 84% 60%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+ 
+    --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 222 84% 5%;
-
-    --radius: 0.75rem;
-
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5% 26%;
-    --sidebar-primary: 240 6% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 5% 96%;
-    --sidebar-accent-foreground: 240 6% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217 91% 60%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+ 
+    --radius: 0.5rem;
+    
+    /* Custom Solar App Colors */
+    --solar: 111 59% 37%; /* #50A612 */
+    --solar-foreground: 0 0% 100%;
+    --solar-dark: 111 68% 28%; /* #357209 */
+    --solar-light: 111 56% 65%; /* #9EDC72 */
+    --solar-blue: 209 100% 50%; /* #0080FF */
+    --solar-blue-dark: 209 100% 40%; /* #0066CC */
   }
-
+ 
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+ 
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+ 
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+ 
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+ 
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+ 
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+ 
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+ 
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+ 
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+  }
+}
+ 
+@layer base {
   * {
     @apply border-border;
   }
-
   body {
-    @apply bg-background text-foreground antialiased;
-    font-feature-settings: "ss01", "ss02", "cv01", "cv02", "cv03";
+    @apply bg-background text-foreground;
   }
+}
 
-  html {
-    @apply scroll-smooth;
-  }
+/* Custom Styles for Enhanced UI/UX */
+.section-title {
+  @apply text-2xl font-bold mb-4 text-gray-800;
 }
 
 .glass-card {
-  @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-lg;
+  @apply bg-white/80 backdrop-blur-sm;
 }
 
 .input-field {
-  @apply h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50;
+  @apply border-gray-300 focus:border-solar focus:ring-1 focus:ring-solar;
 }
 
-.section-title {
-  @apply text-xl font-semibold text-foreground mb-4 tracking-tight;
+.bg-solar {
+  @apply bg-[#50A612];
 }
 
-.animate-in {
-  animation: fadeIn 0.5s ease-out forwards;
-  opacity: 0;
+.bg-solar-dark {
+  @apply bg-[#357209];
 }
 
+.bg-solar-light {
+  @apply bg-[#9EDC72];
+}
+
+.bg-solar-blue {
+  @apply bg-[#0080FF];
+}
+
+.text-solar {
+  @apply text-[#50A612];
+}
+
+.text-solar-dark {
+  @apply text-[#357209];
+}
+
+.text-solar-light {
+  @apply text-[#9EDC72];
+}
+
+.text-solar-blue {
+  @apply text-[#0080FF];
+}
+
+.border-solar {
+  @apply border-[#50A612];
+}
+
+.border-solar-dark {
+  @apply border-[#357209];
+}
+
+.border-solar-light {
+  @apply border-[#9EDC72];
+}
+
+.border-solar-blue {
+  @apply border-[#0080FF];
+}
+
+.hover\:bg-solar:hover {
+  @apply hover:bg-[#50A612];
+}
+
+.hover\:bg-solar-dark:hover {
+  @apply hover:bg-[#357209];
+}
+
+/* Form Field Animation */
+.form-field-animated {
+  @apply transition-all duration-300 relative;
+}
+
+.form-field-animated input,
+.form-field-animated select,
+.form-field-animated textarea {
+  @apply transition-all duration-200 border-2 border-gray-200 rounded-md px-4 py-2 
+  focus:border-solar focus:outline-none focus:ring-2 focus:ring-solar/20;
+}
+
+.form-field-animated label {
+  @apply absolute left-3 -top-2.5 px-1 text-sm transition-all duration-200 
+  bg-white text-gray-600 pointer-events-none;
+}
+
+/* Card Hover Effects */
+.hover-card {
+  @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1;
+}
+
+/* Tab Enhancements */
+.tab-button {
+  @apply transition-all duration-200 px-4 py-2 rounded-md font-medium
+  hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-solar;
+}
+
+.tab-button.active {
+  @apply bg-solar/10 text-solar;
+}
+
+/* Animations */
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
 }
 
-@keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
 }
 
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-5px);
-  }
+.animate-pulse-slow {
+  animation: pulse 2s infinite;
 }
 
-/* Staggered animation for children */
-.stagger-children > * {
-  opacity: 0;
-  animation: fadeIn 0.5s ease-out forwards;
+/* Gradient Backgrounds */
+.bg-gradient-solar {
+  @apply bg-gradient-to-r from-[#50A612] to-[#357209];
 }
 
-.stagger-children > *:nth-child(1) { animation-delay: 0.1s; }
-.stagger-children > *:nth-child(2) { animation-delay: 0.2s; }
-.stagger-children > *:nth-child(3) { animation-delay: 0.3s; }
-.stagger-children > *:nth-child(4) { animation-delay: 0.4s; }
-.stagger-children > *:nth-child(5) { animation-delay: 0.5s; }
-.stagger-children > *:nth-child(6) { animation-delay: 0.6s; }
-.stagger-children > *:nth-child(7) { animation-delay: 0.7s; }
-.stagger-children > *:nth-child(8) { animation-delay: 0.8s; }
-
-.result-card {
-  @apply relative flex flex-col items-center justify-center rounded-xl p-6 transition-all;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+.bg-gradient-solar-light {
+  @apply bg-gradient-to-r from-[#9EDC72] to-[#50A612];
 }
 
-.result-card:before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(to bottom right, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.1));
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
+.bg-gradient-solar-blue {
+  @apply bg-gradient-to-r from-[#0080FF] to-[#0066CC];
 }
 
-.result-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+/* Input Focus Styles */
+input:focus-visible, select:focus-visible {
+  @apply outline-none ring-2 ring-offset-2 ring-solar transition-all duration-200;
 }
 
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
+/* Button Enhancements */
+.button-solar {
+  @apply bg-solar text-white py-2 px-4 rounded-md shadow-sm
+  hover:bg-solar-dark transition-all duration-200 focus:outline-none
+  focus:ring-2 focus:ring-solar focus:ring-offset-2;
 }
 
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+.button-outline {
+  @apply border-2 border-solar text-solar py-2 px-4 rounded-md shadow-sm
+  hover:bg-solar hover:text-white transition-all duration-200 focus:outline-none
+  focus:ring-2 focus:ring-solar focus:ring-offset-2;
 }
 
-/* Enhanced card styles */
-.enhanced-card {
-  @apply bg-white rounded-xl p-5 shadow-sm border border-gray-100 transition-all duration-300;
+/* Custom Card Styles for Financial Metrics */
+.financial-card {
+  @apply bg-white p-4 rounded-xl shadow-sm border border-gray-100
+  transition-all duration-300 hover:shadow-md;
 }
 
-.enhanced-card:hover {
-  @apply shadow-md transform -translate-y-1;
+.metric-icon {
+  @apply text-2xl mb-2 text-solar;
 }
 
-/* Gradient button styles */
-.gradient-button {
-  @apply bg-gradient-to-r from-solar to-solar-blue text-white font-medium py-2 px-4 rounded-lg transition-all duration-300;
+.metric-title {
+  @apply text-base font-medium text-gray-700 mb-1;
 }
 
-.gradient-button:hover {
-  @apply shadow-md transform scale-105;
-  background-size: 200% 100%;
-  background-position: right center;
+.metric-value {
+  @apply text-2xl font-bold text-gray-900 mb-1;
 }
 
-/* Animation classes */
-.animate-slide-in {
-  animation: slideIn 0.5s ease-out forwards;
+.metric-subtitle {
+  @apply text-xs text-gray-500;
 }
 
-.animate-scale-in {
-  animation: scaleIn 0.3s ease-out forwards;
+/* Form Validation Styles */
+.input-valid {
+  @apply border-green-500 focus:border-green-500 focus:ring-green-200;
 }
 
-.animate-float {
-  animation: float 6s ease-in-out infinite;
+.input-invalid {
+  @apply border-red-500 focus:border-red-500 focus:ring-red-200;
 }
 
-/* Gradient text */
-.gradient-text {
-  @apply bg-clip-text text-transparent bg-gradient-to-r from-solar to-solar-blue;
+.validation-message {
+  @apply text-xs mt-1;
 }
 
-/* Enhanced tab styles */
-.enhanced-tabs {
-  @apply rounded-xl overflow-hidden bg-white p-1 shadow-sm;
+.validation-message.error {
+  @apply text-red-500;
 }
 
-.enhanced-tab {
-  @apply rounded-lg px-4 py-2 transition-all duration-300 font-medium;
+.validation-message.success {
+  @apply text-green-500;
 }
 
-.enhanced-tab[data-state="active"] {
-  @apply bg-solar text-white shadow-sm;
+/* Tooltip Styles */
+.tooltip {
+  @apply relative inline-block;
 }
 
-/* Chart container styles */
-.chart-container {
-  @apply bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-all duration-300;
+.tooltip .tooltip-text {
+  @apply invisible absolute z-10 p-2 text-xs text-white bg-gray-800 rounded-md
+  opacity-0 transition-opacity duration-300 w-40 text-center;
+  bottom: 125%;
+  left: 50%;
+  margin-left: -20px;
 }
 
-/* Financial metrics card */
-.metrics-card {
-  @apply bg-white p-4 rounded-lg shadow-sm text-center transition-all duration-300;
-}
-
-.metrics-card:hover {
-  @apply shadow-md transform -translate-y-1;
-}
-
-/* Stylish divider */
-.stylish-divider {
-  height: 1px;
-  background: linear-gradient(to right, transparent, rgba(0,0,0,0.1), transparent);
-  margin: 2rem 0;
-}
-
-/* Glassmorphism styles */
-.glassmorphism {
-  @apply bg-white/70 backdrop-blur-md border border-white/50 shadow-sm;
+.tooltip:hover .tooltip-text {
+  @apply visible opacity-100;
 }
