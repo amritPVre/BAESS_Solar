@@ -25,41 +25,62 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [canvasInitialized, setCanvasInitialized] = useState(false);
+  const mapInstanceId = useRef(`solar-designer-map-${Math.random().toString(36).substring(2, 9)}`);
   
   // Generate a unique ID for the map div to be used by Leaflet
   useEffect(() => {
     if (mapRef.current) {
-      mapRef.current.id = "solar-designer-map";
+      // Use the unique ID generated for this component instance
+      mapRef.current.id = mapInstanceId.current;
       
       // Clean up any existing leaflet instances on this element
       if (mapRef.current._leaflet_id) {
+        console.log("Cleaning up existing Leaflet instance on mount");
         delete mapRef.current._leaflet_id;
       }
     }
+    
+    return () => {
+      // Clean up global references on unmount
+      if (window.solarDesignerMap) {
+        try {
+          window.solarDesignerMap.remove();
+        } catch (e) {
+          console.warn("Error removing map on unmount:", e);
+        }
+        window.solarDesignerMap = undefined;
+      }
+      window.designCanvas = null;
+      window.isDrawingMode = false;
+    };
   }, []);
   
   const handleMapLoaded = () => {
     console.log("Map loaded callback triggered");
     
+    // Reset any errors
+    setMapError(null);
+    
     // Give the map a moment to fully render
     setTimeout(() => {
       if (window.solarDesignerMap) {
-        window.solarDesignerMap.invalidateSize(true);
-        setMapLoaded(true);
+        try {
+          window.solarDesignerMap.invalidateSize(true);
+          setMapLoaded(true);
+        } catch (e) {
+          console.error("Error in map loaded callback:", e);
+          setMapError("Error initializing map interface");
+        }
       }
-    }, 200);
+    }, 500);
   };
   
-  // Make sure to properly clean up when component unmounts
+  // Clear state when component unmounts
   useEffect(() => {
     return () => {
-      // Clean up global references
-      if (window.solarDesignerMap) {
-        window.solarDesignerMap.remove();
-        window.solarDesignerMap = undefined;
-      }
-      window.designCanvas = null;
-      window.isDrawingMode = false;
+      setMapLoaded(false);
+      setMapError(null);
+      setCanvasInitialized(false);
     };
   }, []);
   
@@ -73,7 +94,6 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
       {/* Map container */}
       <div 
         ref={mapRef} 
-        id="solar-designer-map"
         className="w-full h-full"
       />
       

@@ -13,8 +13,13 @@ export const MapSearchControls: React.FC<MapSearchControlsProps> = ({ mapLoaded 
   const [searchingAddress, setSearchingAddress] = useState(false);
 
   const handleSearchAddress = () => {
-    if (!address.trim() || !window.solarDesignerMap) {
-      toast.error("Please enter a location and ensure the map is loaded");
+    if (!address.trim()) {
+      toast.error("Please enter a location to search");
+      return;
+    }
+    
+    if (!window.solarDesignerMap) {
+      toast.error("Map is not fully initialized yet, please try again");
       return;
     }
     
@@ -22,7 +27,12 @@ export const MapSearchControls: React.FC<MapSearchControlsProps> = ({ mapLoaded 
     
     // Using Nominatim search API (OpenStreetMap's free geocoding service)
     fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`)
-      .then(response => response.json())
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`Network response error: ${response.status}`);
+        }
+        return response.json();
+      })
       .then(data => {
         setSearchingAddress(false);
         
@@ -34,15 +44,20 @@ export const MapSearchControls: React.FC<MapSearchControlsProps> = ({ mapLoaded 
           
           // Ensure the map is fully initialized
           if (window.solarDesignerMap) {
-            // Force map update before setting view
-            window.solarDesignerMap.invalidateSize();
-            window.solarDesignerMap.setView(location, 19);
-            toast.success(`Location found: ${data[0].display_name}`);
+            try {
+              // Force map update before setting view
+              window.solarDesignerMap.invalidateSize();
+              window.solarDesignerMap.setView(location, 19);
+              toast.success(`Location found: ${data[0].display_name}`);
+            } catch (e) {
+              console.error("Error updating map view:", e);
+              toast.error("Error updating map view");
+            }
           } else {
             toast.error("Map not fully initialized yet");
           }
         } else {
-          toast.error("Could not find location");
+          toast.error("Could not find location. Please try a different search term.");
         }
       })
       .catch(error => {

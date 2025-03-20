@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 import { fabric } from "fabric";
 import { calculatePanelArea, estimateKwCapacity, createDrawingHandlers } from "./CanvasDrawingHandlers";
 
@@ -24,35 +24,42 @@ export const CanvasOverlay: React.FC<CanvasOverlayProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricCanvasRef = useRef<fabric.Canvas | null>(null);
   const [statsInitialized, setStatsInitialized] = useState(false);
+  const canvasId = useRef(`design-canvas-${Math.random().toString(36).substring(2, 9)}`);
   
   const isDrawingRef = useRef(false);
   const startPointRef = useRef<{ x: number; y: number } | null>(null);
   const tempRectRef = useRef<fabric.Rect | null>(null);
 
-  // Initialize canvas after map is loaded
-  useEffect(() => {
-    if (!mapLoaded || !canvasRef.current || !mapRef.current) return;
+  // Function to create/initialize the canvas
+  const setupCanvas = useCallback(() => {
+    if (!mapRef.current || !canvasRef.current) return;
     
     console.log("Initializing canvas overlay");
     
-    // Make sure the canvas is properly sized and positioned
-    const setupCanvas = () => {
-      if (!mapRef.current || !canvasRef.current) return;
-      
-      const width = mapRef.current.clientWidth;
-      const height = mapRef.current.clientHeight;
-      
-      canvasRef.current.width = width;
-      canvasRef.current.height = height;
-      
-      console.log(`Setting canvas size to: ${width}x${height}`);
-      
-      // Dispose of any existing canvas
-      if (fabricCanvasRef.current) {
+    // Get the dimensions of the map container
+    const width = mapRef.current.clientWidth;
+    const height = mapRef.current.clientHeight;
+    
+    // Clean up any existing canvas instance
+    if (fabricCanvasRef.current) {
+      try {
         fabricCanvasRef.current.dispose();
+      } catch (e) {
+        console.warn("Error disposing existing fabric canvas:", e);
       }
-      
-      // Create fabric canvas
+      fabricCanvasRef.current = null;
+      window.designCanvas = null;
+    }
+    
+    // Set canvas dimensions and ID
+    canvasRef.current.width = width;
+    canvasRef.current.height = height;
+    canvasRef.current.id = canvasId.current;
+    
+    console.log(`Setting canvas size to: ${width}x${height}`);
+    
+    try {
+      // Create new fabric canvas
       const canvasInstance = new fabric.Canvas(canvasRef.current, {
         width: width,
         height: height,
@@ -69,38 +76,64 @@ export const CanvasOverlay: React.FC<CanvasOverlayProps> = ({
       
       // Prevent propagation of mouse events to map in drawing mode
       canvasRef.current.style.pointerEvents = 'auto';
+      canvasRef.current.style.position = 'absolute';
+      canvasRef.current.style.top = '0';
+      canvasRef.current.style.left = '0';
+      canvasRef.current.style.zIndex = '10';
       
       console.log("Canvas created successfully", canvasInstance);
-    };
+      
+      return canvasInstance;
+    } catch (error) {
+      console.error("Error creating fabric canvas:", error);
+      return null;
+    }
+  }, [mapRef]);
+  
+  // Initialize canvas after map is loaded
+  useEffect(() => {
+    if (!mapLoaded || !canvasRef.current || !mapRef.current) return;
     
     // Wait a bit for the map to fully initialize
-    setTimeout(setupCanvas, 300);
-    
-    // Set up resize listener
-    const resizeCanvas = () => {
-      if (!fabricCanvasRef.current || !mapRef.current) return;
-      
-      const width = mapRef.current.clientWidth;
-      const height = mapRef.current.clientHeight;
-      
-      fabricCanvasRef.current.setWidth(width);
-      fabricCanvasRef.current.setHeight(height);
-      fabricCanvasRef.current.renderAll();
-      
-      console.log(`Canvas resized to: ${width}x${height}`);
-    };
-    
-    window.addEventListener('resize', resizeCanvas);
+    const initTimeout = setTimeout(() => {
+      const canvas = setupCanvas();
+      if (canvas) {
+        // Set up resize listener
+        const handleResize = () => {
+          if (!fabricCanvasRef.current || !mapRef.current) return;
+          
+          const width = mapRef.current.clientWidth;
+          const height = mapRef.current.clientHeight;
+          
+          fabricCanvasRef.current.setWidth(width);
+          fabricCanvasRef.current.setHeight(height);
+          fabricCanvasRef.current.renderAll();
+          
+          console.log(`Canvas resized to: ${width}x${height}`);
+        };
+        
+        window.addEventListener('resize', handleResize);
+        
+        // Return cleanup function
+        return () => {
+          window.removeEventListener('resize', handleResize);
+          if (fabricCanvasRef.current) {
+            try {
+              fabricCanvasRef.current.dispose();
+            } catch (e) {
+              console.warn("Error disposing canvas during cleanup:", e);
+            }
+            fabricCanvasRef.current = null;
+            window.designCanvas = null;
+          }
+        };
+      }
+    }, 500);
     
     return () => {
-      window.removeEventListener('resize', resizeCanvas);
-      if (fabricCanvasRef.current) {
-        fabricCanvasRef.current.dispose();
-        fabricCanvasRef.current = null;
-        window.designCanvas = null;
-      }
+      clearTimeout(initTimeout);
     };
-  }, [mapLoaded, mapRef]);
+  }, [mapLoaded, mapRef, setupCanvas]);
   
   // Handle tool changes and set up drawing events
   useEffect(() => {
@@ -171,17 +204,17 @@ export const CanvasOverlay: React.FC<CanvasOverlayProps> = ({
       
       // Attach canvas event listeners
       canvas.on("mouse:down", (event) => {
-        event.e.stopPropagation();
+        if (event.e) event.e.stopPropagation();
         startDrawing(event);
       });
       
       canvas.on("mouse:move", (event) => {
-        event.e.stopPropagation();
+        if (event.e) event.e.stopPropagation();
         drawObject(event);
       });
       
       canvas.on("mouse:up", (event) => {
-        event.e.stopPropagation();
+        if (event.e) event.e.stopPropagation();
         finishDrawing(event);
       });
       
@@ -278,7 +311,7 @@ export const CanvasOverlay: React.FC<CanvasOverlayProps> = ({
         canvas.off('object:modified', updateStats);
       };
     }
-  }, [onStatsUpdate, fabricCanvasRef.current, statsInitialized]);
+  }, [onStatsUpdate, statsInitialized]);
 
   return (
     <canvas 
