@@ -32,24 +32,28 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
     if (mapRef.current) {
       // Use the unique ID generated for this component instance
       mapRef.current.id = mapInstanceId.current;
+      console.log(`Set map container ID to: ${mapInstanceId.current}`);
       
       // Clean up any existing leaflet instances on this element
       if (mapRef.current._leaflet_id) {
-        console.log("Cleaning up existing Leaflet instance on mount");
+        console.log(`Cleaning up existing Leaflet instance (ID: ${mapRef.current._leaflet_id}) on mount`);
         delete mapRef.current._leaflet_id;
       }
     }
     
     return () => {
       // Clean up global references on unmount
+      console.log("Unmounting DesignCanvas, cleaning up");
+      
       if (window.solarDesignerMap) {
         try {
           window.solarDesignerMap.remove();
+          window.solarDesignerMap = undefined;
         } catch (e) {
           console.warn("Error removing map on unmount:", e);
         }
-        window.solarDesignerMap = undefined;
       }
+      
       window.designCanvas = null;
       window.isDrawingMode = false;
     };
@@ -67,12 +71,16 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
         try {
           window.solarDesignerMap.invalidateSize(true);
           setMapLoaded(true);
+          console.log("Map fully loaded and ready");
         } catch (e) {
           console.error("Error in map loaded callback:", e);
           setMapError("Error initializing map interface");
         }
+      } else {
+        console.error("solarDesignerMap is undefined in handleMapLoaded");
+        setMapError("Map failed to initialize properly");
       }
-    }, 500);
+    }, 800);
   };
   
   // Clear state when component unmounts
@@ -95,6 +103,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
       <div 
         ref={mapRef} 
         className="w-full h-full"
+        style={{ position: 'relative', zIndex: 1 }}
       />
       
       {/* Map initialization functionality */}

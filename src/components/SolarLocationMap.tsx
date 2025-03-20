@@ -13,15 +13,19 @@ const SolarLocationMap: React.FC<SolarLocationMapProps> = ({ location }) => {
   const mapId = useRef(`solar-location-map-${Math.random().toString(36).substring(2, 9)}`);
   
   useEffect(() => {
-    if (!mapContainerRef.current) return;
+    if (!mapContainerRef.current) {
+      console.error("Map container ref is null");
+      return;
+    }
     
     // Ensure the map container has a unique ID
     const uniqueMapId = mapId.current;
     mapContainerRef.current.id = uniqueMapId;
+    console.log(`Initializing location map with ID: ${uniqueMapId}`);
     
     // Check if there's already a Leaflet instance on this container
     if (mapContainerRef.current._leaflet_id) {
-      console.log("Container already has Leaflet instance, cleaning up...");
+      console.log(`Container already has Leaflet instance (ID: ${mapContainerRef.current._leaflet_id}), cleaning up...`);
       delete mapContainerRef.current._leaflet_id;
     }
     
@@ -29,27 +33,29 @@ const SolarLocationMap: React.FC<SolarLocationMapProps> = ({ location }) => {
     if (mapRef.current) {
       try {
         mapRef.current.remove();
+        mapRef.current = null;
       } catch (e) {
         console.warn("Error removing existing map:", e);
       }
-      mapRef.current = null;
     }
     
-    // Short delay to ensure DOM is ready
+    // Wait for DOM to stabilize before initializing
     const initTimeout = setTimeout(() => {
       try {
-        // Initialize the map with a clean container
+        // Check if the element exists in the DOM
         const mapElement = document.getElementById(uniqueMapId);
         if (!mapElement) {
-          console.error("Map container element not found");
+          console.error("Map container element not found in DOM");
           return;
         }
         
         // Double check for any leftover _leaflet_id
         if (mapElement._leaflet_id) {
-          console.warn("Element still has _leaflet_id before initialization, cleaning up again");
+          console.warn(`Element still has _leaflet_id (${mapElement._leaflet_id}) before initialization, cleaning up again`);
           delete mapElement._leaflet_id;
         }
+        
+        console.log("Creating new location map instance");
         
         // Create new map instance
         const map = L.map(uniqueMapId, {
@@ -76,11 +82,12 @@ const SolarLocationMap: React.FC<SolarLocationMapProps> = ({ location }) => {
         // Force a resize to ensure the map renders correctly
         setTimeout(() => {
           map.invalidateSize(true);
-        }, 200);
+          console.log("Location map initialized successfully");
+        }, 300);
       } catch (error) {
         console.error("Error initializing location map:", error);
       }
-    }, 300);
+    }, 500);
     
     // Cleanup function
     return () => {
@@ -88,10 +95,10 @@ const SolarLocationMap: React.FC<SolarLocationMapProps> = ({ location }) => {
       if (mapRef.current) {
         try {
           mapRef.current.remove();
+          mapRef.current = null;
         } catch (e) {
           console.warn("Error removing map during cleanup:", e);
         }
-        mapRef.current = null;
       }
     };
   }, [location]);

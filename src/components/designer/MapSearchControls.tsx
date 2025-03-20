@@ -20,10 +20,12 @@ export const MapSearchControls: React.FC<MapSearchControlsProps> = ({ mapLoaded 
     
     if (!window.solarDesignerMap) {
       toast.error("Map is not fully initialized yet, please try again");
+      console.error("solarDesignerMap is undefined in handleSearchAddress");
       return;
     }
     
     setSearchingAddress(true);
+    console.log(`Searching for address: ${address}`);
     
     // Using Nominatim search API (OpenStreetMap's free geocoding service)
     fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`)
@@ -42,6 +44,8 @@ export const MapSearchControls: React.FC<MapSearchControlsProps> = ({ mapLoaded 
             lng: parseFloat(data[0].lon)
           };
           
+          console.log(`Location found: ${JSON.stringify(location)}`);
+          
           // Ensure the map is fully initialized
           if (window.solarDesignerMap) {
             try {
@@ -54,6 +58,7 @@ export const MapSearchControls: React.FC<MapSearchControlsProps> = ({ mapLoaded 
               toast.error("Error updating map view");
             }
           } else {
+            console.error("Map not fully initialized yet");
             toast.error("Map not fully initialized yet");
           }
         } else {

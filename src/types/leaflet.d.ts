@@ -12,5 +12,22 @@ declare global {
 declare module 'leaflet' {
   interface Map {
     _leaflet_id?: number;
+    _container?: HTMLElement;
+    _mapPane?: HTMLElement;
+    _panes?: {
+      [key: string]: HTMLElement;
+    };
+  }
+  
+  interface Layer {
+    _leaflet_id?: number;
+  }
+  
+  interface Marker {
+    _leaflet_id?: number;
+  }
+  
+  interface TileLayer {
+    _leaflet_id?: number;
   }
 }
