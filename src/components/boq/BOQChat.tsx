@@ -40,10 +40,11 @@ export function BOQChat({ onBOQGenerated }: BOQChatProps) {
         toast.info("Loading language model, this may take a moment...");
         
         // Initialize the pipeline with a small, efficient model
+        // Updated configuration to remove the 'quantized' property and use 'device' instead
         const pipe = await pipeline(
           "text-generation",
           "HuggingFaceH4/zephyr-7b-alpha",
-          { quantized: true }
+          { device: "cpu" }
         );
         
         setGeneratorPipeline(pipe);
