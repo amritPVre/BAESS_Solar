@@ -5,10 +5,8 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import ProjectDetails from "./pages/ProjectDetails";
-import SolarDesigner from "./pages/SolarDesigner";
 import Index from "./pages/Index";
 import AuthGuard from "@/components/AuthGuard";
-import { SolarDesignerPage } from "./pages/SolarDesignerPage";
 import BOQGenerator from "./pages/BOQGenerator";
 
 export const router = createBrowserRouter([
@@ -33,22 +31,6 @@ export const router = createBrowserRouter([
     element: (
       <AuthGuard>
         <ProjectDetails />
-      </AuthGuard>
-    ),
-  },
-  {
-    path: "/solar-designer",
-    element: (
-      <AuthGuard>
-        <SolarDesigner />
-      </AuthGuard>
-    ),
-  },
-  {
-    path: "/solar-designer-page",
-    element: (
-      <AuthGuard>
-        <SolarDesignerPage />
       </AuthGuard>
     ),
   },
