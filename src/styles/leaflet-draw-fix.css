@@ -1,0 +1,39 @@
+
+/* Fix Leaflet Draw icons */
+.leaflet-draw-toolbar a {
+  background-image: url('https://unpkg.com/leaflet-draw@1.0.4/dist/images/spritesheet.png');
+  background-repeat: no-repeat;
+}
+
+.leaflet-retina .leaflet-draw-toolbar a {
+  background-image: url('https://unpkg.com/leaflet-draw@1.0.4/dist/images/spritesheet-2x.png');
+  background-size: 270px 30px;
+}
+
+.leaflet-touch .leaflet-draw-toolbar a {
+  background-position: 3px 3px;
+}
+
+.leaflet-draw-toolbar .leaflet-draw-draw-polygon { 
+  background-position: -31px 0;
+}
+
+.leaflet-retina .leaflet-draw-toolbar .leaflet-draw-draw-polygon {
+  background-position: -31px 0;
+}
+
+.leaflet-draw-toolbar .leaflet-draw-draw-rectangle { 
+  background-position: -62px 0;
+}
+
+.leaflet-draw-toolbar .leaflet-draw-draw-circle { 
+  background-position: -92px 0;
+}
+
+.leaflet-draw-toolbar .leaflet-draw-edit-edit { 
+  background-position: -152px 0;
+}
+
+.leaflet-draw-toolbar .leaflet-draw-edit-remove { 
+  background-position: -182px 0;
+}
