@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { Send, Bot, User, RotateCw } from "lucide-react";
 import { pipeline } from "@huggingface/transformers";
@@ -10,6 +11,7 @@ import { toast } from "sonner";
 interface Message {
   role: "user" | "assistant";
   content: string;
+  options?: string[]; // Add options for MCQ-type questions
 }
 
 interface BOQChatProps {
@@ -23,13 +25,20 @@ export function BOQChat({ onBOQGenerated }: BOQChatProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [generatorPipeline, setGeneratorPipeline] = useState<any>(null);
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Generate an initial greeting when the component mounts
   useEffect(() => {
     const initialMessage: Message = {
       role: "assistant",
-      content: "Hi! I'm your solar PV BOQ assistant. I'll help you generate a detailed bill of quantities for your solar project. Let's start with the basics. What type of solar project are you planning? (residential, commercial, industrial, or utility scale)"
+      content: "Hi! I'm your solar PV BOQ assistant. I'll help you generate a detailed bill of quantities for your solar project. Let's start with the basics.",
+      options: [
+        "residential",
+        "commercial", 
+        "industrial", 
+        "utility scale"
+      ]
     };
     setMessages([initialMessage]);
 
@@ -70,17 +79,21 @@ export function BOQChat({ onBOQGenerated }: BOQChatProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!input.trim()) return;
+    if ((!input.trim() && !selectedOption)) return;
+    
+    // Determine content based on whether an option was selected or text was input
+    const userContent = selectedOption || input;
     
     // Add user message
-    const userMessage: Message = { role: "user", content: input };
+    const userMessage: Message = { role: "user", content: userContent };
     setMessages(prev => [...prev, userMessage]);
     setInput("");
+    setSelectedOption(null);
     setIsProcessing(true);
 
     try {
       // Get context from previous messages
-      const conversation = messages.map(msg => msg.content).join("\n") + "\n" + input;
+      const conversation = messages.map(msg => msg.content).join("\n") + "\n" + userContent;
       
       let response;
       
@@ -97,15 +110,22 @@ export function BOQChat({ onBOQGenerated }: BOQChatProps) {
         response = response.substring(conversation.length).trim();
       } else {
         // Fallback logic with predefined responses
-        response = generateFallbackResponse(input, messages);
+        response = generateFallbackResponse(userContent, messages);
       }
       
+      // Determine if the next question should have options
+      const options = getOptionsForNextQuestion(userContent, messages);
+      
       // Add assistant message
-      const assistantMessage: Message = { role: "assistant", content: response };
+      const assistantMessage: Message = { 
+        role: "assistant", 
+        content: response,
+        options: options
+      };
       setMessages(prev => [...prev, assistantMessage]);
       
       // Check if we have enough information to generate BOQ
-      if (messages.length >= 10 || input.toLowerCase().includes("generate boq")) {
+      if (messages.length >= 10 || userContent.toLowerCase().includes("generate boq")) {
         generateBOQ();
       }
     } catch (error) {
@@ -115,35 +135,83 @@ export function BOQChat({ onBOQGenerated }: BOQChatProps) {
       setIsProcessing(false);
     }
   };
+
+  const handleOptionSelect = (option: string) => {
+    setSelectedOption(option);
+  };
+  
+  const getOptionsForNextQuestion = (input: string, previousMessages: Message[]): string[] | undefined => {
+    const lastMessage = previousMessages[previousMessages.length - 1]?.content.toLowerCase() || "";
+    
+    // Based on the previous message, return appropriate options for the next question
+    if (lastMessage.includes("what type of solar project") || previousMessages.length === 1) {
+      return ["rooftop", "ground-mount", "carport", "floating"];
+    } else if (lastMessage.includes("installation type")) {
+      // No options for capacity - requires numeric input
+      return undefined;
+    } else if (lastMessage.includes("capacity of your system")) {
+      return ["monocrystalline", "polycrystalline", "thin-film", "bifacial"];
+    } else if (lastMessage.includes("type of solar module")) {
+      return ["string", "central", "microinverter", "hybrid"];
+    } else if (lastMessage.includes("type of inverter")) {
+      return ["yes", "no"];
+    } else if (lastMessage.includes("battery storage")) {
+      return ["fixed", "adjustable", "tracking", "dual-tracking"];
+    } else if (lastMessage.includes("mounting structure")) {
+      return ["grid-tied", "hybrid", "off-grid"];
+    } else if (lastMessage.includes("grid connection")) {
+      return ["yes", "no"];
+    } else if (lastMessage.includes("monitoring system")) {
+      return ["yes", "no"];
+    }
+    
+    return undefined;
+  };
   
   // Fallback logic for when the model isn't loaded
   const generateFallbackResponse = (input: string, previousMessages: Message[]): string => {
     const inputLower = input.toLowerCase();
     const lastMessage = previousMessages[previousMessages.length - 1]?.content.toLowerCase() || "";
     
-    if (lastMessage.includes("what type of solar project")) {
-      return "Great! Now, what installation type are you looking for? (rooftop, ground-mount, carport, or floating)";
+    // Create friendly acknowledgment of the user's choice
+    const acknowledgment = getAcknowledgment(input);
+    
+    if (lastMessage.includes("what type of solar project") || previousMessages.length === 1) {
+      return `${acknowledgment} Now, what installation type are you looking for?`;
     } else if (lastMessage.includes("installation type")) {
-      return "What's the capacity of your system in kilowatts (kW)?";
+      return `${acknowledgment} What's the capacity of your system in kilowatts (kW)?`;
     } else if (lastMessage.includes("capacity of your system")) {
-      return "What type of solar module would you prefer? (monocrystalline, polycrystalline, thin-film, or bifacial)";
+      return `${acknowledgment} What type of solar module would you prefer?`;
     } else if (lastMessage.includes("type of solar module")) {
-      return "What type of inverter would you like to use? (string, central, microinverter, or hybrid)";
+      return `${acknowledgment} What type of inverter would you like to use?`;
     } else if (lastMessage.includes("type of inverter")) {
-      return "Do you want to include battery storage in your system? (yes/no)";
+      return `${acknowledgment} Do you want to include battery storage in your system?`;
     } else if (lastMessage.includes("battery storage")) {
-      return "What mounting structure do you prefer? (fixed, adjustable, tracking, or dual-tracking)";
+      return `${acknowledgment} What mounting structure do you prefer?`;
     } else if (lastMessage.includes("mounting structure")) {
-      return "What's your grid connection type? (grid-tied, hybrid, or off-grid)";
+      return `${acknowledgment} What's your grid connection type?`;
     } else if (lastMessage.includes("grid connection")) {
-      return "Would you like to include a monitoring system? (yes/no)";
+      return `${acknowledgment} Would you like to include a monitoring system?`;
     } else if (lastMessage.includes("monitoring system")) {
-      return "I have all the information I need now. Would you like me to generate your BOQ? (yes/no)";
+      return `${acknowledgment} I have all the information I need now. Would you like me to generate your BOQ?`;
     } else if (inputLower.includes("yes") && lastMessage.includes("generate your boq")) {
       return "Great! I'll generate your BOQ now.";
     } else {
       return "I'm processing your request. Can you provide more details about your solar project?";
     }
+  };
+
+  // Generate a friendly acknowledgment based on the user's input
+  const getAcknowledgment = (input: string): string => {
+    const responses = [
+      `Got it! You selected ${input}.`,
+      `Thanks for choosing ${input}!`,
+      `Excellent choice with ${input}.`,
+      `I've noted down ${input}.`,
+      `${input}, perfect!`
+    ];
+    
+    return responses[Math.floor(Math.random() * responses.length)];
   };
   
   // Generate BOQ based on conversation
@@ -388,6 +456,33 @@ export function BOQChat({ onBOQGenerated }: BOQChatProps) {
     };
   }
 
+  // Render MCQ options when available
+  const renderOptions = (options?: string[]) => {
+    if (!options || options.length === 0) return null;
+    
+    return (
+      <div className="mt-4 mb-2">
+        <RadioGroup 
+          value={selectedOption || ""}
+          onValueChange={handleOptionSelect}
+          className="flex flex-col space-y-2"
+        >
+          {options.map((option, index) => (
+            <div key={index} className="flex items-center space-x-2 bg-muted/20 p-2 rounded-md hover:bg-muted/40 transition-colors">
+              <RadioGroupItem value={option} id={`option-${index}`} />
+              <label 
+                htmlFor={`option-${index}`} 
+                className="text-sm cursor-pointer flex-1 py-1"
+              >
+                {option}
+              </label>
+            </div>
+          ))}
+        </RadioGroup>
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-col h-[600px] border rounded-lg overflow-hidden bg-background">
       <div className="p-4 border-b bg-muted/50 flex items-center gap-2">
@@ -428,6 +523,7 @@ export function BOQChat({ onBOQGenerated }: BOQChatProps) {
                 )}
               </div>
               <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+              {message.role === "assistant" && renderOptions(message.options)}
             </div>
           </div>
         ))}
@@ -440,13 +536,13 @@ export function BOQChat({ onBOQGenerated }: BOQChatProps) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Type your message..."
-            disabled={isLoading || isProcessing}
+            disabled={isLoading || isProcessing || !!selectedOption}
             className="flex-1"
           />
           <Button 
             type="submit" 
             size="icon"
-            disabled={isLoading || isProcessing || !input.trim()}
+            disabled={isLoading || isProcessing || (!input.trim() && !selectedOption)}
           >
             {isProcessing ? (
               <RotateCw className="h-4 w-4 animate-spin" />
