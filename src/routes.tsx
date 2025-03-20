@@ -9,6 +9,7 @@ import SolarDesigner from "./pages/SolarDesigner";
 import Index from "./pages/Index";
 import AuthGuard from "@/components/AuthGuard";
 import { SolarDesignerPage } from "./pages/SolarDesignerPage";
+import BOQGenerator from "./pages/BOQGenerator";
 
 export const router = createBrowserRouter([
   {
@@ -48,6 +49,14 @@ export const router = createBrowserRouter([
     element: (
       <AuthGuard>
         <SolarDesignerPage />
+      </AuthGuard>
+    ),
+  },
+  {
+    path: "/boq-generator",
+    element: (
+      <AuthGuard>
+        <BOQGenerator />
       </AuthGuard>
     ),
   },
