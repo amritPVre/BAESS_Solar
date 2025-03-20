@@ -16,15 +16,20 @@ export function SolarDesignerPage() {
     setActiveTab("calculator");
   };
   
-  // Generate a mock project with proper SolarProject type
-  const generateMockProject = (): SolarProject => {
+  // Generate a project with proper SolarProject type
+  const generateProjectData = (): SolarProject => {
     const uniqueId = Math.random().toString(36).substring(2, 9);
-    const defaultProject: SolarProject = {
+    const now = new Date().toISOString();
+    
+    const potentialCapacity = mappingResults?.potentialCapacity || 10;
+    const annualEnergy = potentialCapacity * 1600;
+    
+    const project: SolarProject = {
       id: `temp-${uniqueId}`,
       userId: "temp-user",
       name: "Solar Project",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: now,
+      updatedAt: now,
       clientName: "Client Name",
       clientEmail: "client@example.com",
       clientPhone: "(123) 456-7890",
@@ -35,8 +40,8 @@ export function SolarDesignerPage() {
       companyPhone: "(987) 654-3210",
       knowsAnnualEnergy: false,
       manualAnnualEnergy: 0,
-      annualEnergy: mappingResults ? mappingResults.potentialCapacity * 1600 : 16000,
-      systemSize: mappingResults ? mappingResults.potentialCapacity || 10 : 10,
+      annualEnergy: annualEnergy,
+      systemSize: potentialCapacity,
       panelType: "monocrystalline",
       panelEfficiency: 20,
       inverterType: "string", 
@@ -50,10 +55,10 @@ export function SolarDesignerPage() {
       timezone: "America/New_York",
       country: "United States",
       city: "New York",
-      systemCost: mappingResults?.potentialCapacity ? mappingResults.potentialCapacity * 2500 : 25000,
+      systemCost: potentialCapacity * 2500,
       electricityRate: 0.15,
       electricityEscalationRate: 3,
-      incentives: mappingResults?.potentialCapacity ? mappingResults.potentialCapacity * 750 : 7500,
+      incentives: potentialCapacity * 750,
       financingOption: "cash",
       loanTerm: 15,
       interestRate: 4.5,
@@ -75,7 +80,7 @@ export function SolarDesignerPage() {
       cumulativeCashFlow: []
     };
     
-    return defaultProject;
+    return project;
   };
   
   return (
@@ -103,7 +108,7 @@ export function SolarDesignerPage() {
         
         <TabsContent value="calculator">
           <SolarCalculator 
-            projectData={mappingResults ? generateMockProject() : undefined}
+            projectData={mappingResults ? generateProjectData() : undefined}
           />
         </TabsContent>
       </Tabs>

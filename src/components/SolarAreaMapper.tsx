@@ -44,6 +44,7 @@ const SolarAreaMapper: React.FC<SolarAreaMapperProps> = ({
   const mapInstanceRef = useRef<L.Map | null>(null);
   const drawControlRef = useRef<any>(null);
   const drawnItemsRef = useRef<L.FeatureGroup | null>(null);
+  const mapId = useRef<string>(`solar-area-mapper-${Math.random().toString(36).substring(2, 9)}`);
   
   const [projectCategory, setProjectCategory] = useState(gcrCategories[0]);
   const [installationType, setInstallationType] = useState(installationTypes[gcrCategories[0]][0]);
@@ -54,6 +55,12 @@ const SolarAreaMapper: React.FC<SolarAreaMapperProps> = ({
   
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
+    
+    // Set a unique ID for the map container
+    if (mapRef.current) {
+      mapRef.current.id = mapId.current;
+      console.log(`Setting map container ID: ${mapId.current}`);
+    }
     
     if (defaultLocation) {
       searchLocation(defaultLocation)
@@ -83,92 +90,134 @@ const SolarAreaMapper: React.FC<SolarAreaMapperProps> = ({
   const initializeMap = (center: [number, number]) => {
     if (!mapRef.current || mapInstanceRef.current) return;
     
-    const map = L.map(mapRef.current, {
-      center: center,
-      zoom: 18,
-      maxZoom: 22
-    });
+    const currentMapId = mapId.current;
+    const mapElement = document.getElementById(currentMapId);
     
-    mapInstanceRef.current = map;
+    if (!mapElement) {
+      console.error(`Map element with ID ${currentMapId} not found in DOM`);
+      
+      // Double check that our ref is in the DOM
+      if (!mapRef.current) {
+        console.error("mapRef.current is null");
+        return;
+      }
+      
+      if (!document.body.contains(mapRef.current)) {
+        console.error("mapRef.current is not in the DOM");
+        return;
+      }
+      
+      console.log("Setting ID directly on the ref element again");
+      mapRef.current.id = currentMapId;
+    }
     
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      maxZoom: 19,
-    }).addTo(map);
-    
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-      maxZoom: 19
-    }).addTo(map);
-    
-    const drawnItems = new L.FeatureGroup();
-    map.addLayer(drawnItems);
-    drawnItemsRef.current = drawnItems;
-    
-    import('leaflet-draw').then(() => {
-      const drawControl = new L.Control.Draw({
-        draw: {
-          polyline: false,
-          circle: {
-            shapeOptions: {
-              color: '#3388ff',
-              weight: 2
-            }
-          },
-          rectangle: {
-            shapeOptions: {
-              color: '#3388ff',
-              weight: 2
-            }
-          },
-          marker: false,
-          circlemarker: false,
-          polygon: {
-            allowIntersection: false,
-            showArea: true,
-            drawError: {
-              color: '#e1e100',
-              message: '<strong>Polygon error:</strong> Polygon cannot self-intersect!'
+    try {
+      console.log(`Initializing map with ID: ${currentMapId}`);
+      const map = L.map(currentMapId, {
+        center: center,
+        zoom: 18,
+        maxZoom: 22
+      });
+      
+      mapInstanceRef.current = map;
+      
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19,
+      }).addTo(map);
+      
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+        maxZoom: 19
+      }).addTo(map);
+      
+      const drawnItems = new L.FeatureGroup();
+      map.addLayer(drawnItems);
+      drawnItemsRef.current = drawnItems;
+      
+      // Use setTimeout to ensure DOM is fully rendered before attempting to initialize leaflet-draw
+      setTimeout(() => {
+        import('leaflet-draw').then(() => {
+          // Type assertion for Draw control options
+          const drawOptions: any = {
+            draw: {
+              polyline: false,
+              circle: {
+                shapeOptions: {
+                  color: '#3388ff',
+                  weight: 2
+                }
+              },
+              rectangle: {
+                shapeOptions: {
+                  color: '#3388ff',
+                  weight: 2
+                }
+              },
+              marker: false,
+              circlemarker: false,
+              polygon: {
+                allowIntersection: false,
+                showArea: true,
+                drawError: {
+                  color: '#e1e100',
+                  message: '<strong>Polygon error:</strong> Polygon cannot self-intersect!'
+                },
+                shapeOptions: {
+                  color: '#3388ff',
+                  weight: 2
+                }
+              }
             },
-            shapeOptions: {
-              color: '#3388ff',
-              weight: 2
+            edit: {
+              featureGroup: drawnItems,
+              remove: true
             }
-          }
-        },
-        edit: {
-          featureGroup: drawnItems,
-          remove: true
-        }
-      });
-      
-      map.addControl(drawControl);
-      drawControlRef.current = drawControl;
-      
-      map.on('draw:created', (e: any) => {
-        const layer = e.layer;
-        drawnItems.addLayer(layer);
-        
-        calculateArea(layer);
-      });
-      
-      map.on('draw:edited', (e: any) => {
-        const layers = e.layers;
-        layers.eachLayer((layer: any) => {
-          calculateArea(layer);
+          };
+          
+          // Use any type assertion for L.Control.Draw
+          const drawControl = new (L.Control as any).Draw(drawOptions);
+          
+          map.addControl(drawControl);
+          drawControlRef.current = drawControl;
+          
+          map.on('draw:created', (e: any) => {
+            const layer = e.layer;
+            drawnItems.addLayer(layer);
+            
+            calculateArea(layer);
+          });
+          
+          map.on('draw:edited', (e: any) => {
+            const layers = e.layers;
+            layers.eachLayer((layer: any) => {
+              calculateArea(layer);
+            });
+          });
+          
+          map.on('draw:deleted', () => {
+            if (drawnItems.getLayers().length === 0) {
+              setDrawnArea(null);
+              setAreaAnalysis(null);
+              setCustomGcr(null);
+            }
+          });
+          
+          // Force a resize to ensure the map renders correctly
+          setTimeout(() => {
+            map.invalidateSize(true);
+            console.log("Map initialized successfully");
+            setMapLoaded(true);
+          }, 300);
+        }).catch(err => {
+          console.error("Error loading leaflet-draw:", err);
+          toast.error("Could not load drawing tools. Please try refreshing the page.");
         });
-      });
-      
-      map.on('draw:deleted', () => {
-        if (drawnItems.getLayers().length === 0) {
-          setDrawnArea(null);
-          setAreaAnalysis(null);
-          setCustomGcr(null);
-        }
-      });
-      
-      setMapLoaded(true);
-    });
+      }, 500);
+    } catch (error) {
+      console.error("Error initializing map:", error);
+      toast.error("Error initializing map. Please try refreshing the page.");
+    }
   };
   
   const calculateArea = (layer: any) => {
@@ -177,7 +226,7 @@ const SolarAreaMapper: React.FC<SolarAreaMapperProps> = ({
     if (layer instanceof L.Polygon) {
       const latLngs = layer.getLatLngs()[0];
       if (Array.isArray(latLngs)) {
-        coordinates = latLngs.map((point: any) => [point.lat, point.lng]);
+        coordinates = (latLngs as any).map((point: any) => [point.lat, point.lng]);
       }
     } else if (layer instanceof L.Rectangle) {
       const bounds = layer.getBounds();
@@ -404,8 +453,18 @@ const SolarAreaMapper: React.FC<SolarAreaMapperProps> = ({
           <div className="mb-4 relative">
             <div 
               ref={mapRef} 
+              id={mapId.current}
               className="h-[500px] rounded-md border border-gray-200 shadow-inner bg-gray-50"
             />
+            
+            {!mapLoaded && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-50/80">
+                <div className="text-center">
+                  <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-solar" />
+                  <p>Loading map...</p>
+                </div>
+              </div>
+            )}
             
             {mapLoaded && (
               <div className="absolute bottom-4 right-4 z-[1000]">
