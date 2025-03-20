@@ -1,15 +1,16 @@
 
 import React from "react";
-import { Navigate, RouteObject } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import ProjectDetails from "./pages/ProjectDetails";
-import { SolarDesignerPage } from "./pages/SolarDesignerPage";
+import SolarDesigner from "./pages/SolarDesigner";
 import Index from "./pages/Index";
 import AuthGuard from "@/components/AuthGuard";
+import { SolarDesignerPage } from "./pages/SolarDesignerPage";
 
-export const routes: RouteObject[] = [
+export const router = createBrowserRouter([
   {
     path: "/",
     element: <Index />,
@@ -27,7 +28,7 @@ export const routes: RouteObject[] = [
     ),
   },
   {
-    path: "/project/:id",
+    path: "/projects/:id",
     element: (
       <AuthGuard>
         <ProjectDetails />
@@ -35,15 +36,25 @@ export const routes: RouteObject[] = [
     ),
   },
   {
-    path: "/designer",
-    element: <SolarDesignerPage />,
+    path: "/solar-designer",
+    element: (
+      <AuthGuard>
+        <SolarDesigner />
+      </AuthGuard>
+    ),
   },
   {
-    path: "/solar-designer",
-    element: <Navigate to="/designer" replace />,
+    path: "/solar-designer-page",
+    element: (
+      <AuthGuard>
+        <SolarDesignerPage />
+      </AuthGuard>
+    ),
   },
   {
     path: "*",
     element: <NotFound />,
   },
-];
+]);
+
+export default router;

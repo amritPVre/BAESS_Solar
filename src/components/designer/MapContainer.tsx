@@ -26,10 +26,8 @@ export const MapContainer: React.FC<MapContainerProps> = ({
       return;
     }
     
-    // Assign a unique ID to the map element if it doesn't have one
-    const mapId = mapRef.current.id || "solar-designer-map";
-    mapRef.current.id = mapId;
-    
+    // Get the actual ID from the ref element
+    const mapId = mapRef.current.id;
     console.log(`Preparing to initialize map with ID: ${mapId}`);
     
     // Clean up function
@@ -163,3 +161,4 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   
   return null; // No visible component, just functionality
 };
+
