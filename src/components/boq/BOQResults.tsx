@@ -257,7 +257,7 @@ export function BOQResults({ data }: BOQResultsProps) {
         </CardFooter>
       </Card>
       
-      <style jsx global>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         @media print {
           @page { size: portrait; margin: 1cm; }
           body * { font-size: 12px !important; }
@@ -272,7 +272,7 @@ export function BOQResults({ data }: BOQResultsProps) {
           .print\\:space-y-2 > * + * { margin-top: 0.5rem !important; }
           .print\\:gap-2 { gap: 0.5rem !important; }
         }
-      `}</style>
+      ` }} />
     </div>
   );
 }
