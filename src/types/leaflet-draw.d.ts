@@ -19,12 +19,37 @@ declare module 'leaflet-draw' {
         static DELETESTART: string;
         static DELETESTOP: string;
       }
+      
+      interface DrawOptions {
+        polyline?: boolean | L.PolylineOptions;
+        polygon?: boolean | L.PolygonOptions & {
+          allowIntersection?: boolean;
+          drawError?: {
+            color?: string;
+            timeout?: number;
+            message?: string;
+          };
+          showArea?: boolean;
+        };
+        rectangle?: boolean | L.PolylineOptions;
+        circle?: boolean | L.CircleOptions;
+        marker?: boolean | L.MarkerOptions;
+        circlemarker?: boolean | L.CircleMarkerOptions;
+      }
+      
+      interface EditOptions {
+        featureGroup: L.FeatureGroup;
+        edit?: boolean | {
+          selectedPathOptions?: L.PathOptions;
+        };
+        remove?: boolean;
+      }
     }
 
     namespace control {
       interface DrawConstructorOptions {
-        draw?: any;
-        edit?: any;
+        draw?: Draw.DrawOptions;
+        edit?: Draw.EditOptions;
       }
 
       class Draw extends L.Control {

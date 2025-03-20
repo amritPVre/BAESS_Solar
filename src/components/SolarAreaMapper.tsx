@@ -45,20 +45,16 @@ const SolarAreaMapper: React.FC<SolarAreaMapperProps> = ({
   const drawControlRef = useRef<any>(null);
   const drawnItemsRef = useRef<L.FeatureGroup | null>(null);
   
-  // Installation configuration
   const [projectCategory, setProjectCategory] = useState(gcrCategories[0]);
   const [installationType, setInstallationType] = useState(installationTypes[gcrCategories[0]][0]);
   
-  // Area analysis
   const [drawnArea, setDrawnArea] = useState<number | null>(null);
   const [areaAnalysis, setAreaAnalysis] = useState<any>(null);
   const [customGcr, setCustomGcr] = useState<number | null>(null);
   
-  // Initialize map when component mounts
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
     
-    // Try to load the default location
     if (defaultLocation) {
       searchLocation(defaultLocation)
         .then(location => {
@@ -66,19 +62,16 @@ const SolarAreaMapper: React.FC<SolarAreaMapperProps> = ({
             setMapCenter([location.lat, location.lng]);
             initializeMap([location.lat, location.lng]);
           } else {
-            // Fall back to default coordinates
             initializeMap(mapCenter);
           }
         })
         .catch(() => {
-          // Fall back to default coordinates on error
           initializeMap(mapCenter);
         });
     } else {
       initializeMap(mapCenter);
     }
     
-    // Cleanup map on unmount
     return () => {
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
@@ -87,11 +80,9 @@ const SolarAreaMapper: React.FC<SolarAreaMapperProps> = ({
     };
   }, []);
   
-  // Initialize the map with Leaflet
   const initializeMap = (center: [number, number]) => {
     if (!mapRef.current || mapInstanceRef.current) return;
     
-    // Create map instance
     const map = L.map(mapRef.current, {
       center: center,
       zoom: 18,
@@ -100,31 +91,36 @@ const SolarAreaMapper: React.FC<SolarAreaMapperProps> = ({
     
     mapInstanceRef.current = map;
     
-    // Add tile layers
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       maxZoom: 19,
     }).addTo(map);
     
-    // Add satellite layer
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
       attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
       maxZoom: 19
     }).addTo(map);
     
-    // Initialize the FeatureGroup to store editable layers
     const drawnItems = new L.FeatureGroup();
     map.addLayer(drawnItems);
     drawnItemsRef.current = drawnItems;
     
-    // Import Leaflet Draw dynamically (will only work on client side)
     import('leaflet-draw').then(() => {
-      // Initialize the draw control and pass it the FeatureGroup of editable layers
       const drawControl = new L.Control.Draw({
         draw: {
           polyline: false,
-          circle: true,
-          rectangle: true,
+          circle: {
+            shapeOptions: {
+              color: '#3388ff',
+              weight: 2
+            }
+          },
+          rectangle: {
+            shapeOptions: {
+              color: '#3388ff',
+              weight: 2
+            }
+          },
           marker: false,
           circlemarker: false,
           polygon: {
@@ -149,16 +145,13 @@ const SolarAreaMapper: React.FC<SolarAreaMapperProps> = ({
       map.addControl(drawControl);
       drawControlRef.current = drawControl;
       
-      // Handle the created shape
       map.on('draw:created', (e: any) => {
         const layer = e.layer;
         drawnItems.addLayer(layer);
         
-        // Calculate area
         calculateArea(layer);
       });
       
-      // Update area on edit
       map.on('draw:edited', (e: any) => {
         const layers = e.layers;
         layers.eachLayer((layer: any) => {
@@ -166,7 +159,6 @@ const SolarAreaMapper: React.FC<SolarAreaMapperProps> = ({
         });
       });
       
-      // Clear area on delete
       map.on('draw:deleted', () => {
         if (drawnItems.getLayers().length === 0) {
           setDrawnArea(null);
@@ -179,18 +171,15 @@ const SolarAreaMapper: React.FC<SolarAreaMapperProps> = ({
     });
   };
   
-  // Calculate area for the drawn shape
   const calculateArea = (layer: any) => {
     let coordinates: number[][] = [];
     
     if (layer instanceof L.Polygon) {
-      // Extract coordinates from polygon
       const latLngs = layer.getLatLngs()[0];
       if (Array.isArray(latLngs)) {
-        coordinates = latLngs.map((point: L.LatLng) => [point.lat, point.lng]);
+        coordinates = latLngs.map((point: any) => [point.lat, point.lng]);
       }
     } else if (layer instanceof L.Rectangle) {
-      // Extract coordinates from rectangle
       const bounds = layer.getBounds();
       const ne = bounds.getNorthEast();
       const nw = bounds.getNorthWest();
@@ -203,20 +192,18 @@ const SolarAreaMapper: React.FC<SolarAreaMapperProps> = ({
         [se.lat, se.lng]
       ];
     } else if (layer instanceof L.Circle) {
-      // For circles, create an approximation with points around the circle
       const center = layer.getLatLng();
       const radius = layer.getRadius();
-      const points = 32; // Number of points to approximate the circle
+      const points = 32;
       
       for (let i = 0; i < points; i++) {
         const angle = (i / points) * Math.PI * 2;
         const dx = Math.cos(angle) * radius;
         const dy = Math.sin(angle) * radius;
         
-        // Calculate the latitude and longitude at this point
         const point = L.latLng(
-          center.lat + (dy / 111320), // 1 degree latitude is approximately 111,320 meters
-          center.lng + (dx / (111320 * Math.cos(center.lat * (Math.PI / 180)))) // Adjust for longitude based on latitude
+          center.lat + (dy / 111320),
+          center.lng + (dx / (111320 * Math.cos(center.lat * (Math.PI / 180))))
         );
         
         coordinates.push([point.lat, point.lng]);
@@ -227,14 +214,12 @@ const SolarAreaMapper: React.FC<SolarAreaMapperProps> = ({
       const areaInSquareMeters = calculatePolygonArea(coordinates);
       setDrawnArea(areaInSquareMeters);
       
-      // Calculate installation potential with current GCR
       const gcrValue = getGcrValue(projectCategory, installationType);
       const analysis = calculateInstallationPotential(areaInSquareMeters, customGcr || gcrValue);
       setAreaAnalysis(analysis);
     }
   };
   
-  // Handle search address
   const handleSearchAddress = async () => {
     if (!searchAddress.trim()) {
       toast.error("Please enter a location to search");
@@ -247,10 +232,8 @@ const SolarAreaMapper: React.FC<SolarAreaMapperProps> = ({
       const location = await searchLocation(searchAddress);
       
       if (location) {
-        // Update map center
         setMapCenter([location.lat, location.lng]);
         
-        // Update map view
         if (mapInstanceRef.current) {
           mapInstanceRef.current.setView([location.lat, location.lng], 18);
           toast.success(`Location found: ${location.displayName}`);
@@ -265,12 +248,10 @@ const SolarAreaMapper: React.FC<SolarAreaMapperProps> = ({
     }
   };
   
-  // Update installation type when project category changes
   useEffect(() => {
     setInstallationType(installationTypes[projectCategory][0]);
   }, [projectCategory]);
   
-  // Update area analysis when category, type, or GCR changes
   useEffect(() => {
     if (drawnArea === null) return;
     
@@ -279,7 +260,6 @@ const SolarAreaMapper: React.FC<SolarAreaMapperProps> = ({
     setAreaAnalysis(analysis);
   }, [projectCategory, installationType, customGcr, drawnArea]);
   
-  // Update custom GCR when default changes
   useEffect(() => {
     if (customGcr === null && projectCategory && installationType) {
       const defaultGcr = getGcrValue(projectCategory, installationType);
@@ -287,12 +267,10 @@ const SolarAreaMapper: React.FC<SolarAreaMapperProps> = ({
     }
   }, [projectCategory, installationType]);
   
-  // Handle GCR slider change
   const handleGcrChange = (value: number[]) => {
     setCustomGcr(value[0]);
   };
   
-  // Handle completion of mapping
   const handleComplete = () => {
     if (areaAnalysis && onComplete) {
       onComplete({
@@ -304,7 +282,6 @@ const SolarAreaMapper: React.FC<SolarAreaMapperProps> = ({
     }
   };
   
-  // Handle skip
   const handleSkip = () => {
     if (onComplete && initialCapacity) {
       onComplete({
@@ -314,7 +291,6 @@ const SolarAreaMapper: React.FC<SolarAreaMapperProps> = ({
     }
   };
   
-  // Handle clear drawn items
   const handleClearDrawing = () => {
     if (drawnItemsRef.current) {
       drawnItemsRef.current.clearLayers();

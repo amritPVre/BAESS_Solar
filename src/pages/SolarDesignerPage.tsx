@@ -16,11 +16,10 @@ export function SolarDesignerPage() {
     setActiveTab("calculator");
   };
   
-  // Generate a mock project with unique ID for the calculator
-  const generateMockProject = (): Partial<SolarProject> => {
+  // Generate a mock project with proper SolarProject type
+  const generateMockProject = (): SolarProject => {
     const uniqueId = Math.random().toString(36).substring(2, 9);
-    
-    return {
+    const defaultProject: SolarProject = {
       id: `temp-${uniqueId}`,
       userId: "temp-user",
       name: "Solar Project",
@@ -75,6 +74,8 @@ export function SolarDesignerPage() {
       yearlyCashFlow: [],
       cumulativeCashFlow: []
     };
+    
+    return defaultProject;
   };
   
   return (
@@ -102,7 +103,7 @@ export function SolarDesignerPage() {
         
         <TabsContent value="calculator">
           <SolarCalculator 
-            projectData={mappingResults ? generateMockProject() as SolarProject : undefined}
+            projectData={mappingResults ? generateMockProject() : undefined}
           />
         </TabsContent>
       </Tabs>
