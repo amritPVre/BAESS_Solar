@@ -1,13 +1,13 @@
 
 import React from "react";
 import { Navigate, RouteObject } from "react-router-dom";
-import { Auth } from "./pages/Auth";
-import { NotFound } from "./pages/NotFound";
-import { Dashboard } from "./pages/Dashboard";
-import { ProjectDetails } from "./pages/ProjectDetails";
+import Auth from "./pages/Auth";
+import NotFound from "./pages/NotFound";
+import Dashboard from "./pages/Dashboard";
+import ProjectDetails from "./pages/ProjectDetails";
 import { SolarDesignerPage } from "./pages/SolarDesignerPage";
-import { Index } from "./pages/Index";
-import { AuthGuard } from "@/components/AuthGuard";
+import Index from "./pages/Index";
+import AuthGuard from "@/components/AuthGuard";
 
 export const routes: RouteObject[] = [
   {

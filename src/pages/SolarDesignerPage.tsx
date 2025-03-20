@@ -5,6 +5,7 @@ import SolarAreaMapper from "@/components/SolarAreaMapper";
 import SolarCalculator from "@/components/SolarCalculator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MapPin, Calculator } from "lucide-react";
+import { SolarProject } from "@/types/solarProject";
 
 export function SolarDesignerPage() {
   const [activeTab, setActiveTab] = useState("mapper");
@@ -13,6 +14,67 @@ export function SolarDesignerPage() {
   const handleMappingComplete = (results: any) => {
     setMappingResults(results);
     setActiveTab("calculator");
+  };
+  
+  // Generate a mock project with unique ID for the calculator
+  const generateMockProject = (): Partial<SolarProject> => {
+    const uniqueId = Math.random().toString(36).substring(2, 9);
+    
+    return {
+      id: `temp-${uniqueId}`,
+      userId: "temp-user",
+      name: "Solar Project",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      clientName: "Client Name",
+      clientEmail: "client@example.com",
+      clientPhone: "(123) 456-7890",
+      clientAddress: "123 Solar Street",
+      companyName: "Solar Company",
+      companyContact: "Contact Person",
+      companyEmail: "company@example.com",
+      companyPhone: "(987) 654-3210",
+      knowsAnnualEnergy: false,
+      manualAnnualEnergy: 0,
+      annualEnergy: mappingResults ? mappingResults.potentialCapacity * 1600 : 16000,
+      systemSize: mappingResults ? mappingResults.potentialCapacity || 10 : 10,
+      panelType: "monocrystalline",
+      panelEfficiency: 20,
+      inverterType: "string", 
+      inverterEfficiency: 97,
+      roofType: "asphalt", 
+      roofAngle: 30,
+      orientation: "south",
+      solarIrradiance: 5,
+      shadingFactor: 5,
+      location: { lat: 40.7128, lng: -74.0060 },
+      timezone: "America/New_York",
+      country: "United States",
+      city: "New York",
+      systemCost: mappingResults?.potentialCapacity ? mappingResults.potentialCapacity * 2500 : 25000,
+      electricityRate: 0.15,
+      electricityEscalationRate: 3,
+      incentives: mappingResults?.potentialCapacity ? mappingResults.potentialCapacity * 750 : 7500,
+      financingOption: "cash",
+      loanTerm: 15,
+      interestRate: 4.5,
+      maintenanceCost: 200,
+      maintenanceEscalationRate: 2,
+      degradationRate: 0.5,
+      discountRate: 5,
+      lcoe: 0,
+      annualRevenue: 0,
+      annualCost: 0,
+      netPresentValue: 0,
+      irr: 0,
+      paybackPeriod: { years: 0, months: 0 },
+      co2Reduction: 0,
+      treesEquivalent: 0,
+      vehicleMilesOffset: 0,
+      yearlyProduction: [],
+      yearlyCashFlow: [],
+      cumulativeCashFlow: []
+    };
   };
   
   return (
@@ -40,55 +102,7 @@ export function SolarDesignerPage() {
         
         <TabsContent value="calculator">
           <SolarCalculator 
-            projectData={mappingResults ? {
-              systemSize: mappingResults.potentialCapacity || 10,
-              annualEnergy: mappingResults.potentialCapacity * 1600, // Rough estimate of annual energy
-              // Include other required props
-              name: "Solar Project",
-              clientName: "Client Name",
-              clientEmail: "client@example.com",
-              clientPhone: "(123) 456-7890",
-              clientAddress: "123 Solar Street",
-              companyName: "Solar Company",
-              companyContact: "Contact Person",
-              companyEmail: "company@example.com",
-              companyPhone: "(987) 654-3210",
-              knowsAnnualEnergy: false,
-              manualAnnualEnergy: 0,
-              panelType: "monocrystalline",
-              panelEfficiency: 20,
-              inverterType: "string", 
-              inverterEfficiency: 97,
-              roofType: "asphalt", 
-              roofAngle: 30,
-              orientation: "south",
-              solarIrradiance: 5,
-              shadingFactor: 5,
-              location: { lat: 40.7128, lng: -74.0060 },
-              timezone: "America/New_York",
-              country: "United States",
-              city: "New York",
-              systemCost: mappingResults?.potentialCapacity ? mappingResults.potentialCapacity * 2500 : 25000,
-              electricityRate: 0.15,
-              electricityEscalationRate: 3,
-              incentives: mappingResults?.potentialCapacity ? mappingResults.potentialCapacity * 750 : 7500,
-              financingOption: "cash",
-              loanTerm: 15,
-              interestRate: 4.5,
-              maintenanceCost: 200,
-              maintenanceEscalationRate: 2,
-              degradationRate: 0.5,
-              discountRate: 5,
-              lcoe: 0,
-              annualRevenue: 0,
-              annualCost: 0,
-              netPresentValue: 0,
-              irr: 0,
-              paybackPeriod: { years: 0, months: 0 },
-              co2Reduction: 0,
-              treesEquivalent: 0,
-              vehicleMilesOffset: 0
-            } : undefined}
+            projectData={mappingResults ? generateMockProject() as SolarProject : undefined}
           />
         </TabsContent>
       </Tabs>

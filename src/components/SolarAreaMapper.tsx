@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -151,7 +150,7 @@ const SolarAreaMapper: React.FC<SolarAreaMapperProps> = ({
       drawControlRef.current = drawControl;
       
       // Handle the created shape
-      map.on(L.Draw.Event.CREATED, (e: any) => {
+      map.on('draw:created', (e: any) => {
         const layer = e.layer;
         drawnItems.addLayer(layer);
         
@@ -160,7 +159,7 @@ const SolarAreaMapper: React.FC<SolarAreaMapperProps> = ({
       });
       
       // Update area on edit
-      map.on(L.Draw.Event.EDITED, (e: any) => {
+      map.on('draw:edited', (e: any) => {
         const layers = e.layers;
         layers.eachLayer((layer: any) => {
           calculateArea(layer);
@@ -168,7 +167,7 @@ const SolarAreaMapper: React.FC<SolarAreaMapperProps> = ({
       });
       
       // Clear area on delete
-      map.on(L.Draw.Event.DELETED, () => {
+      map.on('draw:deleted', () => {
         if (drawnItems.getLayers().length === 0) {
           setDrawnArea(null);
           setAreaAnalysis(null);
@@ -187,7 +186,9 @@ const SolarAreaMapper: React.FC<SolarAreaMapperProps> = ({
     if (layer instanceof L.Polygon) {
       // Extract coordinates from polygon
       const latLngs = layer.getLatLngs()[0];
-      coordinates = latLngs.map((point: L.LatLng) => [point.lat, point.lng]);
+      if (Array.isArray(latLngs)) {
+        coordinates = latLngs.map((point: L.LatLng) => [point.lat, point.lng]);
+      }
     } else if (layer instanceof L.Rectangle) {
       // Extract coordinates from rectangle
       const bounds = layer.getBounds();
