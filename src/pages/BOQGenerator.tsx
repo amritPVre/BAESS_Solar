@@ -2,13 +2,14 @@
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, List, Settings } from "lucide-react";
+import { FileText, List, Settings, MessageSquare } from "lucide-react";
 import { BOQForm } from "@/components/boq/BOQForm";
 import { BOQResults } from "@/components/boq/BOQResults";
+import { BOQChat } from "@/components/boq/BOQChat";
 import SectionHeader from "@/components/ui/SectionHeader";
 
 const BOQGenerator: React.FC = () => {
-  const [activeTab, setActiveTab] = useState("specifications");
+  const [activeTab, setActiveTab] = useState("chat");
   const [boqData, setBOQData] = useState<any>(null);
   
   const handleBOQGenerated = (data: any) => {
@@ -26,7 +27,11 @@ const BOQGenerator: React.FC = () => {
 
       <div className="mt-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full max-w-md mx-auto grid grid-cols-2 mb-8">
+          <TabsList className="w-full max-w-md mx-auto grid grid-cols-3 mb-8">
+            <TabsTrigger value="chat" className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              AI Assistant
+            </TabsTrigger>
             <TabsTrigger value="specifications" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
               System Specifications
@@ -36,6 +41,17 @@ const BOQGenerator: React.FC = () => {
               BOQ Results
             </TabsTrigger>
           </TabsList>
+          
+          <TabsContent value="chat">
+            <Card>
+              <CardHeader>
+                <CardTitle>Chat with AI Assistant</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <BOQChat onBOQGenerated={handleBOQGenerated} />
+              </CardContent>
+            </Card>
+          </TabsContent>
           
           <TabsContent value="specifications">
             <Card>
@@ -58,7 +74,7 @@ const BOQGenerator: React.FC = () => {
                   <BOQResults data={boqData} />
                 ) : (
                   <p className="text-center text-muted-foreground py-8">
-                    Please fill the system specifications to generate a BOQ
+                    Please fill the system specifications or chat with the AI assistant to generate a BOQ
                   </p>
                 )}
               </CardContent>
