@@ -244,7 +244,9 @@ export function BOQChat({ onBOQGenerated }: BOQChatProps) {
     
     onBOQGenerated(boqData);
     
+    const assistantMsgId = `msg_${Date.now()}`;
     setMessages(prev => [...prev, { 
+      id: assistantMsgId,
       role: "assistant", 
       content: "I've generated your BOQ based on our conversation. You can view the results in the BOQ Results tab!" 
     }]);
