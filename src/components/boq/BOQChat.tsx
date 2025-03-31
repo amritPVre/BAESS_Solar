@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,8 +28,10 @@ export function BOQChat({ onBOQGenerated }: BOQChatProps) {
   const [generatorPipeline, setGeneratorPipeline] = useState<any>(null);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [modelError, setModelError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Initialize with welcome message
     const initialId = `msg_${Date.now()}`;
     const initialMessage: Message = {
       id: initialId,
@@ -43,25 +46,32 @@ export function BOQChat({ onBOQGenerated }: BOQChatProps) {
     };
     setMessages([initialMessage]);
 
+    // Try to load the model
     const loadModel = async () => {
       try {
         setIsLoading(true);
         toast.info("Loading language model, this may take a moment...");
         
+        console.log("Attempting to load language model...");
+        
+        // Try loading a smaller model that's more likely to work in browser environments
         const pipe = await pipeline(
           "text-generation",
-          "HuggingFaceH4/zephyr-7b-alpha",
-          { device: "webgpu" }
+          "Xenova/distilgpt2", // A smaller model that's more likely to work
+          { device: "auto" } // Let the library choose the best device
         );
         
+        console.log("Language model loaded successfully!");
         setGeneratorPipeline(pipe);
         setIsModelLoaded(true);
-        setIsLoading(false);
+        setModelError(null);
         toast.success("Language model loaded successfully!");
       } catch (error) {
         console.error("Error loading model:", error);
-        toast.error("Failed to load language model. Using fallback mode.");
+        setModelError(error instanceof Error ? error.message : "Unknown error");
+        toast.error("Using simplified conversation mode. The AI features will be limited.");
         setIsModelLoaded(false);
+      } finally {
         setIsLoading(false);
       }
     };
@@ -104,14 +114,19 @@ export function BOQChat({ onBOQGenerated }: BOQChatProps) {
       let response;
       
       if (isModelLoaded && generatorPipeline) {
-        const result = await generatorPipeline(conversation, {
-          max_new_tokens: 250,
-          temperature: 0.7,
-          repetition_penalty: 1.2
-        });
-        
-        response = result[0].generated_text;
-        response = response.substring(conversation.length).trim();
+        try {
+          const result = await generatorPipeline(conversation, {
+            max_new_tokens: 250,
+            temperature: 0.7,
+            repetition_penalty: 1.2
+          });
+          
+          response = result[0].generated_text;
+          response = response.substring(conversation.length).trim();
+        } catch (modelError) {
+          console.error("Error using model for generation:", modelError);
+          response = generateFallbackResponse(userContent, messages);
+        }
       } else {
         response = generateFallbackResponse(userContent, messages);
       }
@@ -479,6 +494,9 @@ export function BOQChat({ onBOQGenerated }: BOQChatProps) {
             <RotateCw className="h-3 w-3 animate-spin" />
             Loading AI model...
           </div>
+        )}
+        {!isLoading && modelError && (
+          <div className="ml-auto text-sm text-amber-500">Running in simplified mode</div>
         )}
       </div>
       
