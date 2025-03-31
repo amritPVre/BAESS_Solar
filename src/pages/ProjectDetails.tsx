@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuth } from "@/hooks/useAuth";
@@ -8,6 +8,7 @@ import { useSolarProjects } from "@/hooks/useSolarProjects";
 import { toast } from "sonner";
 import SolarCalculator from "@/components/SolarCalculator";
 import { SolarProject } from "@/types/solarProject";
+import { Home } from "lucide-react";
 
 const ProjectDetails: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -61,7 +62,15 @@ const ProjectDetails: React.FC = () => {
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
-        <Button onClick={() => navigate("/dashboard")}>Return to Dashboard</Button>
+        <div className="flex gap-4">
+          <Button onClick={() => navigate("/dashboard")}>Return to Dashboard</Button>
+          <Link to="/">
+            <Button variant="outline" className="flex gap-2">
+              <Home className="h-4 w-4" />
+              Return to Home
+            </Button>
+          </Link>
+        </div>
       </div>
     );
   }
@@ -73,7 +82,15 @@ const ProjectDetails: React.FC = () => {
           <AlertTitle>Project Not Found</AlertTitle>
           <AlertDescription>This project doesn't exist or you don't have access to it.</AlertDescription>
         </Alert>
-        <Button onClick={() => navigate("/dashboard")}>Return to Dashboard</Button>
+        <div className="flex gap-4">
+          <Button onClick={() => navigate("/dashboard")}>Return to Dashboard</Button>
+          <Link to="/">
+            <Button variant="outline" className="flex gap-2">
+              <Home className="h-4 w-4" />
+              Return to Home
+            </Button>
+          </Link>
+        </div>
       </div>
     );
   }
@@ -96,7 +113,15 @@ const ProjectDetails: React.FC = () => {
             Created on {new Date(project.createdAt).toLocaleDateString()}
           </p>
         </div>
-        <Button onClick={() => navigate("/dashboard")}>Back to Dashboard</Button>
+        <div className="flex gap-4">
+          <Button onClick={() => navigate("/dashboard")}>Back to Dashboard</Button>
+          <Link to="/">
+            <Button variant="outline" className="flex gap-2">
+              <Home className="h-4 w-4" />
+              Return to Home
+            </Button>
+          </Link>
+        </div>
       </div>
       
       <SolarCalculator 

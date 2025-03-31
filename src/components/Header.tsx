@@ -2,7 +2,7 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Sun, LogOut, Settings } from "lucide-react";
+import { Sun, LogOut, Settings, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const Header = () => {
@@ -20,6 +20,17 @@ const Header = () => {
         <nav className="hidden md:flex items-center justify-between gap-6 mx-6">
           {isAuthenticated ? (
             <>
+              <Link
+                to="/"
+                className={`text-sm font-medium transition-colors hover:text-primary ${
+                  location.pathname === "/" ? "text-primary" : "text-muted-foreground"
+                }`}
+              >
+                <span className="flex items-center gap-1">
+                  <Home className="h-4 w-4" />
+                  Home
+                </span>
+              </Link>
               <Link
                 to="/dashboard"
                 className={`text-sm font-medium transition-colors hover:text-primary ${
@@ -84,7 +95,7 @@ const Header = () => {
               className="text-sm font-medium transition-colors hover:text-primary text-muted-foreground flex items-center gap-1"
             >
               <LogOut className="h-4 w-4" />
-              <span className="hidden sm:inline">Logout</span>
+              <span className="sm:inline">Logout</span>
             </Button>
           )}
         </div>

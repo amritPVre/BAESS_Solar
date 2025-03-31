@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +12,7 @@ import { SolarProject } from "@/types/solarProject";
 import { toast } from "sonner";
 import { formatCurrency, formatNumber } from "@/utils/calculations";
 import { motion } from "framer-motion";
-import { Sun, Plus, Calculator, BarChart3, FileText, Settings } from "lucide-react";
+import { Sun, Plus, Calculator, BarChart3, FileText, Settings, LogOut, Home } from "lucide-react";
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
@@ -85,6 +86,13 @@ const Dashboard: React.FC = () => {
         </div>
         
         <div className="mt-4 md:mt-0 flex gap-4 flex-wrap">
+          <Link to="/">
+            <Button variant="outline" className="flex gap-2">
+              <Home className="h-4 w-4" />
+              Return to Home
+            </Button>
+          </Link>
+          
           <Link to="/solar-calculator">
             <Button variant="outline" className="flex gap-2">
               <Calculator className="h-4 w-4" />
