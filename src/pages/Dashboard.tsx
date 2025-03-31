@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +11,7 @@ import { SolarProject } from "@/types/solarProject";
 import { toast } from "sonner";
 import { formatCurrency, formatNumber } from "@/utils/calculations";
 import { motion } from "framer-motion";
-import { Sun, Plus, Calculator, BarChart3, FileText } from "lucide-react";
+import { Sun, Plus, Calculator, BarChart3, FileText, Settings } from "lucide-react";
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
@@ -73,6 +72,8 @@ const Dashboard: React.FC = () => {
     });
   };
 
+  const isAdmin = user?.email === "admin@example.com";
+
   return (
     <div className="container mx-auto py-8">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
@@ -83,11 +84,11 @@ const Dashboard: React.FC = () => {
           </p>
         </div>
         
-        <div className="mt-4 md:mt-0 flex gap-4">
-          <Link to="/advanced-calculator">
+        <div className="mt-4 md:mt-0 flex gap-4 flex-wrap">
+          <Link to="/solar-calculator">
             <Button variant="outline" className="flex gap-2">
               <Calculator className="h-4 w-4" />
-              Advanced Calculator
+              Calculator
             </Button>
           </Link>
           
@@ -97,6 +98,15 @@ const Dashboard: React.FC = () => {
               BOQ Generator
             </Button>
           </Link>
+          
+          {isAdmin && (
+            <Link to="/admin">
+              <Button variant="outline" className="flex gap-2">
+                <Settings className="h-4 w-4" />
+                Admin Dashboard
+              </Button>
+            </Link>
+          )}
           
           <Dialog open={isNewProjectDialogOpen} onOpenChange={setIsNewProjectDialogOpen}>
             <DialogTrigger asChild>

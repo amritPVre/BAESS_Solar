@@ -1,11 +1,14 @@
+
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Sun } from "lucide-react";
+import { Sun, LogOut, Settings } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const Header = () => {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout, user } = useAuth();
   const location = useLocation();
+  const isAdmin = user?.email === "admin@example.com";
 
   return (
     <header className="border-b">
@@ -49,6 +52,16 @@ const Header = () => {
               >
                 Components
               </Link>
+              {isAdmin && (
+                <Link
+                  to="/admin"
+                  className={`text-sm font-medium transition-colors hover:text-primary ${
+                    location.pathname === "/admin" ? "text-primary" : "text-muted-foreground"
+                  }`}
+                >
+                  Admin
+                </Link>
+              )}
             </>
           ) : (
             <>
@@ -62,11 +75,17 @@ const Header = () => {
           )}
         </nav>
         
-        <div className="ml-auto flex items-center space-x-4">
+        <div className="ml-auto flex items-center gap-4">
           {isAuthenticated && (
-            <button onClick={logout} className="text-sm font-medium transition-colors hover:text-primary text-muted-foreground">
-              Logout
-            </button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={logout} 
+              className="text-sm font-medium transition-colors hover:text-primary text-muted-foreground flex items-center gap-1"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Logout</span>
+            </Button>
           )}
         </div>
       </div>
