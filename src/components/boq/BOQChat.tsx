@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,9 +8,10 @@ import { pipeline } from "@huggingface/transformers";
 import { toast } from "sonner";
 
 interface Message {
+  id: string;
   role: "user" | "assistant";
   content: string;
-  options?: string[]; // Add options for MCQ-type questions
+  options?: string[];
 }
 
 interface BOQChatProps {
@@ -25,12 +25,13 @@ export function BOQChat({ onBOQGenerated }: BOQChatProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [generatorPipeline, setGeneratorPipeline] = useState<any>(null);
-  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Generate an initial greeting when the component mounts
   useEffect(() => {
+    const initialId = `msg_${Date.now()}`;
     const initialMessage: Message = {
+      id: initialId,
       role: "assistant",
       content: "Hi! I'm your solar PV BOQ assistant. I'll help you generate a detailed bill of quantities for your solar project. Let's start with the basics.",
       options: [
@@ -42,18 +43,15 @@ export function BOQChat({ onBOQGenerated }: BOQChatProps) {
     };
     setMessages([initialMessage]);
 
-    // Load the model
     const loadModel = async () => {
       try {
         setIsLoading(true);
         toast.info("Loading language model, this may take a moment...");
         
-        // Initialize the pipeline with a small, efficient model
-        // Updated configuration to remove the 'quantized' property and use 'device' instead
         const pipe = await pipeline(
           "text-generation",
           "HuggingFaceH4/zephyr-7b-alpha",
-          { device: "cpu" }
+          { device: "webgpu" }
         );
         
         setGeneratorPipeline(pipe);
@@ -71,7 +69,6 @@ export function BOQChat({ onBOQGenerated }: BOQChatProps) {
     loadModel();
   }, []);
 
-  // Scroll to bottom of messages when new messages are added
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -79,26 +76,34 @@ export function BOQChat({ onBOQGenerated }: BOQChatProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    const lastAssistantMsg = [...messages].reverse().find(m => m.role === "assistant");
+    const selectedOption = lastAssistantMsg ? selectedOptions[lastAssistantMsg.id] : null;
+    
     if ((!input.trim() && !selectedOption)) return;
     
-    // Determine content based on whether an option was selected or text was input
     const userContent = selectedOption || input;
+    const messageId = `msg_${Date.now()}`;
     
-    // Add user message
-    const userMessage: Message = { role: "user", content: userContent };
+    const userMessage: Message = { id: messageId, role: "user", content: userContent };
     setMessages(prev => [...prev, userMessage]);
     setInput("");
-    setSelectedOption(null);
+    
+    if (lastAssistantMsg) {
+      setSelectedOptions(prev => {
+        const newSelections = { ...prev };
+        delete newSelections[lastAssistantMsg.id];
+        return newSelections;
+      });
+    }
+    
     setIsProcessing(true);
 
     try {
-      // Get context from previous messages
       const conversation = messages.map(msg => msg.content).join("\n") + "\n" + userContent;
       
       let response;
       
       if (isModelLoaded && generatorPipeline) {
-        // Use the loaded model if available
         const result = await generatorPipeline(conversation, {
           max_new_tokens: 250,
           temperature: 0.7,
@@ -106,25 +111,22 @@ export function BOQChat({ onBOQGenerated }: BOQChatProps) {
         });
         
         response = result[0].generated_text;
-        // Extract only the new text (remove the input)
         response = response.substring(conversation.length).trim();
       } else {
-        // Fallback logic with predefined responses
         response = generateFallbackResponse(userContent, messages);
       }
       
-      // Determine if the next question should have options
       const options = getOptionsForNextQuestion(userContent, messages);
       
-      // Add assistant message
+      const assistantMsgId = `msg_${Date.now() + 1}`;
       const assistantMessage: Message = { 
+        id: assistantMsgId,
         role: "assistant", 
         content: response,
         options: options
       };
       setMessages(prev => [...prev, assistantMessage]);
       
-      // Check if we have enough information to generate BOQ
       if (messages.length >= 10 || userContent.toLowerCase().includes("generate boq")) {
         generateBOQ();
       }
@@ -136,18 +138,19 @@ export function BOQChat({ onBOQGenerated }: BOQChatProps) {
     }
   };
 
-  const handleOptionSelect = (option: string) => {
-    setSelectedOption(option);
+  const handleOptionSelect = (messageId: string, option: string) => {
+    setSelectedOptions(prev => ({
+      ...prev,
+      [messageId]: option
+    }));
   };
-  
+
   const getOptionsForNextQuestion = (input: string, previousMessages: Message[]): string[] | undefined => {
     const lastMessage = previousMessages[previousMessages.length - 1]?.content.toLowerCase() || "";
     
-    // Based on the previous message, return appropriate options for the next question
     if (lastMessage.includes("what type of solar project") || previousMessages.length === 1) {
       return ["rooftop", "ground-mount", "carport", "floating"];
     } else if (lastMessage.includes("installation type")) {
-      // No options for capacity - requires numeric input
       return undefined;
     } else if (lastMessage.includes("capacity of your system")) {
       return ["monocrystalline", "polycrystalline", "thin-film", "bifacial"];
@@ -167,13 +170,11 @@ export function BOQChat({ onBOQGenerated }: BOQChatProps) {
     
     return undefined;
   };
-  
-  // Fallback logic for when the model isn't loaded
+
   const generateFallbackResponse = (input: string, previousMessages: Message[]): string => {
     const inputLower = input.toLowerCase();
     const lastMessage = previousMessages[previousMessages.length - 1]?.content.toLowerCase() || "";
     
-    // Create friendly acknowledgment of the user's choice
     const acknowledgment = getAcknowledgment(input);
     
     if (lastMessage.includes("what type of solar project") || previousMessages.length === 1) {
@@ -201,7 +202,6 @@ export function BOQChat({ onBOQGenerated }: BOQChatProps) {
     }
   };
 
-  // Generate a friendly acknowledgment based on the user's input
   const getAcknowledgment = (input: string): string => {
     const responses = [
       `Got it! You selected ${input}.`,
@@ -213,17 +213,14 @@ export function BOQChat({ onBOQGenerated }: BOQChatProps) {
     
     return responses[Math.floor(Math.random() * responses.length)];
   };
-  
-  // Generate BOQ based on conversation
+
   const generateBOQ = () => {
-    // Extract information from chat
     const projectTypeMatch = messages.find(m => m.role === "user" && m.content.toLowerCase().match(/(residential|commercial|industrial|utility)/));
     const installationTypeMatch = messages.find(m => m.role === "user" && m.content.toLowerCase().match(/(rooftop|ground-mount|carport|floating)/));
     const capacityMatch = messages.find(m => m.role === "user" && m.content.match(/\d+(\.\d+)?\s*kw/i));
     const moduleTypeMatch = messages.find(m => m.role === "user" && m.content.toLowerCase().match(/(monocrystalline|polycrystalline|thin-film|bifacial)/));
     const inverterTypeMatch = messages.find(m => m.role === "user" && m.content.toLowerCase().match(/(string|central|microinverter|hybrid)/));
     
-    // Create mock data with defaults and overrides from chat
     const mockData = {
       projectType: projectTypeMatch ? 
         extractMatch(projectTypeMatch.content, /(residential|commercial|industrial|utility)/) : "residential",
@@ -243,52 +240,42 @@ export function BOQChat({ onBOQGenerated }: BOQChatProps) {
       monitoringSystem: true,
     };
     
-    // Generate the BOQ using similar logic from the BOQForm component
     const boqData = generateMockBOQ(mockData);
     
-    // Send the generated BOQ to the parent component
     onBOQGenerated(boqData);
     
-    // Add a final message
     setMessages(prev => [...prev, { 
       role: "assistant", 
       content: "I've generated your BOQ based on our conversation. You can view the results in the BOQ Results tab!" 
     }]);
   };
-  
-  // Helper function to extract matches from regex
+
   const extractMatch = (text: string, regex: RegExp): string => {
     const match = text.toLowerCase().match(regex);
     return match ? match[0] : "";
   };
-  
-  // This function simulates BOQ generation based on form values (copied from BOQForm)
+
   function generateMockBOQ(values: any) {
     const systemCapacity = values.systemCapacity;
     
-    // Simplified calculations for demonstration
-    const modulePower = values.moduleType === "monocrystalline" ? 450 : 400; // W per module
+    const modulePower = values.moduleType === "monocrystalline" ? 450 : 400;
     const moduleCount = Math.ceil((systemCapacity * 1000) / modulePower);
     
-    // Determine inverter count and sizing based on system capacity
-    const inverterSizing = values.inverterType === "string" ? 1.2 : 1.1; // DC/AC ratio
+    const inverterSizing = values.inverterType === "string" ? 1.2 : 1.1;
     const inverterCapacity = Math.ceil(systemCapacity / inverterSizing);
     const inverterCount = values.inverterType === "microinverter" 
       ? moduleCount 
-      : Math.ceil(systemCapacity / 10); // Assuming 10kW inverters for string
+      : Math.ceil(systemCapacity / 10);
     
-    // Structure mounting points based on installation type
     const mountingPointsPerModule = values.installationType === "ground-mount" ? 4 : 2.5;
     
-    // Calculate safety equipment quantities
     const dcDisconnects = Math.ceil(systemCapacity / 20) + 1;
     const acDisconnects = Math.ceil(systemCapacity / 50) + 1;
     
-    // Calculate battery system if selected
     let batteryItems = [];
     if (values.batteryStorage) {
-      const batteryUnitSize = 5; // kWh per unit
-      const batteryCount = Math.ceil((systemCapacity * 2) / batteryUnitSize); // Assuming 2 hours storage
+      const batteryUnitSize = 5;
+      const batteryCount = Math.ceil((systemCapacity * 2) / batteryUnitSize);
       batteryItems = [
         { item: "Battery Unit (5kWh)", quantity: batteryCount, unit: "pcs" },
         { item: "Battery Management System", quantity: 1, unit: "set" },
@@ -297,7 +284,6 @@ export function BOQChat({ onBOQGenerated }: BOQChatProps) {
       ];
     }
     
-    // Main BOQ items
     const boqItems = [
       { 
         category: "Solar Modules",
@@ -344,7 +330,7 @@ export function BOQChat({ onBOQGenerated }: BOQChatProps) {
         items: [
           { 
             item: "DC Solar Cable", 
-            quantity: values.dcCableLength * 2, // Both positive and negative
+            quantity: values.dcCableLength * 2, 
             unit: "meters" 
           },
           { 
@@ -357,7 +343,7 @@ export function BOQChat({ onBOQGenerated }: BOQChatProps) {
             quantity: moduleCount * 2, 
             unit: "pairs" 
           },
-          {
+          { 
             item: "Cable Conduit", 
             quantity: Math.ceil((values.dcCableLength + values.acCableLength) * 0.7), 
             unit: "meters"
@@ -391,7 +377,6 @@ export function BOQChat({ onBOQGenerated }: BOQChatProps) {
       }
     ];
     
-    // Add battery section if applicable
     if (batteryItems.length > 0) {
       boqItems.push({
         category: "Battery Storage System",
@@ -399,7 +384,6 @@ export function BOQChat({ onBOQGenerated }: BOQChatProps) {
       });
     }
     
-    // Add monitoring if selected
     if (values.monitoringSystem) {
       boqItems.push({
         category: "Monitoring System",
@@ -411,7 +395,6 @@ export function BOQChat({ onBOQGenerated }: BOQChatProps) {
       });
     }
     
-    // Add grid connection equipment based on selection
     if (values.gridConnection === "grid-tied") {
       boqItems.push({
         category: "Grid Connection",
@@ -450,28 +433,29 @@ export function BOQChat({ onBOQGenerated }: BOQChatProps) {
       summary: {
         totalModules: moduleCount,
         totalInverters: inverterCount,
-        estimatedArea: moduleCount * 2, // m²
-        estimatedWeight: moduleCount * 25, // kg
+        estimatedArea: moduleCount * 2,
+        estimatedWeight: moduleCount * 25,
       }
     };
   }
 
-  // Render MCQ options when available
-  const renderOptions = (options?: string[]) => {
-    if (!options || options.length === 0) return null;
+  const renderOptions = (message: Message) => {
+    if (!message.options || message.options.length === 0) return null;
+    
+    const selectedValue = selectedOptions[message.id] || "";
     
     return (
       <div className="mt-4 mb-2">
         <RadioGroup 
-          value={selectedOption || ""}
-          onValueChange={handleOptionSelect}
+          value={selectedValue}
+          onValueChange={(value) => handleOptionSelect(message.id, value)}
           className="flex flex-col space-y-2"
         >
-          {options.map((option, index) => (
+          {message.options.map((option, index) => (
             <div key={index} className="flex items-center space-x-2 bg-muted/20 p-2 rounded-md hover:bg-muted/40 transition-colors">
-              <RadioGroupItem value={option} id={`option-${index}`} />
+              <RadioGroupItem value={option} id={`option-${message.id}-${index}`} />
               <label 
-                htmlFor={`option-${index}`} 
+                htmlFor={`option-${message.id}-${index}`} 
                 className="text-sm cursor-pointer flex-1 py-1"
               >
                 {option}
@@ -523,7 +507,7 @@ export function BOQChat({ onBOQGenerated }: BOQChatProps) {
                 )}
               </div>
               <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-              {message.role === "assistant" && renderOptions(message.options)}
+              {message.role === "assistant" && renderOptions(message)}
             </div>
           </div>
         ))}
@@ -536,13 +520,13 @@ export function BOQChat({ onBOQGenerated }: BOQChatProps) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Type your message..."
-            disabled={isLoading || isProcessing || !!selectedOption}
+            disabled={isLoading || isProcessing}
             className="flex-1"
           />
           <Button 
             type="submit" 
             size="icon"
-            disabled={isLoading || isProcessing || (!input.trim() && !selectedOption)}
+            disabled={isLoading || isProcessing || (!input.trim() && !Object.values(selectedOptions).length)}
           >
             {isProcessing ? (
               <RotateCw className="h-4 w-4 animate-spin" />
