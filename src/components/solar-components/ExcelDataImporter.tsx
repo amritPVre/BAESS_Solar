@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +7,7 @@ import { Upload, FileSpreadsheet, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
+import { useAuth } from "@/hooks/useAuth";
 
 interface SolarPanel {
   manufacturer: string;
@@ -52,6 +52,7 @@ interface SolarInverter {
 }
 
 const ExcelDataImporter: React.FC = () => {
+  const { user } = useAuth();
   const [isPanelUploading, setPanelUploading] = useState(false);
   const [isInverterUploading, setInverterUploading] = useState(false);
   const [panelFile, setPanelFile] = useState<File | null>(null);
@@ -59,6 +60,8 @@ const ExcelDataImporter: React.FC = () => {
   const [panelResults, setPanelResults] = useState<{total: number, success: number, errors: number} | null>(null);
   const [inverterResults, setInverterResults] = useState<{total: number, success: number, errors: number} | null>(null);
   const [activeTab, setActiveTab] = useState("panels");
+
+  const isAdmin = user?.email === "amrit.mandal0191@gmail.com";
 
   const handlePanelFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -85,16 +88,12 @@ const ExcelDataImporter: React.FC = () => {
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
           
-          // Parse with header option to get column names
           const json = XLSX.utils.sheet_to_json(worksheet, { header: "A" });
           
-          // Get header row (first row)
           const headers = json[0];
           
-          // Remove header row from data
           const rows = json.slice(1);
           
-          // Create a map of lowercase header to original header
           const headerMap: Record<string, string> = {};
           
           Object.entries(headers).forEach(([key, value]) => {
@@ -103,7 +102,6 @@ const ExcelDataImporter: React.FC = () => {
             }
           });
           
-          // Map rows to objects with proper case-insensitive field matching
           const result = rows.map(row => {
             const obj: Record<string, any> = {};
             
@@ -137,6 +135,11 @@ const ExcelDataImporter: React.FC = () => {
       return;
     }
 
+    if (!isAdmin) {
+      toast.error("Only admin users can upload data");
+      return;
+    }
+
     setPanelUploading(true);
     setPanelResults(null);
     
@@ -151,15 +154,11 @@ const ExcelDataImporter: React.FC = () => {
 
       console.log("Raw Excel data sample:", data[0]);
 
-      // Map the data to the expected format with case-insensitive field matching
       const panelData: SolarPanel[] = data.map(item => {
-        // Helper function to get values case-insensitively
         const getValue = (fieldNames: string[]): any => {
           for (const name of fieldNames) {
-            // Try exact match first
             if (item[name] !== undefined) return item[name];
             
-            // Try case-insensitive match
             const lowerName = name.toLowerCase();
             const key = Object.keys(item).find(k => k.toLowerCase() === lowerName);
             if (key !== undefined) return item[key];
@@ -167,7 +166,6 @@ const ExcelDataImporter: React.FC = () => {
           return undefined;
         };
         
-        // Look for different possible column names
         const manufacturer = getValue(['manufacturer', 'Manufacturer']);
         const model = getValue(['model', 'Model']);
         const nominal_power_w = getValue(['nominal_power_w', 'Nominal_Power_W', 'Nominal Power', 'Power']);
@@ -199,7 +197,6 @@ const ExcelDataImporter: React.FC = () => {
 
       console.log("Mapped panel data sample:", panelData[0]);
 
-      // Filter out invalid records
       const validPanels = panelData.filter(panel => 
         panel.manufacturer && 
         panel.model && 
@@ -214,7 +211,6 @@ const ExcelDataImporter: React.FC = () => {
         return;
       }
 
-      // Insert the data into Supabase
       const { data: insertedData, error } = await supabase
         .from('solar_panels')
         .insert(validPanels)
@@ -245,6 +241,11 @@ const ExcelDataImporter: React.FC = () => {
       return;
     }
 
+    if (!isAdmin) {
+      toast.error("Only admin users can upload data");
+      return;
+    }
+
     setInverterUploading(true);
     setInverterResults(null);
     
@@ -257,17 +258,11 @@ const ExcelDataImporter: React.FC = () => {
         return;
       }
       
-      console.log("Raw Excel data sample:", data[0]);
-
-      // Map the data to the expected format with case-insensitive field matching
       const inverterData: SolarInverter[] = data.map(item => {
-        // Helper function to get values case-insensitively
         const getValue = (fieldNames: string[]): any => {
           for (const name of fieldNames) {
-            // Try exact match first
             if (item[name] !== undefined) return item[name];
             
-            // Try case-insensitive match
             const lowerName = name.toLowerCase();
             const key = Object.keys(item).find(k => k.toLowerCase() === lowerName);
             if (key !== undefined) return item[key];
@@ -296,7 +291,6 @@ const ExcelDataImporter: React.FC = () => {
 
       console.log("Mapped inverter data sample:", inverterData[0]);
 
-      // Filter out invalid records
       const validInverters = inverterData.filter(inverter => 
         inverter.manufacturer && 
         inverter.model
@@ -310,7 +304,6 @@ const ExcelDataImporter: React.FC = () => {
         return;
       }
 
-      // Insert the data into Supabase
       const { data: insertedData, error } = await supabase
         .from('solar_inverters')
         .insert(validInverters)
@@ -334,6 +327,29 @@ const ExcelDataImporter: React.FC = () => {
       setInverterUploading(false);
     }
   };
+
+  if (!isAdmin) {
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>Import Solar Components Data</CardTitle>
+          <CardDescription>
+            Only admin users can import data into the database.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="p-6 text-center">
+            <AlertCircle className="h-12 w-12 mx-auto mb-4 text-amber-500" />
+            <h3 className="text-lg font-medium mb-2">Admin Access Required</h3>
+            <p className="text-muted-foreground">
+              You need admin privileges to upload data to the component library.
+              Please contact the administrator if you need to add components.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full">

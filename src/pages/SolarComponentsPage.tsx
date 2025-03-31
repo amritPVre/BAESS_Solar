@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const SolarComponentsPage = () => {
   const { user } = useAuth();
-  const isAdmin = user?.email === "amrit.mandal0191@gmail.com"; // Using the correct admin email
+  const isAdmin = user?.email === "amrit.mandal0191@gmail.com"; // Admin email for RLS policies
   const [selectedPanel, setSelectedPanel] = useState<SolarPanel | null>(null);
   const [selectedInverter, setSelectedInverter] = useState<SolarInverter | null>(null);
   const [activeTab, setActiveTab] = useState<string>("browse");
