@@ -12,6 +12,7 @@ import Dashboard from "./pages/Dashboard";
 import ProjectDetails from "./pages/ProjectDetails";
 import SolarCalculator from "./components/SolarCalculator";
 import BOQGenerator from "./pages/BOQGenerator";
+import SolarComponentsPage from "./pages/SolarComponentsPage";
 import { AuthProvider } from "@/hooks/useAuth";
 import { SolarProjectsProvider } from "@/hooks/useSolarProjects";
 import AuthGuard from "./components/AuthGuard";
@@ -58,6 +59,13 @@ const App = () => (
               <Route path="/boq-generator" element={
                 <AuthGuard>
                   <BOQGenerator />
+                </AuthGuard>
+              } />
+              
+              {/* Solar Components Library Route */}
+              <Route path="/solar-components" element={
+                <AuthGuard>
+                  <SolarComponentsPage />
                 </AuthGuard>
               } />
               
