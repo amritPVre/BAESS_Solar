@@ -72,7 +72,7 @@ const Dashboard: React.FC = () => {
     });
   };
 
-  const isAdmin = user?.email === "admin@example.com";
+  const isAdmin = user?.email === "amrit.mandal0191@gmail.com";
 
   return (
     <div className="container mx-auto py-8">

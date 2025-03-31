@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Helmet } from "react-helmet";
 import Header from "@/components/Header";
@@ -32,8 +31,8 @@ const AdminDashboard = () => {
   });
 
   useEffect(() => {
-    // Check admin access
-    if (user?.email !== "admin@example.com") {
+    // Check admin access - updated to use your email
+    if (user?.email !== "amrit.mandal0191@gmail.com") {
       toast.error("Access denied: Admin privileges required");
       navigate("/dashboard");
     } else {

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 const Header = () => {
   const { isAuthenticated, logout, user } = useAuth();
   const location = useLocation();
-  const isAdmin = user?.email === "admin@example.com";
+  const isAdmin = user?.email === "amrit.mandal0191@gmail.com";
 
   return (
     <header className="border-b">
@@ -84,7 +84,7 @@ const Header = () => {
               className="text-sm font-medium transition-colors hover:text-primary text-muted-foreground flex items-center gap-1"
             >
               <LogOut className="h-4 w-4" />
-              <span>Logout</span>
+              <span className="hidden sm:inline">Logout</span>
             </Button>
           )}
         </div>
