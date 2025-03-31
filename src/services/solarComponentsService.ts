@@ -39,7 +39,7 @@ export const fetchSolarPanels = async (
   try {
     let query = supabase
       .from('solar_panels')
-      .select('id, manufacturer, model, nominal_power_w, technology, vmp_v, imp_a, voc_v, isc_a, module_length, module_width, panel_area_m2, efficiency_percent');
+      .select('*');
 
     if (search) {
       query = query.or(`manufacturer.ilike.%${search}%,model.ilike.%${search}%`);
@@ -55,7 +55,7 @@ export const fetchSolarPanels = async (
       throw error;
     }
 
-    return data as SolarPanel[];
+    return (data || []) as SolarPanel[];
   } catch (error) {
     console.error("Error fetching solar panels:", error);
     toast.error("Failed to load solar panels");
@@ -70,7 +70,7 @@ export const fetchSolarInverters = async (
   try {
     let query = supabase
       .from('solar_inverters')
-      .select('id, manufacturer, model, nominal_ac_power_kw, maximum_ac_power_kw, phase, topology, min_mpp_voltage_v, max_dc_voltage_v, total_mppt, total_string_inputs');
+      .select('*');
 
     if (search) {
       query = query.or(`manufacturer.ilike.%${search}%,model.ilike.%${search}%`);
@@ -86,7 +86,7 @@ export const fetchSolarInverters = async (
       throw error;
     }
 
-    return data as SolarInverter[];
+    return (data || []) as SolarInverter[];
   } catch (error) {
     console.error("Error fetching solar inverters:", error);
     toast.error("Failed to load solar inverters");
@@ -106,7 +106,7 @@ export const fetchPanelManufacturers = async (): Promise<string[]> => {
     }
 
     // Extract unique manufacturers
-    const manufacturers = [...new Set(data.map(item => item.manufacturer))];
+    const manufacturers = [...new Set(data.map(item => (item as any).manufacturer))];
     return manufacturers;
   } catch (error) {
     console.error("Error fetching manufacturers:", error);
@@ -127,7 +127,7 @@ export const fetchInverterManufacturers = async (): Promise<string[]> => {
     }
 
     // Extract unique manufacturers
-    const manufacturers = [...new Set(data.map(item => item.manufacturer))];
+    const manufacturers = [...new Set(data.map(item => (item as any).manufacturer))];
     return manufacturers;
   } catch (error) {
     console.error("Error fetching manufacturers:", error);

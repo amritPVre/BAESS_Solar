@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { insertSamplePanels, insertSampleInverters, insertAllSampleData } from "@/utils/sampleDataGenerator";
@@ -75,7 +74,7 @@ const SampleDataAdminPanel = () => {
       </CardHeader>
       <CardContent className="space-y-4">
         {result && (
-          <Alert variant={result.success ? "success" : "destructive"}>
+          <Alert variant={result.success ? "default" : "destructive"}>
             {result.success ? (
               <Check className="h-4 w-4" />
             ) : (

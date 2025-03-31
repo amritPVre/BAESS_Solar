@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Sun } from "lucide-react";
 
 const Header = () => {
-  const { isAuthenticated, signOut } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
   const location = useLocation();
 
   return (
@@ -64,7 +64,7 @@ const Header = () => {
         
         <div className="ml-auto flex items-center space-x-4">
           {isAuthenticated && (
-            <button onClick={signOut} className="text-sm font-medium transition-colors hover:text-primary text-muted-foreground">
+            <button onClick={logout} className="text-sm font-medium transition-colors hover:text-primary text-muted-foreground">
               Logout
             </button>
           )}

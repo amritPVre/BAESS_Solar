@@ -179,7 +179,7 @@ export const insertSamplePanels = async () => {
   try {
     const { error } = await supabase
       .from('solar_panels')
-      .insert(samplePanels);
+      .insert(samplePanels as any);
     
     if (error) throw error;
     
@@ -196,7 +196,7 @@ export const insertSampleInverters = async () => {
   try {
     const { error } = await supabase
       .from('solar_inverters')
-      .insert(sampleInverters);
+      .insert(sampleInverters as any);
     
     if (error) throw error;
     
