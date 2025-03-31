@@ -25,7 +25,7 @@ const SolarComponentsLibrary: React.FC<SolarComponentsLibraryProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState("panels");
   const [searchQuery, setSearchQuery] = useState("");
-  const [manufacturerFilter, setManufacturerFilter] = useState("");
+  const [manufacturerFilter, setManufacturerFilter] = useState("all"); // Changed default value from "" to "all"
 
   const [panels, setPanels] = useState<SolarPanel[]>([]);
   const [inverters, setInverters] = useState<SolarInverter[]>([]);
@@ -35,14 +35,18 @@ const SolarComponentsLibrary: React.FC<SolarComponentsLibraryProps> = ({
 
   const loadPanels = async () => {
     setIsLoading(true);
-    const data = await fetchSolarPanels(searchQuery, manufacturerFilter);
+    // Pass empty string when filter is "all" for backward compatibility with the API
+    const filterValue = manufacturerFilter === "all" ? "" : manufacturerFilter;
+    const data = await fetchSolarPanels(searchQuery, filterValue);
     setPanels(data);
     setIsLoading(false);
   };
 
   const loadInverters = async () => {
     setIsLoading(true);
-    const data = await fetchSolarInverters(searchQuery, manufacturerFilter);
+    // Pass empty string when filter is "all" for backward compatibility with the API
+    const filterValue = manufacturerFilter === "all" ? "" : manufacturerFilter;
+    const data = await fetchSolarInverters(searchQuery, filterValue);
     setInverters(data);
     setIsLoading(false);
   };
@@ -70,7 +74,7 @@ const SolarComponentsLibrary: React.FC<SolarComponentsLibraryProps> = ({
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     setSearchQuery("");
-    setManufacturerFilter("");
+    setManufacturerFilter("all"); // Changed from "" to "all"
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -84,7 +88,7 @@ const SolarComponentsLibrary: React.FC<SolarComponentsLibraryProps> = ({
 
   const clearFilters = () => {
     setSearchQuery("");
-    setManufacturerFilter("");
+    setManufacturerFilter("all"); // Changed from "" to "all"
   };
 
   return (
@@ -114,7 +118,7 @@ const SolarComponentsLibrary: React.FC<SolarComponentsLibraryProps> = ({
                 <SelectValue placeholder="All Manufacturers" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Manufacturers</SelectItem>
+                <SelectItem value="all">All Manufacturers</SelectItem>
                 {activeTab === "panels"
                   ? panelManufacturers.map((mfr) => (
                       <SelectItem key={mfr} value={mfr}>
@@ -129,7 +133,7 @@ const SolarComponentsLibrary: React.FC<SolarComponentsLibraryProps> = ({
               </SelectContent>
             </Select>
 
-            {(searchQuery || manufacturerFilter) && (
+            {(searchQuery || manufacturerFilter !== "all") && (
               <Button 
                 variant="ghost" 
                 size="icon" 
@@ -163,7 +167,7 @@ const SolarComponentsLibrary: React.FC<SolarComponentsLibraryProps> = ({
           ) : (
             <div className="text-center py-10">
               <p className="text-muted-foreground">No solar panels found. Try adjusting your filters.</p>
-              {searchQuery || manufacturerFilter ? (
+              {searchQuery || manufacturerFilter !== "all" ? (
                 <Button variant="link" onClick={clearFilters}>
                   Clear all filters
                 </Button>
@@ -193,7 +197,7 @@ const SolarComponentsLibrary: React.FC<SolarComponentsLibraryProps> = ({
           ) : (
             <div className="text-center py-10">
               <p className="text-muted-foreground">No solar inverters found. Try adjusting your filters.</p>
-              {searchQuery || manufacturerFilter ? (
+              {searchQuery || manufacturerFilter !== "all" ? (
                 <Button variant="link" onClick={clearFilters}>
                   Clear all filters
                 </Button>
