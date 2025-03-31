@@ -15,6 +15,7 @@ interface SolarPanel {
   nominal_power_w: number;
   technology?: string;
   cells_in_series?: number;
+  cells_in_parallel?: number;
   vmp_v?: number;
   imp_a?: number;
   voc_v?: number;
@@ -24,6 +25,12 @@ interface SolarPanel {
   module_weight?: number;
   panel_area_m2?: number;
   efficiency_percent?: number;
+  file_name?: string;
+  data_source?: string;
+  noct_c?: number;
+  maximum_voltage_iec?: number;
+  current_temp_coeff?: number;
+  power_temp_coeff?: number;
 }
 
 interface SolarInverter {
@@ -77,9 +84,44 @@ const ExcelDataImporter: React.FC = () => {
           const workbook = XLSX.read(data, { type: 'binary' });
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
-          const json = XLSX.utils.sheet_to_json(worksheet);
-          resolve(json);
+          
+          // Parse with header option to get column names
+          const json = XLSX.utils.sheet_to_json(worksheet, { header: "A" });
+          
+          // Get header row (first row)
+          const headers = json[0];
+          
+          // Remove header row from data
+          const rows = json.slice(1);
+          
+          // Create a map of lowercase header to original header
+          const headerMap: Record<string, string> = {};
+          
+          Object.entries(headers).forEach(([key, value]) => {
+            if (typeof value === 'string') {
+              headerMap[value.toLowerCase().trim()] = value;
+            }
+          });
+          
+          // Map rows to objects with proper case-insensitive field matching
+          const result = rows.map(row => {
+            const obj: Record<string, any> = {};
+            
+            Object.entries(row).forEach(([cellKey, cellValue]) => {
+              const headerKey = headers[cellKey];
+              if (headerKey && typeof headerKey === 'string') {
+                obj[headerKey] = cellValue;
+              }
+            });
+            
+            return obj;
+          });
+          
+          console.log("Processed Excel data:", { headerMap, firstRow: result[0] });
+          
+          resolve(result);
         } catch (error) {
+          console.error("Error processing Excel file:", error);
           reject(error);
         }
       };
@@ -107,23 +149,55 @@ const ExcelDataImporter: React.FC = () => {
         return;
       }
 
-      // Map the data to the expected format
-      const panelData: SolarPanel[] = data.map(item => ({
-        manufacturer: String(item.manufacturer || ""),
-        model: String(item.model || ""),
-        nominal_power_w: Number(item.nominal_power_w || 0),
-        technology: String(item.technology || ""),
-        cells_in_series: Number(item.cells_in_series || 0),
-        vmp_v: Number(item.vmp_v || 0),
-        imp_a: Number(item.imp_a || 0),
-        voc_v: Number(item.voc_v || 0),
-        isc_a: Number(item.isc_a || 0),
-        module_length: Number(item.module_length || 0),
-        module_width: Number(item.module_width || 0),
-        module_weight: Number(item.module_weight || 0),
-        panel_area_m2: Number(item.panel_area_m2 || 0),
-        efficiency_percent: Number(item.efficiency_percent || 0)
-      }));
+      console.log("Raw Excel data sample:", data[0]);
+
+      // Map the data to the expected format with case-insensitive field matching
+      const panelData: SolarPanel[] = data.map(item => {
+        // Helper function to get values case-insensitively
+        const getValue = (fieldNames: string[]): any => {
+          for (const name of fieldNames) {
+            // Try exact match first
+            if (item[name] !== undefined) return item[name];
+            
+            // Try case-insensitive match
+            const lowerName = name.toLowerCase();
+            const key = Object.keys(item).find(k => k.toLowerCase() === lowerName);
+            if (key !== undefined) return item[key];
+          }
+          return undefined;
+        };
+        
+        // Look for different possible column names
+        const manufacturer = getValue(['manufacturer', 'Manufacturer']);
+        const model = getValue(['model', 'Model']);
+        const nominal_power_w = getValue(['nominal_power_w', 'Nominal_Power_W', 'Nominal Power', 'Power']);
+        
+        return {
+          manufacturer: String(manufacturer || ""),
+          model: String(model || ""),
+          nominal_power_w: Number(nominal_power_w || 0),
+          technology: String(getValue(['technology', 'Technology']) || ""),
+          cells_in_series: Number(getValue(['cells_in_series', 'Cells_in_Series']) || 0),
+          cells_in_parallel: Number(getValue(['cells_in_parallel', 'Cells_in_Parallel']) || 0),
+          vmp_v: Number(getValue(['vmp_v', 'Vmp_V']) || 0),
+          imp_a: Number(getValue(['imp_a', 'Imp_A']) || 0),
+          voc_v: Number(getValue(['voc_v', 'Voc_V']) || 0),
+          isc_a: Number(getValue(['isc_a', 'Isc_A']) || 0),
+          module_length: Number(getValue(['module_length', 'Module_Length']) || 0),
+          module_width: Number(getValue(['module_width', 'Module_Width']) || 0),
+          module_weight: Number(getValue(['module_weight', 'Module_Weight']) || 0),
+          panel_area_m2: Number(getValue(['panel_area_m2', 'Panel_Area_m2']) || 0),
+          efficiency_percent: Number(getValue(['efficiency_percent', 'Efficiency_percent']) || 0),
+          file_name: String(getValue(['file_name', 'File_Name']) || ""),
+          data_source: String(getValue(['data_source', 'Data_Source']) || ""),
+          noct_c: Number(getValue(['noct_c', 'NOCT_C']) || 0),
+          maximum_voltage_iec: Number(getValue(['maximum_voltage_iec', 'Maximum_Voltage_IEC']) || 0),
+          current_temp_coeff: Number(getValue(['current_temp_coeff', 'Current_Temp_Coeff']) || 0),
+          power_temp_coeff: Number(getValue(['power_temp_coeff', 'Power_Temp_Coeff']) || 0),
+        };
+      });
+
+      console.log("Mapped panel data sample:", panelData[0]);
 
       // Filter out invalid records
       const validPanels = panelData.filter(panel => 
@@ -131,6 +205,8 @@ const ExcelDataImporter: React.FC = () => {
         panel.model && 
         panel.nominal_power_w > 0
       );
+
+      console.log("Valid panels:", validPanels.length, "of", panelData.length);
 
       if (validPanels.length === 0) {
         toast.error("No valid panel data found. Each panel must have manufacturer, model, and nominal power.");
@@ -180,31 +256,53 @@ const ExcelDataImporter: React.FC = () => {
         setInverterUploading(false);
         return;
       }
+      
+      console.log("Raw Excel data sample:", data[0]);
 
-      // Map the data to the expected format
-      const inverterData: SolarInverter[] = data.map(item => ({
-        manufacturer: String(item.manufacturer || ""),
-        model: String(item.model || ""),
-        nominal_ac_power_kw: Number(item.nominal_ac_power_kw || 0),
-        maximum_ac_power_kw: Number(item.maximum_ac_power_kw || 0),
-        nominal_ac_voltage_v: Number(item.nominal_ac_voltage_v || 0),
-        maximum_ac_current_a: Number(item.maximum_ac_current_a || 0),
-        phase: String(item.phase || ""),
-        topology: String(item.topology || ""),
-        power_threshold_w: Number(item.power_threshold_w || 0),
-        nominal_mpp_voltage_v: Number(item.nominal_mpp_voltage_v || 0),
-        min_mpp_voltage_v: Number(item.min_mpp_voltage_v || 0),
-        max_dc_voltage_v: Number(item.max_dc_voltage_v || 0),
-        max_dc_current_a: Number(item.max_dc_current_a || 0),
-        total_mppt: Number(item.total_mppt || 0),
-        total_string_inputs: Number(item.total_string_inputs || 0),
-      }));
+      // Map the data to the expected format with case-insensitive field matching
+      const inverterData: SolarInverter[] = data.map(item => {
+        // Helper function to get values case-insensitively
+        const getValue = (fieldNames: string[]): any => {
+          for (const name of fieldNames) {
+            // Try exact match first
+            if (item[name] !== undefined) return item[name];
+            
+            // Try case-insensitive match
+            const lowerName = name.toLowerCase();
+            const key = Object.keys(item).find(k => k.toLowerCase() === lowerName);
+            if (key !== undefined) return item[key];
+          }
+          return undefined;
+        };
+        
+        return {
+          manufacturer: String(getValue(['manufacturer', 'Manufacturer']) || ""),
+          model: String(getValue(['model', 'Model']) || ""),
+          nominal_ac_power_kw: Number(getValue(['nominal_ac_power_kw', 'Nominal_AC_Power_kW']) || 0),
+          maximum_ac_power_kw: Number(getValue(['maximum_ac_power_kw', 'Maximum_AC_Power_kW']) || 0),
+          nominal_ac_voltage_v: Number(getValue(['nominal_ac_voltage_v', 'Nominal_AC_Voltage_V']) || 0),
+          maximum_ac_current_a: Number(getValue(['maximum_ac_current_a', 'Maximum_AC_Current_A']) || 0),
+          phase: String(getValue(['phase', 'Phase']) || ""),
+          topology: String(getValue(['topology', 'Topology']) || ""),
+          power_threshold_w: Number(getValue(['power_threshold_w', 'Power_Threshold_W']) || 0),
+          nominal_mpp_voltage_v: Number(getValue(['nominal_mpp_voltage_v', 'Nominal_MPP_Voltage_V']) || 0),
+          min_mpp_voltage_v: Number(getValue(['min_mpp_voltage_v', 'Min_MPP_Voltage_V']) || 0),
+          max_dc_voltage_v: Number(getValue(['max_dc_voltage_v', 'Max_DC_Voltage_V']) || 0),
+          max_dc_current_a: Number(getValue(['max_dc_current_a', 'Max_DC_Current_A']) || 0),
+          total_mppt: Number(getValue(['total_mppt', 'Total_MPPT']) || 0),
+          total_string_inputs: Number(getValue(['total_string_inputs', 'Total_String_Inputs']) || 0),
+        };
+      });
+
+      console.log("Mapped inverter data sample:", inverterData[0]);
 
       // Filter out invalid records
       const validInverters = inverterData.filter(inverter => 
         inverter.manufacturer && 
         inverter.model
       );
+
+      console.log("Valid inverters:", validInverters.length, "of", inverterData.length);
 
       if (validInverters.length === 0) {
         toast.error("No valid inverter data found. Each inverter must have manufacturer and model.");
@@ -262,7 +360,10 @@ const ExcelDataImporter: React.FC = () => {
               <div>
                 <h3 className="text-sm font-medium mb-2">Required columns:</h3>
                 <p className="text-sm text-muted-foreground">
-                  manufacturer, model, nominal_power_w
+                  Manufacturer, Model, Nominal_Power_W
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Column names are case-insensitive, but must match the database field names.
                 </p>
               </div>
               
@@ -316,7 +417,10 @@ const ExcelDataImporter: React.FC = () => {
               <div>
                 <h3 className="text-sm font-medium mb-2">Required columns:</h3>
                 <p className="text-sm text-muted-foreground">
-                  manufacturer, model
+                  Manufacturer, Model
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Column names are case-insensitive, but must match the database field names.
                 </p>
               </div>
               
@@ -374,6 +478,7 @@ const ExcelDataImporter: React.FC = () => {
             <p className="text-xs">
               Your Excel file should have column headers that match the database fields. 
               Required fields must be present for successful import. All other fields are optional.
+              The importer is case-insensitive when matching column names.
             </p>
           </div>
         </div>
