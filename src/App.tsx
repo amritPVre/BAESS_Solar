@@ -17,6 +17,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import { AuthProvider } from "@/hooks/useAuth";
 import { SolarProjectsProvider } from "@/hooks/useSolarProjects";
 import AuthGuard from "./components/AuthGuard";
+import SolarDesignerPage from "./pages/SolarDesignerPage";
 
 const queryClient = new QueryClient();
 
@@ -46,13 +47,13 @@ const App = () => (
               } />
               <Route path="/solar-calculator" element={
                 <AuthGuard>
-                  <SolarCalculator />
+                  <SolarDesignerPage />
                 </AuthGuard>
               } />
               {/* For backward compatibility - maintain both routes */}
               <Route path="/calculator" element={
                 <AuthGuard>
-                  <SolarCalculator />
+                  <SolarDesignerPage />
                 </AuthGuard>
               } />
               

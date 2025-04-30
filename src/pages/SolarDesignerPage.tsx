@@ -1,9 +1,7 @@
 
 import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import SolarCalculator from "@/components/SolarCalculator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calculator } from "lucide-react";
 import { SolarProject } from "@/types/solarProject";
 
 export function SolarDesignerPage() {
