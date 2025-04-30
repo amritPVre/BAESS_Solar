@@ -1,454 +1,814 @@
-import React from "react";
-// Assuming these are the existing imports
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ClientDetails from "@/components/ClientDetails";
+import CompanyDetails from "@/components/CompanyDetails";
+import FinancialDetails from "@/components/FinancialDetails";
+import ResultsDisplay from "@/components/ResultsDisplay";
+import EnvironmentalBenefits from "@/components/EnvironmentalBenefits";
+import AnnualEnergyCheck from "@/components/AnnualEnergyCheck";
+import ElectricityDetails from "@/components/ElectricityDetails";
+import FinancialMetricsDisplay from "@/components/FinancialMetricsDisplay";
+import AdvancedSolarInputs from "@/components/AdvancedSolarInputs";
+import { 
+  calculateLevelizedCostOfEnergy, 
+  calculateAnnualRevenue, 
+  calculateAnnualCost, 
+  calculateNetPresentValue, 
+  calculateInternalRateOfReturn, 
+  calculatePaybackPeriod,
+  calculateCO2Reduction
+} from "@/utils/calculations";
+import { 
+  FinancialCalculator, 
+  ElectricityData, 
+  ProjectCost, 
+  OMParams, 
+  FinancialMetrics 
+} from "@/utils/financialCalculator";
+import { SolarCalculationResult } from "@/types/solarCalculations";
+import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
+import { useSolarProjects } from "@/hooks/useSolarProjects";
+import { SolarProject } from "@/types/solarProject";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { SolarCalculatorProps } from "@/types/components";
-import { SolarProject } from "@/types/solarProject";
+import { useNavigate } from "react-router-dom";
+import { User, Calculator, Check, Home, DollarSign, FileBarChart, PanelRight } from "lucide-react";
 
-const SolarCalculator: React.FC<SolarCalculatorProps> = ({
-  projectData,
-  initialLocation,
-  onSaveProject
-}) => {
-  // Initialize state with initialLocation if provided
-  const [location, setLocation] = React.useState(initialLocation || {
-    latitude: 40.7128,
-    longitude: -74.0060,
-    timezone: "America/New_York",
-    country: "United States",
-    city: "New York"
-  });
+interface SolarCalculatorProps {
+  projectData?: SolarProject;
+  onSaveProject?: (project: SolarProject) => Promise<void>;
+}
+
+const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSaveProject }) => {
+  const { isAuthenticated } = useAuth();
+  const { saveProject } = useSolarProjects();
+  const navigate = useNavigate();
+  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
+  const [projectName, setProjectName] = useState("");
   
-  // Other state variables and logic from the original component
-  const [activeTab, setActiveTab] = React.useState("system");
-  const [projectDetails, setProjectDetails] = React.useState(projectData || {
-    name: "New Solar Project",
-    systemSize: 10,
-    clientName: "",
-    clientEmail: "",
-    clientPhone: "",
-    clientAddress: "",
-    companyName: "",
-    companyContact: "",
-    companyEmail: "",
-    companyPhone: "",
-    knowsAnnualEnergy: false,
-    manualAnnualEnergy: 0,
-    annualEnergy: 0,
-    panelType: "monocrystalline",
-    panelEfficiency: 20,
-    inverterType: "string",
-    inverterEfficiency: 95,
-    roofType: "asphalt",
-    roofAngle: 30,
-    orientation: "south",
-    solarIrradiance: 5,
-    shadingFactor: 10,
-    location: {
-      lat: 40.7128,
-      lng: -74.0060
-    },
-    timezone: "America/New_York",
-    country: "United States",
-    city: "New York",
-    systemCost: 25000,
-    electricityRate: 0.15,
-    electricityEscalationRate: 2,
-    incentives: 5000,
-    financingOption: "cash",
-    loanTerm: 10,
-    interestRate: 5,
-    maintenanceCost: 200,
-    maintenanceEscalationRate: 3,
-    degradationRate: 0.5,
-    discountRate: 8,
-    lcoe: 0,
-    annualRevenue: 0,
-    annualCost: 0,
-    netPresentValue: 0,
-    irr: 0,
-    paybackPeriod: {
-      years: 0,
-      months: 0
-    },
-    co2Reduction: 0,
-    treesEquivalent: 0,
-    vehicleMilesOffset: 0,
-    yearlyProduction: [],
-    yearlyCashFlow: [],
-    cumulativeCashFlow: []
-  });
+  // Client Details
+  const [clientName, setClientName] = useState("John Doe");
+  const [clientEmail, setClientEmail] = useState("john@example.com");
+  const [clientPhone, setClientPhone] = useState("(123) 456-7890");
+  const [clientAddress, setClientAddress] = useState("123 Solar Street");
   
-  // Use projectData if provided
-  React.useEffect(() => {
+  // Company Details
+  const [companyName, setCompanyName] = useState("Solar Solutions Inc.");
+  const [companyContact, setCompanyContact] = useState("Jane Smith");
+  const [companyEmail, setCompanyEmail] = useState("contact@solarsolutions.com");
+  const [companyPhone, setCompanyPhone] = useState("(987) 654-3210");
+  
+  // Energy Check
+  const [knowsAnnualEnergy, setKnowsAnnualEnergy] = useState<boolean | null>(null);
+  const [manualAnnualEnergy, setManualAnnualEnergy] = useState<number>(12000);
+  
+  // Advanced Solar Calculation Results
+  const [advancedCalculationResults, setAdvancedCalculationResults] = useState<SolarCalculationResult | null>(null);
+  
+  // System details
+  const [systemSize, setSystemSize] = useState(10);
+  
+  // Financial Details
+  const [systemCost, setSystemCost] = useState(30000);
+  const [electricityRate, setElectricityRate] = useState(0.15);
+  const [electricityEscalationRate, setElectricityEscalationRate] = useState(3);
+  const [incentives, setIncentives] = useState(9000);
+  const [financingOption, setFinancingOption] = useState("cash");
+  const [loanTerm, setLoanTerm] = useState(15);
+  const [interestRate, setInterestRate] = useState(4.5);
+  const [maintenanceCost, setMaintenanceCost] = useState(200);
+  const [maintenanceEscalationRate, setMaintenanceEscalationRate] = useState(2);
+  const [degradationRate, setDegradationRate] = useState(0.5);
+  const [discountRate, setDiscountRate] = useState(5);
+  
+  // Financial Calculation Objects
+  const [financialCalculator] = useState(new FinancialCalculator());
+  const [financialInputs, setFinancialInputs] = useState<{
+    project_cost: ProjectCost | null;
+    om_params: OMParams | null;
+    electricity_data: ElectricityData | null;
+  }>({
+    project_cost: null,
+    om_params: null,
+    electricity_data: null
+  });
+  const [financialMetrics, setFinancialMetrics] = useState<FinancialMetrics | null>(null);
+  
+  // Legacy Financial Results
+  const [lcoe, setLCOE] = useState(0);
+  const [annualRevenue, setAnnualRevenue] = useState(0);
+  const [annualCost, setAnnualCost] = useState(0);
+  const [netPresentValue, setNetPresentValue] = useState(0);
+  const [irr, setIRR] = useState(0);
+  const [paybackPeriod, setPaybackPeriod] = useState({ years: 0, months: 0 });
+  const [co2Reduction, setCO2Reduction] = useState(0);
+  const [treesEquivalent, setTreesEquivalent] = useState(0);
+  const [vehicleMilesOffset, setVehicleMilesOffset] = useState(0);
+  const [yearlyProduction, setYearlyProduction] = useState<number[]>([]);
+  const [yearlyCashFlow, setYearlyCashFlow] = useState<number[]>([]);
+  const [cumulativeCashFlow, setCumulativeCashFlow] = useState<number[]>([]);
+  
+  const [showResults, setShowResults] = useState(false);
+  const [activeTab, setActiveTab] = useState("client");
+  const [calculating, setCalculating] = useState(false);
+  
+  // Initialize financial settings
+  useEffect(() => {
+    // Initialize financial calculator with default settings
+    financialCalculator.initialize_financial_settings();
+  }, [financialCalculator]);
+  
+  // Load project data if provided
+  useEffect(() => {
     if (projectData) {
-      setProjectDetails(projectData);
+      setClientName(projectData.clientName);
+      setClientEmail(projectData.clientEmail);
+      setClientPhone(projectData.clientPhone);
+      setClientAddress(projectData.clientAddress);
       
-      // If projectData has location information, use it
-      if (projectData.location) {
-        setLocation({
-          latitude: projectData.location.lat,
-          longitude: projectData.location.lng,
-          timezone: projectData.timezone || location.timezone,
-          country: projectData.country || location.country,
-          city: projectData.city || location.city
-        });
-      }
+      setCompanyName(projectData.companyName);
+      setCompanyContact(projectData.companyContact);
+      setCompanyEmail(projectData.companyEmail);
+      setCompanyPhone(projectData.companyPhone);
+      
+      setKnowsAnnualEnergy(projectData.knowsAnnualEnergy);
+      setManualAnnualEnergy(projectData.manualAnnualEnergy);
+      
+      setSystemSize(projectData.systemSize);
+      
+      setSystemCost(projectData.systemCost);
+      setElectricityRate(projectData.electricityRate);
+      setElectricityEscalationRate(projectData.electricityEscalationRate);
+      setIncentives(projectData.incentives);
+      setFinancingOption(projectData.financingOption);
+      setLoanTerm(projectData.loanTerm);
+      setInterestRate(projectData.interestRate);
+      setMaintenanceCost(projectData.maintenanceCost);
+      setMaintenanceEscalationRate(projectData.maintenanceEscalationRate);
+      setDegradationRate(projectData.degradationRate);
+      setDiscountRate(projectData.discountRate);
+      
+      setLCOE(projectData.lcoe);
+      setAnnualRevenue(projectData.annualRevenue);
+      setAnnualCost(projectData.annualCost);
+      setNetPresentValue(projectData.netPresentValue);
+      setIRR(projectData.irr);
+      setPaybackPeriod(projectData.paybackPeriod);
+      setCO2Reduction(projectData.co2Reduction);
+      setTreesEquivalent(projectData.treesEquivalent);
+      setVehicleMilesOffset(projectData.vehicleMilesOffset);
+      
+      if (projectData.yearlyProduction) setYearlyProduction(projectData.yearlyProduction);
+      if (projectData.yearlyCashFlow) setYearlyCashFlow(projectData.yearlyCashFlow);
+      if (projectData.cumulativeCashFlow) setCumulativeCashFlow(projectData.cumulativeCashFlow);
+      
+      setShowResults(true);
+      setProjectName(projectData.name);
     }
   }, [projectData]);
   
-  // Handle location changes
-  const handleLocationChange = (field: string, value: any) => {
-    setLocation(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  // Handle project details changes
-  const handleProjectDetailsChange = (field: string, value: any) => {
-    setProjectDetails(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  // Handle project save
-  const handleSave = () => {
-    if (onSaveProject && projectData) {
-      const updatedProject: SolarProject = {
-        ...projectData,
-        ...projectDetails,
-        location: {
-          lat: location.latitude,
-          lng: location.longitude
-        },
-        timezone: location.timezone,
-        country: location.country,
-        city: location.city,
-        updatedAt: new Date().toISOString()
-      };
-      onSaveProject(updatedProject);
+  // State for location parameters
+  const [latitude, setLatitude] = useState(40.7128); // Default to New York
+  const [longitude, setLongitude] = useState(-74.0060);
+  const [solarTimezone, setSolarTimezone] = useState("America/New_York");
+  
+  // Handle advanced calculation completion
+  const handleAdvancedCalculationComplete = (results: SolarCalculationResult) => {
+    setAdvancedCalculationResults(results);
+    
+    // Update the system size to match the calculated capacity
+    setSystemSize(results.system.calculated_capacity);
+    
+    // Set yearly production
+    setYearlyProduction(results.yearlyProduction);
+    
+    // Update location if available
+    if (results.location) {
+      setLatitude(results.location.lat);
+      setLongitude(results.location.lng);
     }
+    
+    // Update timezone if available
+    if (results.timezone) {
+      setSolarTimezone(results.timezone);
+    }
+    
+    // Move to next step
+    setActiveTab("electricity");
+    toast.success("Advanced energy calculations completed, now continue with electricity details");
   };
   
+  // Handle electricity data save
+  const handleElectricityDataSave = (electricityData: ElectricityData) => {
+    // Save electricity data to financial inputs
+    setFinancialInputs(prev => ({
+      ...prev,
+      electricity_data: electricityData
+    }));
+    
+    // Update the electricity rate if flat rate
+    if (electricityData.tariff.type === "flat" && electricityData.tariff.rate) {
+      setElectricityRate(electricityData.tariff.rate);
+    }
+    
+    // Move to financial details tab
+    setActiveTab("financial");
+    toast.success("Electricity data saved, now complete the financial details");
+  };
+  
+  // Set up financial calculations when entering financial tab
+  useEffect(() => {
+    if (activeTab === "financial") {
+      // Initialize project cost
+      const annualEnergy = knowsAnnualEnergy ? manualAnnualEnergy : 
+        (advancedCalculationResults ? advancedCalculationResults.energy.metrics.total_yearly : 0);
+      
+      if (annualEnergy > 0) {
+        // Calculate project cost using financial calculator
+        const projectCost = financialCalculator.calculate_project_cost(systemSize);
+        setFinancialInputs(prev => ({
+          ...prev,
+          project_cost: {
+            ...projectCost,
+            cost_local: systemCost,
+            cost_per_kw_actual: systemCost / systemSize
+          }
+        }));
+        
+        // Calculate O&M parameters
+        const omParams = financialCalculator.calculate_om_parameters(systemCost);
+        
+        // Update the maintenance cost to match
+        setMaintenanceCost(omParams.yearly_om_cost);
+        
+        // Update financial inputs
+        setFinancialInputs(prev => ({
+          ...prev,
+          om_params: {
+            ...omParams,
+            // Convert percent to decimal for escalation rates
+            om_escalation: maintenanceEscalationRate / 100,
+            tariff_escalation: electricityEscalationRate / 100
+          }
+        }));
+      }
+    }
+  }, [activeTab, financialCalculator, systemSize, systemCost, knowsAnnualEnergy, manualAnnualEnergy, advancedCalculationResults, maintenanceEscalationRate, electricityEscalationRate]);
+  
+  const calculateResults = () => {
+    setCalculating(true);
+    
+    setTimeout(() => {
+      try {
+        const { project_cost, om_params, electricity_data } = financialInputs;
+        
+        if (!project_cost || !om_params || !electricity_data) {
+          toast.error("Missing required financial inputs");
+          setCalculating(false);
+          return;
+        }
+        
+        // Get actual yearly generation
+        const yearlyGeneration = knowsAnnualEnergy ? manualAnnualEnergy : 
+          (advancedCalculationResults ? advancedCalculationResults.energy.metrics.total_yearly : 0);
+        
+        if (yearlyGeneration <= 0) {
+          toast.error("Invalid energy generation amount");
+          setCalculating(false);
+          return;
+        }
+        
+        // Calculate financial metrics
+        const netProjectCost = systemCost - incentives;
+        const metrics = financialCalculator.calculate_financial_metrics(
+          electricity_data,
+          netProjectCost,
+          om_params,
+          yearlyGeneration,
+          degradationRate / 100
+        );
+        
+        setFinancialMetrics(metrics);
+        
+        // Save yearly cash flows and production
+        setYearlyCashFlow(metrics.cash_flows);
+        
+        if (advancedCalculationResults) {
+          setYearlyProduction(advancedCalculationResults.yearlyProduction);
+        } else {
+          // Generate synthetic year-by-year production with degradation
+          const syntheticProduction = Array(25).fill(0).map((_, index) => 
+            yearlyGeneration * Math.pow(1 - (degradationRate / 100), index)
+          );
+          setYearlyProduction(syntheticProduction);
+        }
+        
+        // Calculate cumulative cash flow
+        const cumulativeCF = metrics.cash_flows.reduce(
+          (acc: number[], val, idx) => {
+            const prevTotal = idx > 0 ? acc[idx - 1] : 0;
+            acc.push(prevTotal + val);
+            return acc;
+          }, 
+          []
+        );
+        setCumulativeCashFlow(cumulativeCF);
+        
+        // Legacy calculations for backward compatibility
+        const calculatedLCOE = calculateLevelizedCostOfEnergy(
+          netProjectCost,
+          yearlyGeneration,
+          maintenanceCost,
+          25
+        );
+        setLCOE(calculatedLCOE);
+        
+        const calculatedAnnualRevenue = calculateAnnualRevenue(
+          yearlyGeneration,
+          electricityRate
+        );
+        setAnnualRevenue(calculatedAnnualRevenue);
+        
+        const calculatedAnnualCost = calculateAnnualCost(
+          maintenanceCost,
+          financingOption === "loan" ? netProjectCost * (interestRate / 100) : 0
+        );
+        setAnnualCost(calculatedAnnualCost);
+        
+        const calculatedNPV = calculateNetPresentValue(
+          netProjectCost,
+          calculatedAnnualRevenue - calculatedAnnualCost,
+          discountRate,
+          25
+        );
+        setNetPresentValue(calculatedNPV);
+        
+        const calculatedIRR = calculateInternalRateOfReturn(
+          netProjectCost,
+          calculatedAnnualRevenue - calculatedAnnualCost,
+          25
+        );
+        setIRR(calculatedIRR);
+        
+        const calculatedPaybackPeriod = calculatePaybackPeriod(
+          netProjectCost,
+          calculatedAnnualRevenue - calculatedAnnualCost
+        );
+        setPaybackPeriod(calculatedPaybackPeriod);
+        
+        // Environmental benefits
+        const calculatedCO2Reduction = calculateCO2Reduction(yearlyGeneration);
+        setCO2Reduction(calculatedCO2Reduction);
+        
+        setTreesEquivalent(calculatedCO2Reduction / 22);
+        
+        setVehicleMilesOffset(calculatedCO2Reduction * 1000 / 404);
+        
+        setShowResults(true);
+        setActiveTab("results");
+        toast.success("Financial calculations completed successfully!");
+      } catch (error) {
+        console.error("Calculation error:", error);
+        toast.error("Error performing calculations. Please check your inputs.");
+      } finally {
+        setCalculating(false);
+      }
+    }, 1500);
+  };
+  
+  const handleSaveProject = async () => {
+    if (!isAuthenticated) {
+      toast.error("Please log in to save your project");
+      navigate("/auth");
+      return;
+    }
+    
+    if (!projectName.trim()) {
+      toast.error("Please enter a project name");
+      return;
+    }
+    
+    try {
+      if (projectData && onSaveProject) {
+        const updatedProject: SolarProject = {
+          ...projectData,
+          name: projectName,
+          clientName,
+          clientEmail,
+          clientPhone,
+          clientAddress,
+          companyName,
+          companyContact,
+          companyEmail,
+          companyPhone,
+          knowsAnnualEnergy: !!knowsAnnualEnergy,
+          manualAnnualEnergy,
+          annualEnergy: knowsAnnualEnergy ? manualAnnualEnergy : 
+            (advancedCalculationResults ? advancedCalculationResults.energy.metrics.total_yearly : 0),
+          systemSize,
+          panelType: "monocrystalline", // Default
+          panelEfficiency: 20, // Default
+          inverterType: "string", // Default
+          inverterEfficiency: 97, // Default
+          roofType: "asphalt", // Default
+          roofAngle: 30, // Default
+          orientation: "south", // Default
+          solarIrradiance: 5, // Default
+          shadingFactor: 5, // Default
+          location: advancedCalculationResults?.location || { lat: 40.7128, lng: -74.0060 },
+          timezone: advancedCalculationResults?.timezone || "America/New_York",
+          country: "United States", // Default
+          city: "New York", // Default
+          systemCost,
+          electricityRate,
+          electricityEscalationRate,
+          incentives,
+          financingOption,
+          loanTerm,
+          interestRate,
+          maintenanceCost,
+          maintenanceEscalationRate,
+          degradationRate,
+          discountRate,
+          lcoe,
+          annualRevenue,
+          annualCost,
+          netPresentValue,
+          irr,
+          paybackPeriod,
+          co2Reduction,
+          treesEquivalent,
+          vehicleMilesOffset,
+          yearlyProduction,
+          yearlyCashFlow,
+          cumulativeCashFlow,
+        };
+        
+        await onSaveProject(updatedProject);
+        toast.success("Project updated successfully!");
+      } else {
+        const newProject = {
+          name: projectName,
+          clientName,
+          clientEmail,
+          clientPhone,
+          clientAddress,
+          companyName,
+          companyContact,
+          companyEmail,
+          companyPhone,
+          knowsAnnualEnergy: !!knowsAnnualEnergy,
+          manualAnnualEnergy,
+          annualEnergy: knowsAnnualEnergy ? manualAnnualEnergy : 
+            (advancedCalculationResults ? advancedCalculationResults.energy.metrics.total_yearly : 0),
+          systemSize,
+          panelType: "monocrystalline", // Default
+          panelEfficiency: 20, // Default
+          inverterType: "string", // Default
+          inverterEfficiency: 97, // Default
+          roofType: "asphalt", // Default
+          roofAngle: 30, // Default
+          orientation: "south", // Default
+          solarIrradiance: 5, // Default
+          shadingFactor: 5, // Default
+          location: advancedCalculationResults?.location || { lat: 40.7128, lng: -74.0060 },
+          timezone: advancedCalculationResults?.timezone || "America/New_York",
+          country: "United States", // Default
+          city: "New York", // Default
+          systemCost,
+          electricityRate,
+          electricityEscalationRate,
+          incentives,
+          financingOption,
+          loanTerm,
+          interestRate,
+          maintenanceCost,
+          maintenanceEscalationRate,
+          degradationRate,
+          discountRate,
+          lcoe,
+          annualRevenue,
+          annualCost,
+          netPresentValue,
+          irr,
+          paybackPeriod,
+          co2Reduction,
+          treesEquivalent,
+          vehicleMilesOffset,
+          yearlyProduction,
+          yearlyCashFlow,
+          cumulativeCashFlow,
+        };
+        
+        const savedProject = await saveProject(newProject);
+        toast.success("Project saved successfully!");
+        navigate(`/project/${savedProject.id}`);
+      }
+      
+      setIsSaveDialogOpen(false);
+    } catch (error) {
+      console.error("Failed to save project:", error);
+      toast.error("Failed to save project");
+    }
+  };
+
   return (
-    <div className="container mx-auto py-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Solar System Calculator</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="mb-4">
-              <TabsTrigger value="system">System Details</TabsTrigger>
-              <TabsTrigger value="location">Location</TabsTrigger>
-              <TabsTrigger value="financial">Financial</TabsTrigger>
-              <TabsTrigger value="results">Results</TabsTrigger>
-            </TabsList>
+    <div className="w-full max-w-7xl mx-auto">
+      <div className="mb-8 text-center">
+        <h1 className="text-4xl font-bold tracking-tight mb-2">Solar PV System Financial Calculator</h1>
+        <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+          Analyze the financial impact of your solar investment with our comprehensive calculator
+        </p>
+      </div>
+      
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid grid-cols-6 mb-8 w-full mx-auto overflow-auto">
+          <TabsTrigger value="client" className="flex items-center">
+            <Home className="h-4 w-4 mr-2 hidden sm:inline" />
+            Client
+          </TabsTrigger>
+          <TabsTrigger value="energyCheck" className="flex items-center">
+            <Check className="h-4 w-4 mr-2 hidden sm:inline" />
+            Energy Check
+          </TabsTrigger>
+          <TabsTrigger value="advanced" disabled={knowsAnnualEnergy === null || knowsAnnualEnergy === true} className="flex items-center">
+            <Calculator className="h-4 w-4 mr-2 hidden sm:inline" />
+            Advanced Solar
+          </TabsTrigger>
+          <TabsTrigger value="electricity" disabled={knowsAnnualEnergy === null || (knowsAnnualEnergy === false && !advancedCalculationResults)} className="flex items-center">
+            <PanelRight className="h-4 w-4 mr-2 hidden sm:inline" />
+            Electricity
+          </TabsTrigger>
+          <TabsTrigger value="financial" disabled={knowsAnnualEnergy === null || (knowsAnnualEnergy === false && !financialInputs.electricity_data)} className="flex items-center">
+            <DollarSign className="h-4 w-4 mr-2 hidden sm:inline" />
+            Financial
+          </TabsTrigger>
+          <TabsTrigger value="results" disabled={!showResults} className="flex items-center">
+            <FileBarChart className="h-4 w-4 mr-2 hidden sm:inline" />
+            Results
+          </TabsTrigger>
+        </TabsList>
+        
+        <div className="min-h-[600px]">
+          <TabsContent value="client" className="space-y-8 mt-2">
+            <ClientDetails
+              clientName={clientName}
+              setClientName={setClientName}
+              clientEmail={clientEmail}
+              setClientEmail={setClientEmail}
+              clientPhone={clientPhone}
+              setClientPhone={setClientPhone}
+              clientAddress={clientAddress}
+              setClientAddress={setClientAddress}
+            />
             
-            <TabsContent value="system">
-              {/* System details form */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="systemSize">System Size (kW)</Label>
-                  <Input 
-                    id="systemSize"
-                    type="number"
-                    value={projectDetails.systemSize}
-                    onChange={(e) => handleProjectDetailsChange('systemSize', parseFloat(e.target.value))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="clientName">Client Name</Label>
-                  <Input 
-                    id="clientName"
-                    type="text"
-                    value={projectDetails.clientName}
-                    onChange={(e) => handleProjectDetailsChange('clientName', e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="clientEmail">Client Email</Label>
-                  <Input 
-                    id="clientEmail"
-                    type="email"
-                    value={projectDetails.clientEmail}
-                    onChange={(e) => handleProjectDetailsChange('clientEmail', e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="clientPhone">Client Phone</Label>
-                  <Input 
-                    id="clientPhone"
-                    type="tel"
-                    value={projectDetails.clientPhone}
-                    onChange={(e) => handleProjectDetailsChange('clientPhone', e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="clientAddress">Client Address</Label>
-                  <Input 
-                    id="clientAddress"
-                    type="text"
-                    value={projectDetails.clientAddress}
-                    onChange={(e) => handleProjectDetailsChange('clientAddress', e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="companyName">Company Name</Label>
-                  <Input 
-                    id="companyName"
-                    type="text"
-                    value={projectDetails.companyName}
-                    onChange={(e) => handleProjectDetailsChange('companyName', e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="companyContact">Company Contact</Label>
-                  <Input 
-                    id="companyContact"
-                    type="text"
-                    value={projectDetails.companyContact}
-                    onChange={(e) => handleProjectDetailsChange('companyContact', e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="companyEmail">Company Email</Label>
-                  <Input 
-                    id="companyEmail"
-                    type="email"
-                    value={projectDetails.companyEmail}
-                    onChange={(e) => handleProjectDetailsChange('companyEmail', e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="companyPhone">Company Phone</Label>
-                  <Input 
-                    id="companyPhone"
-                    type="tel"
-                    value={projectDetails.companyPhone}
-                    onChange={(e) => handleProjectDetailsChange('companyPhone', e.target.value)}
-                  />
-                </div>
-              </div>
-            </TabsContent>
+            <CompanyDetails
+              companyName={companyName}
+              setCompanyName={setCompanyName}
+              companyContact={companyContact}
+              setCompanyContact={setCompanyContact}
+              companyEmail={companyEmail}
+              setCompanyEmail={setCompanyEmail}
+              companyPhone={companyPhone}
+              setCompanyPhone={setCompanyPhone}
+            />
             
-            <TabsContent value="location">
-              {/* Location form using the initialLocation data */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="latitude">Latitude</Label>
-                  <Input 
-                    id="latitude"
-                    type="number"
-                    value={location.latitude}
-                    onChange={(e) => handleLocationChange('latitude', parseFloat(e.target.value))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="longitude">Longitude</Label>
-                  <Input 
-                    id="longitude"
-                    type="number"
-                    value={location.longitude}
-                    onChange={(e) => handleLocationChange('longitude', parseFloat(e.target.value))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="timezone">Timezone</Label>
-                  <Input 
-                    id="timezone"
-                    value={location.timezone}
-                    onChange={(e) => handleLocationChange('timezone', e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="country">Country</Label>
-                  <Input 
-                    id="country"
-                    value={location.country}
-                    onChange={(e) => handleLocationChange('country', e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="city">City</Label>
-                  <Input 
-                    id="city"
-                    value={location.city}
-                    onChange={(e) => handleLocationChange('city', e.target.value)}
-                  />
-                </div>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="financial">
-              {/* Financial inputs */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Financial form fields */}
-                <div className="space-y-2">
-                  <Label htmlFor="systemCost">System Cost</Label>
-                  <Input 
-                    id="systemCost"
-                    type="number"
-                    value={projectDetails.systemCost}
-                    onChange={(e) => handleProjectDetailsChange('systemCost', parseFloat(e.target.value))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="electricityRate">Electricity Rate</Label>
-                  <Input 
-                    id="electricityRate"
-                    type="number"
-                    value={projectDetails.electricityRate}
-                    onChange={(e) => handleProjectDetailsChange('electricityRate', parseFloat(e.target.value))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="electricityEscalationRate">Electricity Escalation Rate</Label>
-                  <Input 
-                    id="electricityEscalationRate"
-                    type="number"
-                    value={projectDetails.electricityEscalationRate}
-                    onChange={(e) => handleProjectDetailsChange('electricityEscalationRate', parseFloat(e.target.value))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="incentives">Incentives</Label>
-                  <Input 
-                    id="incentives"
-                    type="number"
-                    value={projectDetails.incentives}
-                    onChange={(e) => handleProjectDetailsChange('incentives', parseFloat(e.target.value))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="financingOption">Financing Option</Label>
-                  <Select value={projectDetails.financingOption} onValueChange={(value) => handleProjectDetailsChange('financingOption', value)}>
-                    <SelectTrigger id="financingOption">
-                      <SelectValue placeholder="Select financing option" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="cash">Cash</SelectItem>
-                      <SelectItem value="loan">Loan</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="loanTerm">Loan Term</Label>
-                  <Input 
-                    id="loanTerm"
-                    type="number"
-                    value={projectDetails.loanTerm}
-                    onChange={(e) => handleProjectDetailsChange('loanTerm', parseFloat(e.target.value))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="interestRate">Interest Rate</Label>
-                  <Input 
-                    id="interestRate"
-                    type="number"
-                    value={projectDetails.interestRate}
-                    onChange={(e) => handleProjectDetailsChange('interestRate', parseFloat(e.target.value))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="maintenanceCost">Maintenance Cost</Label>
-                  <Input 
-                    id="maintenanceCost"
-                    type="number"
-                    value={projectDetails.maintenanceCost}
-                    onChange={(e) => handleProjectDetailsChange('maintenanceCost', parseFloat(e.target.value))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="maintenanceEscalationRate">Maintenance Escalation Rate</Label>
-                  <Input 
-                    id="maintenanceEscalationRate"
-                    type="number"
-                    value={projectDetails.maintenanceEscalationRate}
-                    onChange={(e) => handleProjectDetailsChange('maintenanceEscalationRate', parseFloat(e.target.value))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="degradationRate">Degradation Rate</Label>
-                  <Input 
-                    id="degradationRate"
-                    type="number"
-                    value={projectDetails.degradationRate}
-                    onChange={(e) => handleProjectDetailsChange('degradationRate', parseFloat(e.target.value))}
-                  />
-                </div>
-                 <div className="space-y-2">
-                  <Label htmlFor="discountRate">Discount Rate</Label>
-                  <Input 
-                    id="discountRate"
-                    type="number"
-                    value={projectDetails.discountRate}
-                    onChange={(e) => handleProjectDetailsChange('discountRate', parseFloat(e.target.value))}
-                  />
-                </div>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="results">
-              {/* Results display */}
-              <div className="space-y-4">
-                {/* Results content */}
-                <div>
-                  <Label>LCOE</Label>
-                  <Input type="number" value={projectDetails.lcoe} readOnly />
-                </div>
-                <div>
-                  <Label>Annual Revenue</Label>
-                  <Input type="number" value={projectDetails.annualRevenue} readOnly />
-                </div>
-                <div>
-                  <Label>Annual Cost</Label>
-                  <Input type="number" value={projectDetails.annualCost} readOnly />
-                </div>
-                <div>
-                  <Label>Net Present Value</Label>
-                  <Input type="number" value={projectDetails.netPresentValue} readOnly />
-                </div>
-                <div>
-                  <Label>IRR</Label>
-                  <Input type="number" value={projectDetails.irr} readOnly />
-                </div>
-                <div>
-                  <Label>Payback Period (Years)</Label>
-                  <Input type="number" value={projectDetails.paybackPeriod.years} readOnly />
-                </div>
-                <div>
-                  <Label>Payback Period (Months)</Label>
-                  <Input type="number" value={projectDetails.paybackPeriod.months} readOnly />
-                </div>
-                <div>
-                  <Label>CO2 Reduction</Label>
-                  <Input type="number" value={projectDetails.co2Reduction} readOnly />
-                </div>
-                <div>
-                  <Label>Trees Equivalent</Label>
-                  <Input type="number" value={projectDetails.treesEquivalent} readOnly />
-                </div>
-                <div>
-                  <Label>Vehicle Miles Offset</Label>
-                  <Input type="number" value={projectDetails.vehicleMilesOffset} readOnly />
-                </div>
-              </div>
-            </TabsContent>
-          </Tabs>
+            <div className="flex justify-end mb-10">
+              <Button 
+                onClick={() => setActiveTab("energyCheck")}
+                className="bg-solar hover:bg-solar-dark text-white"
+              >
+                Next: Energy Check
+              </Button>
+            </div>
+          </TabsContent>
           
-          <div className="mt-6 flex justify-end space-x-2">
-            <Button variant="outline">Cancel</Button>
-            <Button onClick={handleSave}>Save Project</Button>
-          </div>
-        </CardContent>
-      </Card>
+          <TabsContent value="energyCheck" className="space-y-8 mt-2">
+            <AnnualEnergyCheck
+              knowsAnnualEnergy={knowsAnnualEnergy}
+              setKnowsAnnualEnergy={setKnowsAnnualEnergy}
+              manualAnnualEnergy={manualAnnualEnergy}
+              setManualAnnualEnergy={setManualAnnualEnergy}
+            />
+            
+            <div className="flex justify-between mb-10">
+              <Button 
+                variant="outline" 
+                onClick={() => setActiveTab("client")}
+              >
+                Back
+              </Button>
+              <Button 
+                onClick={() => {
+                  if (knowsAnnualEnergy) {
+                    setActiveTab("electricity");
+                  } else {
+                    setActiveTab("advanced");
+                  }
+                }}
+                className="bg-solar hover:bg-solar-dark text-white"
+                disabled={knowsAnnualEnergy === null}
+              >
+                {knowsAnnualEnergy ? "Next: Electricity Details" : "Next: Advanced Solar Details"}
+              </Button>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="advanced" className="space-y-8 mt-2">
+            <AdvancedSolarInputs
+              latitude={latitude}
+              longitude={longitude}
+              setLatitude={setLatitude}
+              setLongitude={setLongitude}
+              timezone={solarTimezone}
+              setTimezone={setSolarTimezone}
+              capacity={systemSize}
+              setCapacity={setSystemSize}
+              onCalculationComplete={handleAdvancedCalculationComplete}
+            />
+            
+            <div className="flex justify-between mb-10">
+              <Button 
+                variant="outline" 
+                onClick={() => setActiveTab("energyCheck")}
+              >
+                Back
+              </Button>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="electricity" className="space-y-8 mt-2">
+            <ElectricityDetails
+              currency={financialCalculator.current_settings.currency}
+              currencySymbol={financialCalculator.current_settings.currency_symbol}
+              defaultTariff={financialCalculator.current_settings.regional_data.default_tariff}
+              onSave={handleElectricityDataSave}
+              yearlyGeneration={
+                knowsAnnualEnergy 
+                  ? manualAnnualEnergy 
+                  : (advancedCalculationResults ? advancedCalculationResults.energy.metrics.total_yearly : 0)
+              }
+            />
+            
+            <div className="flex justify-between mb-10">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  if (knowsAnnualEnergy) {
+                    setActiveTab("energyCheck");
+                  } else {
+                    setActiveTab("advanced");
+                  }
+                }}
+              >
+                Back
+              </Button>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="financial" className="space-y-8 mt-2">
+            <FinancialDetails
+              systemCost={systemCost}
+              setSystemCost={setSystemCost}
+              electricityRate={electricityRate}
+              setElectricityRate={setElectricityRate}
+              electricityEscalationRate={electricityEscalationRate}
+              setElectricityEscalationRate={setElectricityEscalationRate}
+              incentives={incentives}
+              setIncentives={setIncentives}
+              financingOption={financingOption}
+              setFinancingOption={setFinancingOption}
+              loanTerm={loanTerm}
+              setLoanTerm={setLoanTerm}
+              interestRate={interestRate}
+              setInterestRate={setInterestRate}
+              maintenanceCost={maintenanceCost}
+              setMaintenanceCost={setMaintenanceCost}
+              maintenanceEscalationRate={maintenanceEscalationRate}
+              setMaintenanceEscalationRate={setMaintenanceEscalationRate}
+              degradationRate={degradationRate}
+              setDegradationRate={setDegradationRate}
+              discountRate={discountRate}
+              setDiscountRate={setDiscountRate}
+            />
+            
+            <div className="flex justify-between mb-10">
+              <Button 
+                variant="outline" 
+                onClick={() => setActiveTab("electricity")}
+              >
+                Back
+              </Button>
+              <Button 
+                onClick={calculateResults}
+                className="bg-solar hover:bg-solar-dark text-white"
+                disabled={calculating}
+              >
+                {calculating ? 'Calculating...' : 'Calculate Results'}
+              </Button>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="results" className="mt-2">
+            {showResults && (
+              <div className="space-y-8">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-2xl font-bold">Results Summary</h2>
+                  
+                  <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button className="bg-solar hover:bg-solar-dark text-white">
+                        {projectData ? "Update Project" : "Save Project"}
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>{projectData ? "Update Project" : "Save Project"}</DialogTitle>
+                        <DialogDescription>
+                          {projectData 
+                            ? "Update your solar PV project details."
+                            : "Give your project a name to save it to your dashboard."}
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="py-4">
+                        <Label htmlFor="projectName">Project Name</Label>
+                        <Input 
+                          id="projectName" 
+                          value={projectName} 
+                          onChange={(e) => setProjectName(e.target.value)}
+                          placeholder="e.g., Residential Solar - John Smith"
+                          className="mt-2"
+                        />
+                      </div>
+                      <DialogFooter>
+                        <Button onClick={handleSaveProject}>
+                          {projectData ? "Update Project" : "Save Project"}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+                
+                {/* Display calculated results */}
+                <div className="space-y-8">
+                  {/* New Financial Metrics Display */}
+                  {financialMetrics && (
+                    <FinancialMetricsDisplay 
+                      financialMetrics={financialMetrics}
+                      currencySymbol={financialCalculator.current_settings.currency_symbol}
+                    />
+                  )}
+
+                  {/* Legacy Results Display for comparison */}
+                  <ResultsDisplay
+                    lcoe={lcoe}
+                    annualRevenue={annualRevenue}
+                    annualCost={annualCost}
+                    netPresentValue={netPresentValue}
+                    irr={irr}
+                    paybackPeriod={paybackPeriod}
+                    yearlyProduction={yearlyProduction}
+                    yearlyCashFlow={yearlyCashFlow}
+                    cumulativeCashFlow={cumulativeCashFlow}
+                    clientName={clientName}
+                    clientEmail={clientEmail}
+                    clientAddress={clientAddress}
+                    companyName={companyName}
+                    companyContact={companyContact}
+                    systemSize={systemSize}
+                    panelType={"monocrystalline"}
+                    co2Reduction={co2Reduction}
+                    treesEquivalent={treesEquivalent}
+                    vehicleMilesOffset={vehicleMilesOffset}
+                    location={advancedCalculationResults?.location || { lat: 40.7128, lng: -74.0060 }}
+                    timezone={advancedCalculationResults?.timezone || "America/New_York"}
+                    country={"United States"}
+                    city={"New York"}
+                  />
+
+                  <EnvironmentalBenefits
+                    co2Reduction={co2Reduction}
+                    treesEquivalent={treesEquivalent}
+                    vehicleMilesOffset={vehicleMilesOffset}
+                  />
+                </div>
+              </div>
+            )}
+            
+            <div className="flex justify-between mt-8 mb-10">
+              <Button 
+                variant="outline" 
+                onClick={() => setActiveTab("financial")}
+              >
+                Back to Financial Details
+              </Button>
+            </div>
+          </TabsContent>
+        </div>
+      </Tabs>
     </div>
   );
 };
