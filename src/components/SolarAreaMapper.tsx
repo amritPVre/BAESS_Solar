@@ -21,6 +21,7 @@ import { Loader2, Search, MapPin, Info, ChevronsRight, Trash2 } from "lucide-rea
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet-draw/dist/leaflet.draw.css";
+import { SolarAreaMapperProps } from "@/types/components";
 
 // Import required Leaflet Draw CSS
 import "@/styles/leaflet-draw-fix.css";
@@ -29,14 +30,26 @@ interface SolarAreaMapperProps {
   onComplete?: (data: any) => void;
   defaultLocation?: string;
   initialCapacity?: number;
+  latitude?: number;
+  longitude?: number;
+  timezone?: string;
+  country?: string;
+  city?: string;
 }
 
 const SolarAreaMapper: React.FC<SolarAreaMapperProps> = ({
   onComplete,
   defaultLocation = "New York",
-  initialCapacity
+  initialCapacity,
+  latitude,
+  longitude,
+  timezone,
+  country,
+  city
 }) => {
-  const [mapCenter, setMapCenter] = useState<[number, number]>([40.7128, -74.0060]); // NYC default
+  const [mapCenter, setMapCenter] = useState<[number, number]>(
+    latitude && longitude ? [latitude, longitude] : [40.7128, -74.0060]
+  ); // Use provided coordinates or default to NYC
   const [searchAddress, setSearchAddress] = useState("");
   const [searchingAddress, setSearchingAddress] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -62,7 +75,10 @@ const SolarAreaMapper: React.FC<SolarAreaMapperProps> = ({
       console.log(`Setting map container ID: ${mapId.current}`);
     }
     
-    if (defaultLocation) {
+    if (latitude && longitude) {
+      // Use provided coordinates
+      initializeMap([latitude, longitude]);
+    } else if (defaultLocation) {
       searchLocation(defaultLocation)
         .then(location => {
           if (location) {
@@ -326,7 +342,11 @@ const SolarAreaMapper: React.FC<SolarAreaMapperProps> = ({
         ...areaAnalysis,
         projectCategory,
         installationType,
-        mapCenter
+        mapCenter,
+        location: { lat: mapCenter[0], lng: mapCenter[1] },
+        timezone: timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+        country: country || '',
+        city: city || ''
       });
     }
   };
