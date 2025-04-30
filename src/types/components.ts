@@ -9,6 +9,7 @@ export interface SolarAreaMapperProps {
   timezone?: string;
   country?: string;
   city?: string;
+  defaultLocation?: string;
 }
 
 export interface SolarCalculatorProps {
@@ -20,4 +21,5 @@ export interface SolarCalculatorProps {
     country: string;
     city: string;
   };
+  onSaveProject?: (updatedProject: SolarProject) => Promise<void>;
 }

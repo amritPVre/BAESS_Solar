@@ -1,3 +1,4 @@
+
 import React from "react";
 // Assuming these are the existing imports
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,10 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SolarCalculatorProps } from "@/types/components";
+import { SolarProject } from "@/types/solarProject";
 
 const SolarCalculator: React.FC<SolarCalculatorProps> = ({
   projectData,
-  initialLocation
+  initialLocation,
+  onSaveProject
 }) => {
   // Initialize state with initialLocation if provided
   const [location, setLocation] = React.useState(initialLocation || {
@@ -53,6 +56,25 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({
       ...prev,
       [field]: value
     }));
+  };
+
+  // Handle project save
+  const handleSave = () => {
+    if (onSaveProject && projectData) {
+      const updatedProject: SolarProject = {
+        ...projectData,
+        ...projectDetails,
+        location: {
+          lat: location.latitude,
+          lng: location.longitude
+        },
+        timezone: location.timezone,
+        country: location.country,
+        city: location.city,
+        updatedAt: new Date().toISOString()
+      };
+      onSaveProject(updatedProject);
+    }
   };
   
   return (
@@ -154,7 +176,7 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({
           
           <div className="mt-6 flex justify-end space-x-2">
             <Button variant="outline">Cancel</Button>
-            <Button>Save Project</Button>
+            <Button onClick={handleSave}>Save Project</Button>
           </div>
         </CardContent>
       </Card>

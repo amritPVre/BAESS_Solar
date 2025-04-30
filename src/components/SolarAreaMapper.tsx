@@ -26,17 +26,6 @@ import { SolarAreaMapperProps } from "@/types/components";
 // Import required Leaflet Draw CSS
 import "@/styles/leaflet-draw-fix.css";
 
-interface SolarAreaMapperProps {
-  onComplete?: (data: any) => void;
-  defaultLocation?: string;
-  initialCapacity?: number;
-  latitude?: number;
-  longitude?: number;
-  timezone?: string;
-  country?: string;
-  city?: string;
-}
-
 const SolarAreaMapper: React.FC<SolarAreaMapperProps> = ({
   onComplete,
   defaultLocation = "New York",
