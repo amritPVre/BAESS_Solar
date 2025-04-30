@@ -6,6 +6,7 @@ import SolarCalculator from "@/components/SolarCalculator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MapPin, Calculator } from "lucide-react";
 import { SolarProject } from "@/types/solarProject";
+import { SolarAreaMapperProps, SolarCalculatorProps } from "@/types/components";
 
 export function SolarDesignerPage() {
   const [activeTab, setActiveTab] = useState("mapper");

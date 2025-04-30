@@ -71,6 +71,8 @@ export interface SolarCalculationResult {
   yearlyProduction: number[];
   location?: { lat: number; lng: number };
   timezone?: string;
+  country?: string;
+  city?: string;
 }
 
 // Financial calculation types
