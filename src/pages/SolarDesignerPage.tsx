@@ -11,7 +11,28 @@ export function SolarDesignerPage() {
   const [activeTab, setActiveTab] = useState("mapper");
   const [mappingResults, setMappingResults] = useState<any>(null);
   
+  // Store location details as they're updated
+  const [locationDetails, setLocationDetails] = useState({
+    latitude: 40.7128,
+    longitude: -74.0060,
+    timezone: "America/New_York",
+    country: "United States",
+    city: "New York"
+  });
+  
   const handleMappingComplete = (results: any) => {
+    // Update location details if they were provided
+    if (results.location) {
+      setLocationDetails(prevDetails => ({
+        ...prevDetails,
+        latitude: results.location.lat || prevDetails.latitude,
+        longitude: results.location.lng || prevDetails.longitude,
+        timezone: results.timezone || prevDetails.timezone,
+        country: results.country || prevDetails.country,
+        city: results.city || prevDetails.city
+      }));
+    }
+    
     setMappingResults(results);
     setActiveTab("calculator");
   };
@@ -51,10 +72,13 @@ export function SolarDesignerPage() {
       orientation: "south",
       solarIrradiance: 5,
       shadingFactor: 5,
-      location: { lat: 40.7128, lng: -74.0060 },
-      timezone: "America/New_York",
-      country: "United States",
-      city: "New York",
+      location: { 
+        lat: locationDetails.latitude, 
+        lng: locationDetails.longitude 
+      },
+      timezone: locationDetails.timezone,
+      country: locationDetails.country,
+      city: locationDetails.city,
       systemCost: potentialCapacity * 2500,
       electricityRate: 0.15,
       electricityEscalationRate: 3,
@@ -103,12 +127,18 @@ export function SolarDesignerPage() {
           <SolarAreaMapper 
             onComplete={handleMappingComplete}
             initialCapacity={10}
+            latitude={locationDetails.latitude}
+            longitude={locationDetails.longitude}
+            timezone={locationDetails.timezone}
+            country={locationDetails.country}
+            city={locationDetails.city}
           />
         </TabsContent>
         
         <TabsContent value="calculator">
           <SolarCalculator 
             projectData={mappingResults ? generateProjectData() : undefined}
+            initialLocation={locationDetails}
           />
         </TabsContent>
       </Tabs>

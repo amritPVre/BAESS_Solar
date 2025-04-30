@@ -10,7 +10,7 @@ import { calculateSolarEnergy } from "@/utils/solarEnergyCalculation";
 import InverterConfiguration from "./InverterConfiguration";
 import { InverterParams } from "@/types/solarCalculations";
 import SectionHeader from "@/components/ui/SectionHeader";
-import { MapPin, Sun, Compass, Ruler, Settings, RotateCw } from "lucide-react";
+import { MapPin, Sun, Compass, Ruler, Settings, RotateCw, Search } from "lucide-react";
 
 interface AdvancedSolarInputsProps {
   onCalculationComplete: (results: SolarCalculationResult) => void;
@@ -44,6 +44,9 @@ const AdvancedSolarInputs: React.FC<AdvancedSolarInputsProps> = ({
   const [localLongitude, setLocalLongitude] = useState(-74.0060); // New York default
   const [localTimezone, setLocalTimezone] = useState("America/New_York");
   const [localCapacity, setLocalCapacity] = useState(10);
+  const [localCountry, setLocalCountry] = useState(country);
+  const [localCity, setLocalCity] = useState(city);
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   
   // Use either the props or local state getters
   const latitude = propLatitude !== undefined ? propLatitude : localLatitude;
@@ -71,6 +74,91 @@ const AdvancedSolarInputs: React.FC<AdvancedSolarInputsProps> = ({
   // Calculation state
   const [calculating, setCalculating] = useState(false);
 
+  // Function to fetch location details from coordinates
+  const fetchLocationDetails = async () => {
+    if (!latitude || !longitude) {
+      toast.error("Please enter valid latitude and longitude values");
+      return;
+    }
+    
+    setIsLoadingLocation(true);
+    try {
+      // Using Nominatim reverse geocoding API (OpenStreetMap)
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=10&addressdetails=1`
+      );
+      
+      if (!response.ok) {
+        throw new Error("Failed to fetch location data");
+      }
+      
+      const data = await response.json();
+      
+      if (data && data.address) {
+        // Extract country name
+        const countryName = data.address.country;
+        if (countryName) {
+          setLocalCountry(countryName);
+        }
+        
+        // Extract city/town/village name (whichever is available)
+        const cityName = data.address.city || data.address.town || data.address.village || data.address.county;
+        if (cityName) {
+          setLocalCity(cityName);
+        }
+        
+        // Try to get the timezone based on coordinates
+        try {
+          const tzResponse = await fetch(
+            `https://api.timezonedb.com/v2.1/get-time-zone?key=OG2CGVC047PB&format=json&by=position&lat=${latitude}&lng=${longitude}`
+          );
+          
+          if (tzResponse.ok) {
+            const tzData = await tzResponse.json();
+            if (tzData.status === "OK" && tzData.zoneName) {
+              setTimezone(tzData.zoneName);
+            } else {
+              // Fallback: Use browser timezone detection
+              const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+              setTimezone(detectedTimezone);
+            }
+          } else {
+            // Fallback: Estimate timezone based on longitude
+            estimateTimezone(longitude);
+          }
+        } catch (error) {
+          console.error("Error fetching timezone:", error);
+          // Fallback: Estimate timezone based on longitude
+          estimateTimezone(longitude);
+        }
+        
+        toast.success("Location details fetched successfully");
+      } else {
+        toast.error("No location data found for these coordinates");
+      }
+    } catch (error) {
+      console.error("Error fetching location details:", error);
+      toast.error("Failed to fetch location details");
+    } finally {
+      setIsLoadingLocation(false);
+    }
+  };
+  
+  // Rough timezone estimation based on longitude
+  const estimateTimezone = (longitude: number) => {
+    // Each timezone is roughly 15 degrees wide
+    const utcOffset = Math.round(longitude / 15);
+    
+    // Set a generic timezone string (this is a simplification)
+    if (utcOffset === 0) {
+      setTimezone("Etc/GMT");
+    } else if (utcOffset > 0) {
+      setTimezone(`Etc/GMT-${utcOffset}`);
+    } else {
+      setTimezone(`Etc/GMT+${Math.abs(utcOffset)}`);
+    }
+  };
+
   const handleCalculate = () => {
     setCalculating(true);
     
@@ -96,6 +184,8 @@ const AdvancedSolarInputs: React.FC<AdvancedSolarInputsProps> = ({
       // Add location and timezone to results for use in other components
       calculationResults.location = { lat: latitude, lng: longitude };
       calculationResults.timezone = timezone;
+      calculationResults.country = localCountry;
+      calculationResults.city = localCity;
       
       // Update capacity to match calculated capacity
       setCapacity(calculationResults.system.calculated_capacity);
@@ -165,6 +255,26 @@ const AdvancedSolarInputs: React.FC<AdvancedSolarInputsProps> = ({
               </div>
             </div>
             
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={fetchLocationDetails} 
+              disabled={isLoadingLocation}
+              className="w-full border-amber-300 text-amber-700 hover:text-amber-800 hover:bg-amber-100"
+            >
+              {isLoadingLocation ? (
+                <>
+                  <RotateCw className="h-4 w-4 mr-2 animate-spin" />
+                  Fetching location data...
+                </>
+              ) : (
+                <>
+                  <Search className="h-4 w-4 mr-2" />
+                  Get Location Details
+                </>
+              )}
+            </Button>
+            
             <div className="space-y-2">
               <Label htmlFor="timezone" className="flex items-center gap-2">
                 <Settings className="h-4 w-4 text-amber-600" />
@@ -187,9 +297,9 @@ const AdvancedSolarInputs: React.FC<AdvancedSolarInputsProps> = ({
                 </Label>
                 <Input
                   id="country"
-                  value={country}
-                  disabled
-                  className="bg-amber-50/50"
+                  value={localCountry}
+                  onChange={(e) => setLocalCountry(e.target.value)}
+                  className="border-amber-200 focus-visible:ring-amber-500"
                 />
               </div>
               <div className="space-y-2">
@@ -199,9 +309,9 @@ const AdvancedSolarInputs: React.FC<AdvancedSolarInputsProps> = ({
                 </Label>
                 <Input
                   id="city"
-                  value={city}
-                  disabled
-                  className="bg-amber-50/50"
+                  value={localCity}
+                  onChange={(e) => setLocalCity(e.target.value)}
+                  className="border-amber-200 focus-visible:ring-amber-500"
                 />
               </div>
             </div>
