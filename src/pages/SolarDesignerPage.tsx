@@ -1,16 +1,12 @@
 
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import SolarAreaMapper from "@/components/SolarAreaMapper";
 import SolarCalculator from "@/components/SolarCalculator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MapPin, Calculator } from "lucide-react";
+import { Calculator } from "lucide-react";
 import { SolarProject } from "@/types/solarProject";
 
 export function SolarDesignerPage() {
-  const [activeTab, setActiveTab] = useState("mapper");
-  const [mappingResults, setMappingResults] = useState<any>(null);
-  
   // Store location details as they're updated
   const [locationDetails, setLocationDetails] = useState({
     latitude: 40.7128,
@@ -20,29 +16,12 @@ export function SolarDesignerPage() {
     city: "New York"
   });
   
-  const handleMappingComplete = (results: any) => {
-    // Update location details if they were provided
-    if (results.location) {
-      setLocationDetails(prevDetails => ({
-        ...prevDetails,
-        latitude: results.location.lat || prevDetails.latitude,
-        longitude: results.location.lng || prevDetails.longitude,
-        timezone: results.timezone || prevDetails.timezone,
-        country: results.country || prevDetails.country,
-        city: results.city || prevDetails.city
-      }));
-    }
-    
-    setMappingResults(results);
-    setActiveTab("calculator");
-  };
-  
   // Generate a project with proper SolarProject type
   const generateProjectData = (): SolarProject => {
     const uniqueId = Math.random().toString(36).substring(2, 9);
     const now = new Date().toISOString();
     
-    const potentialCapacity = mappingResults?.potentialCapacity || 10;
+    const potentialCapacity = 10;
     const annualEnergy = potentialCapacity * 1600;
     
     const project: SolarProject = {
@@ -109,39 +88,15 @@ export function SolarDesignerPage() {
   
   return (
     <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-bold mb-8 text-center">Solar PV System Designer</h1>
+      <h1 className="text-3xl font-bold mb-8 text-center">Solar Financial Tool</h1>
       
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-full mb-6">
-          <TabsTrigger value="mapper" className="flex-1">
-            <MapPin className="w-4 h-4 mr-2" />
-            Area Mapper
-          </TabsTrigger>
-          <TabsTrigger value="calculator" className="flex-1">
-            <Calculator className="w-4 h-4 mr-2" />
-            Financial Calculator
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="mapper">
-          <SolarAreaMapper 
-            onComplete={handleMappingComplete}
-            initialCapacity={10}
-            latitude={locationDetails.latitude}
-            longitude={locationDetails.longitude}
-            timezone={locationDetails.timezone}
-            country={locationDetails.country}
-            city={locationDetails.city}
-          />
-        </TabsContent>
-        
-        <TabsContent value="calculator">
+      <Card>
+        <CardContent className="p-6">
           <SolarCalculator 
-            projectData={mappingResults ? generateProjectData() : undefined}
-            initialLocation={locationDetails}
+            projectData={generateProjectData()}
           />
-        </TabsContent>
-      </Tabs>
+        </CardContent>
+      </Card>
     </div>
   );
 }
