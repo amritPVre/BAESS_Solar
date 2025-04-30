@@ -1,617 +1,675 @@
-import React, { useState, useEffect, useRef } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
+
+import React, { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { 
-  calculatePolygonArea, 
-  calculateInstallationPotential,
-  gcrCategories,
-  installationTypes,
-  getGcrValue,
-  getGcrRange,
-  getInstallationDescription,
-  searchLocation
-} from "@/utils/areaMapper";
-import { Loader2, Search, MapPin, Info, ChevronsRight, Trash2 } from "lucide-react";
+import { MapPin, Search } from "lucide-react";
+import { SolarAreaMapperProps } from "@/types/components";
+
+// Import for map components
+import { MapContainer, TileLayer, FeatureGroup } from "react-leaflet";
+import { EditControl } from "react-leaflet-draw";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet-draw/dist/leaflet.draw.css";
-import { SolarAreaMapperProps } from "@/types/components";
+
+// Fix for Leaflet icons
+import icon from "leaflet/dist/images/marker-icon.png";
+import iconShadow from "leaflet/dist/images/marker-shadow.png";
+import iconRetinaUrl from "leaflet/dist/images/marker-icon-2x.png";
 
 // Import required Leaflet Draw CSS
 import "@/styles/leaflet-draw-fix.css";
 
 const SolarAreaMapper: React.FC<SolarAreaMapperProps> = ({
   onComplete,
-  defaultLocation = "New York",
-  initialCapacity,
-  latitude,
-  longitude,
-  timezone,
-  country,
-  city
+  initialCapacity = 10,
+  latitude = 18.9384791,
+  longitude = 72.8252102,
+  timezone = "Asia/Kolkata",
+  country = "India",
+  city = "Mumbai",
+  defaultLocation
 }) => {
-  const [mapCenter, setMapCenter] = useState<[number, number]>(
-    latitude && longitude ? [latitude, longitude] : [40.7128, -74.0060]
-  ); // Use provided coordinates or default to NYC
-  const [searchAddress, setSearchAddress] = useState("");
-  const [searchingAddress, setSearchingAddress] = useState(false);
-  const [mapLoaded, setMapLoaded] = useState(false);
-  const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<L.Map | null>(null);
-  const drawControlRef = useRef<any>(null);
-  const drawnItemsRef = useRef<L.FeatureGroup | null>(null);
-  const mapId = useRef<string>(`solar-area-mapper-${Math.random().toString(36).substring(2, 9)}`);
+  // State for map
+  const [mapCenter, setMapCenter] = useState<[number, number]>([latitude, longitude]);
+  const [drawnItems, setDrawnItems] = useState(null);
+  const [lastDrawnArea, setLastDrawnArea] = useState<any>(null);
+  const [totalArea, setTotalArea] = useState<number | null>(null);
+  const [initialUsableArea, setInitialUsableArea] = useState<number | null>(null);
+  const [finalUsableArea, setFinalUsableArea] = useState<number | null>(null);
+  const [modulesEstimate, setModulesEstimate] = useState<number | null>(null);
+  const [potentialCapacity, setPotentialCapacity] = useState<number | null>(null);
+  const [potentialCapacityRange, setPotentialCapacityRange] = useState<{low: number, high: number} | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // State for GCR (Ground Coverage Ratio)
+  const [projectCategory, setProjectCategory] = useState<string>("commercial");
+  const [installationType, setInstallationType] = useState<string>("roof-mounted");
+  const [gcr, setGcr] = useState<number>(0.7);
+  const [gcrRange, setGcrRange] = useState<[number, number]>([0.5, 0.9]);
   
-  const [projectCategory, setProjectCategory] = useState(gcrCategories[0]);
-  const [installationType, setInstallationType] = useState(installationTypes[gcrCategories[0]][0]);
-  
-  const [drawnArea, setDrawnArea] = useState<number | null>(null);
-  const [areaAnalysis, setAreaAnalysis] = useState<any>(null);
-  const [customGcr, setCustomGcr] = useState<number | null>(null);
-  
+  // Fix Leaflet icon issues for webpack
   useEffect(() => {
-    if (!mapRef.current || mapInstanceRef.current) return;
+    // Fix for Leaflet icons
+    let DefaultIcon = L.icon({
+      iconUrl: icon,
+      shadowUrl: iconShadow,
+      iconRetinaUrl: iconRetinaUrl,
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      tooltipAnchor: [16, -28],
+      shadowSize: [41, 41]
+    });
     
-    // Set a unique ID for the map container
-    if (mapRef.current) {
-      mapRef.current.id = mapId.current;
-      console.log(`Setting map container ID: ${mapId.current}`);
+    L.Marker.prototype.options.icon = DefaultIcon;
+    
+    // If defaultLocation is provided, geocode it
+    if (defaultLocation) {
+      handleSearchLocation();
     }
-    
-    if (latitude && longitude) {
-      // Use provided coordinates
-      initializeMap([latitude, longitude]);
-    } else if (defaultLocation) {
-      searchLocation(defaultLocation)
-        .then(location => {
-          if (location) {
-            setMapCenter([location.lat, location.lng]);
-            initializeMap([location.lat, location.lng]);
-          } else {
-            initializeMap(mapCenter);
-          }
-        })
-        .catch(() => {
-          initializeMap(mapCenter);
-        });
-    } else {
-      initializeMap(mapCenter);
+  }, []);
+
+  // GCR category options
+  const gcrCategories = [
+    "residential",
+    "commercial",
+    "industrial",
+    "utility-scale"
+  ];
+  
+  // Installation types based on category
+  const getInstallationTypes = (category: string) => {
+    switch (category) {
+      case "residential":
+        return ["roof-mounted", "ground-mounted"];
+      case "commercial":
+        return ["roof-mounted", "carport", "ground-mounted"];
+      case "industrial":
+        return ["roof-mounted", "ground-mounted", "floating"];
+      case "utility-scale":
+        return ["fixed-tilt", "single-axis-tracking", "dual-axis-tracking"];
+      default:
+        return ["roof-mounted"];
     }
-    
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
+  };
+  
+  // Get GCR value based on category and installation type
+  const getGcrValue = (category: string, type: string): number => {
+    // These are simplified values - in a real app you might have more precise values
+    const gcrValues: {[key: string]: {[key: string]: number}} = {
+      "residential": {
+        "roof-mounted": 0.75,
+        "ground-mounted": 0.65
+      },
+      "commercial": {
+        "roof-mounted": 0.7,
+        "carport": 0.6,
+        "ground-mounted": 0.6
+      },
+      "industrial": {
+        "roof-mounted": 0.65,
+        "ground-mounted": 0.55,
+        "floating": 0.5
+      },
+      "utility-scale": {
+        "fixed-tilt": 0.45,
+        "single-axis-tracking": 0.35,
+        "dual-axis-tracking": 0.3
       }
     };
-  }, []);
-  
-  const initializeMap = (center: [number, number]) => {
-    if (!mapRef.current || mapInstanceRef.current) return;
     
-    const currentMapId = mapId.current;
-    const mapElement = document.getElementById(currentMapId);
-    
-    if (!mapElement) {
-      console.error(`Map element with ID ${currentMapId} not found in DOM`);
-      
-      // Double check that our ref is in the DOM
-      if (!mapRef.current) {
-        console.error("mapRef.current is null");
-        return;
-      }
-      
-      if (!document.body.contains(mapRef.current)) {
-        console.error("mapRef.current is not in the DOM");
-        return;
-      }
-      
-      console.log("Setting ID directly on the ref element again");
-      mapRef.current.id = currentMapId;
-    }
-    
-    try {
-      console.log(`Initializing map with ID: ${currentMapId}`);
-      const map = L.map(currentMapId, {
-        center: center,
-        zoom: 18,
-        maxZoom: 22
-      });
-      
-      mapInstanceRef.current = map;
-      
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        maxZoom: 19,
-      }).addTo(map);
-      
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-        maxZoom: 19
-      }).addTo(map);
-      
-      const drawnItems = new L.FeatureGroup();
-      map.addLayer(drawnItems);
-      drawnItemsRef.current = drawnItems;
-      
-      // Use setTimeout to ensure DOM is fully rendered before attempting to initialize leaflet-draw
-      setTimeout(() => {
-        import('leaflet-draw').then(() => {
-          // Type assertion for Draw control options
-          const drawOptions: any = {
-            draw: {
-              polyline: false,
-              circle: {
-                shapeOptions: {
-                  color: '#3388ff',
-                  weight: 2
-                }
-              },
-              rectangle: {
-                shapeOptions: {
-                  color: '#3388ff',
-                  weight: 2
-                }
-              },
-              marker: false,
-              circlemarker: false,
-              polygon: {
-                allowIntersection: false,
-                showArea: true,
-                drawError: {
-                  color: '#e1e100',
-                  message: '<strong>Polygon error:</strong> Polygon cannot self-intersect!'
-                },
-                shapeOptions: {
-                  color: '#3388ff',
-                  weight: 2
-                }
-              }
-            },
-            edit: {
-              featureGroup: drawnItems,
-              remove: true
-            }
-          };
-          
-          // Use any type assertion for L.Control.Draw
-          const drawControl = new (L.Control as any).Draw(drawOptions);
-          
-          map.addControl(drawControl);
-          drawControlRef.current = drawControl;
-          
-          map.on('draw:created', (e: any) => {
-            const layer = e.layer;
-            drawnItems.addLayer(layer);
-            
-            calculateArea(layer);
-          });
-          
-          map.on('draw:edited', (e: any) => {
-            const layers = e.layers;
-            layers.eachLayer((layer: any) => {
-              calculateArea(layer);
-            });
-          });
-          
-          map.on('draw:deleted', () => {
-            if (drawnItems.getLayers().length === 0) {
-              setDrawnArea(null);
-              setAreaAnalysis(null);
-              setCustomGcr(null);
-            }
-          });
-          
-          // Force a resize to ensure the map renders correctly
-          setTimeout(() => {
-            map.invalidateSize(true);
-            console.log("Map initialized successfully");
-            setMapLoaded(true);
-          }, 300);
-        }).catch(err => {
-          console.error("Error loading leaflet-draw:", err);
-          toast.error("Could not load drawing tools. Please try refreshing the page.");
-        });
-      }, 500);
-    } catch (error) {
-      console.error("Error initializing map:", error);
-      toast.error("Error initializing map. Please try refreshing the page.");
-    }
+    return gcrValues[category]?.[type] || 0.6; // Default to 0.6 if not found
   };
   
-  const calculateArea = (layer: any) => {
-    let coordinates: number[][] = [];
-    
-    if (layer instanceof L.Polygon) {
-      const latLngs = layer.getLatLngs()[0];
-      if (Array.isArray(latLngs)) {
-        coordinates = (latLngs as any).map((point: any) => [point.lat, point.lng]);
+  // Get GCR range based on category and installation type
+  const getGcrRange = (category: string, type: string): [number, number] => {
+    // Simplified ranges
+    const gcrRanges: {[key: string]: {[key: string]: [number, number]}} = {
+      "residential": {
+        "roof-mounted": [0.65, 0.85],
+        "ground-mounted": [0.55, 0.75]
+      },
+      "commercial": {
+        "roof-mounted": [0.6, 0.8],
+        "carport": [0.5, 0.7],
+        "ground-mounted": [0.5, 0.7]
+      },
+      "industrial": {
+        "roof-mounted": [0.55, 0.75],
+        "ground-mounted": [0.45, 0.65],
+        "floating": [0.4, 0.6]
+      },
+      "utility-scale": {
+        "fixed-tilt": [0.35, 0.55],
+        "single-axis-tracking": [0.25, 0.45],
+        "dual-axis-tracking": [0.2, 0.4]
       }
-    } else if (layer instanceof L.Rectangle) {
-      const bounds = layer.getBounds();
-      const ne = bounds.getNorthEast();
-      const nw = bounds.getNorthWest();
-      const sw = bounds.getSouthWest();
-      const se = bounds.getSouthEast();
-      coordinates = [
-        [ne.lat, ne.lng],
-        [nw.lat, nw.lng],
-        [sw.lat, sw.lng],
-        [se.lat, se.lng]
-      ];
-    } else if (layer instanceof L.Circle) {
-      const center = layer.getLatLng();
-      const radius = layer.getRadius();
-      const points = 32;
-      
-      for (let i = 0; i < points; i++) {
-        const angle = (i / points) * Math.PI * 2;
-        const dx = Math.cos(angle) * radius;
-        const dy = Math.sin(angle) * radius;
-        
-        const point = L.latLng(
-          center.lat + (dy / 111320),
-          center.lng + (dx / (111320 * Math.cos(center.lat * (Math.PI / 180))))
-        );
-        
-        coordinates.push([point.lat, point.lng]);
-      }
-    }
+    };
     
-    if (coordinates.length > 0) {
-      const areaInSquareMeters = calculatePolygonArea(coordinates);
-      setDrawnArea(areaInSquareMeters);
-      
-      const gcrValue = getGcrValue(projectCategory, installationType);
-      const analysis = calculateInstallationPotential(areaInSquareMeters, customGcr || gcrValue);
-      setAreaAnalysis(analysis);
-    }
+    return gcrRanges[category]?.[type] || [0.5, 0.7]; // Default range
   };
   
-  const handleSearchAddress = async () => {
-    if (!searchAddress.trim()) {
+  // Get installation description
+  const getInstallationDescription = (category: string, type: string): string => {
+    const descriptions: {[key: string]: {[key: string]: string}} = {
+      "residential": {
+        "roof-mounted": "Typical residential rooftop installation",
+        "ground-mounted": "Small-scale ground installation for homes"
+      },
+      "commercial": {
+        "roof-mounted": "Flat or pitched roof installation for commercial buildings",
+        "carport": "Solar panels mounted on carport structures",
+        "ground-mounted": "Ground installation for commercial properties"
+      },
+      "industrial": {
+        "roof-mounted": "Large-scale rooftop installation for factories or warehouses",
+        "ground-mounted": "Large ground installation for industrial use",
+        "floating": "Solar panels mounted on floating structures (e.g., water bodies)"
+      },
+      "utility-scale": {
+        "fixed-tilt": "Large solar farm with fixed-tilt arrays",
+        "single-axis-tracking": "Solar farm with panels that track the sun on one axis",
+        "dual-axis-tracking": "Solar farm with panels that track the sun on two axes"
+      }
+    };
+    
+    return descriptions[category]?.[type] || "Standard solar PV installation";
+  };
+  
+  // Handle installation type change based on project category
+  useEffect(() => {
+    const types = getInstallationTypes(projectCategory);
+    setInstallationType(types[0]);
+    
+    // Update GCR value and range when category changes
+    const newGcrValue = getGcrValue(projectCategory, types[0]);
+    const newGcrRange = getGcrRange(projectCategory, types[0]);
+    
+    setGcr(newGcrValue);
+    setGcrRange(newGcrRange);
+  }, [projectCategory]);
+  
+  // Handle installation type change
+  useEffect(() => {
+    if (installationType) {
+      const newGcrValue = getGcrValue(projectCategory, installationType);
+      const newGcrRange = getGcrRange(projectCategory, installationType);
+      
+      setGcr(newGcrValue);
+      setGcrRange(newGcrRange);
+    }
+  }, [installationType]);
+  
+  // Handle location search
+  const handleSearchLocation = async () => {
+    if (!defaultLocation && (!city || !country)) {
       toast.error("Please enter a location to search");
       return;
     }
     
-    setSearchingAddress(true);
-    
+    setIsLoading(true);
     try {
-      const location = await searchLocation(searchAddress);
+      const searchQuery = defaultLocation || `${city}, ${country}`;
       
-      if (location) {
-        setMapCenter([location.lat, location.lng]);
+      // Using Nominatim geocoding service
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`
+      );
+      
+      if (!response.ok) {
+        throw new Error("Failed to fetch location");
+      }
+      
+      const data = await response.json();
+      
+      if (data && data.length > 0) {
+        const location = data[0];
+        const newLat = parseFloat(location.lat);
+        const newLng = parseFloat(location.lon);
         
-        if (mapInstanceRef.current) {
-          mapInstanceRef.current.setView([location.lat, location.lng], 18);
-          toast.success(`Location found: ${location.displayName}`);
-        }
+        setMapCenter([newLat, newLng]);
+        
+        // For demonstration, we'd also update city and country here
+        // In a real app, you might do a reverse geocode to get accurate city/country
+        
+        toast.success("Location found");
       } else {
-        toast.error("Could not find location. Please try a different search term.");
+        toast.error("Location not found");
       }
     } catch (error) {
-      toast.error(`Error searching for location: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error("Error searching location:", error);
+      toast.error("Error searching location");
     } finally {
-      setSearchingAddress(false);
+      setIsLoading(false);
     }
   };
   
-  useEffect(() => {
-    setInstallationType(installationTypes[projectCategory][0]);
-  }, [projectCategory]);
+  // Calculate area from coordinates
+  const calculateAreaFromCoords = (coords: any[]): number => {
+    try {
+      if (!coords || coords.length < 3) {
+        return 0;
+      }
+      
+      // Earth radius in meters
+      const R = 6371000;
+      
+      let area = 0;
+      for (let i = 0; i < coords.length; i++) {
+        const j = (i + 1) % coords.length;
+        
+        const lat1 = coords[i].lat * Math.PI / 180;
+        const lon1 = coords[i].lng * Math.PI / 180;
+        const lat2 = coords[j].lat * Math.PI / 180;
+        const lon2 = coords[j].lng * Math.PI / 180;
+        
+        area += (lon2 - lon1) * (2 + Math.sin(lat1) + Math.sin(lat2));
+      }
+      
+      area = Math.abs(area * R * R / 2);
+      return area;
+    } catch (error) {
+      console.error("Error calculating area:", error);
+      return 0;
+    }
+  };
   
-  useEffect(() => {
-    if (drawnArea === null) return;
+  // Handle creation of new drawn items
+  const handleCreated = (e: any) => {
+    const layer = e.layer;
     
-    const gcrValue = getGcrValue(projectCategory, installationType);
-    const analysis = calculateInstallationPotential(drawnArea, customGcr || gcrValue);
-    setAreaAnalysis(analysis);
-  }, [projectCategory, installationType, customGcr, drawnArea]);
-  
-  useEffect(() => {
-    if (customGcr === null && projectCategory && installationType) {
-      const defaultGcr = getGcrValue(projectCategory, installationType);
-      setCustomGcr(defaultGcr);
+    // Get the coordinates of the drawn shape
+    if (layer && layer.getLatLngs) {
+      const coords = layer.getLatLngs()[0];
+      
+      // Calculate area
+      const areaInSquareMeters = calculateAreaFromCoords(coords);
+      
+      setTotalArea(areaInSquareMeters);
+      setLastDrawnArea({
+        type: "Feature",
+        geometry: {
+          type: "Polygon",
+          coordinates: [coords.map((coord: any) => [coord.lng, coord.lat])]
+        }
+      });
+      
+      // Calculate initial usable area (85% of total)
+      const initialUsable = areaInSquareMeters * 0.85;
+      setInitialUsableArea(initialUsable);
+      
+      // Calculate final usable area with GCR
+      const finalUsable = initialUsable * gcr;
+      setFinalUsableArea(finalUsable);
+      
+      // Estimate modules and capacity
+      const modules = Math.floor(finalUsable / 2.16);  // typical module size
+      setModulesEstimate(modules);
+      
+      const capacityLow = modules * 450 / 1000;  // Low-power modules (~450W)
+      const capacityHigh = modules * 620 / 1000; // High-power modules (~620W)
+      setPotentialCapacityRange({ low: capacityLow, high: capacityHigh });
+      setPotentialCapacity((capacityLow + capacityHigh) / 2);
+      
+      toast.success("Area calculation completed");
     }
-  }, [projectCategory, installationType]);
-  
-  const handleGcrChange = (value: number[]) => {
-    setCustomGcr(value[0]);
   };
   
+  // Handle GCR change
+  useEffect(() => {
+    if (initialUsableArea !== null) {
+      const newFinalArea = initialUsableArea * gcr;
+      setFinalUsableArea(newFinalArea);
+      
+      // Update modules and capacity estimates
+      const newModules = Math.floor(newFinalArea / 2.16);
+      setModulesEstimate(newModules);
+      
+      const newCapacityLow = newModules * 450 / 1000;
+      const newCapacityHigh = newModules * 620 / 1000;
+      setPotentialCapacityRange({ low: newCapacityLow, high: newCapacityHigh });
+      setPotentialCapacity((newCapacityLow + newCapacityHigh) / 2);
+    }
+  }, [gcr, initialUsableArea]);
+  
+  // Handle completion
   const handleComplete = () => {
-    if (areaAnalysis && onComplete) {
-      onComplete({
-        ...areaAnalysis,
+    if (finalUsableArea && potentialCapacity && potentialCapacityRange) {
+      const results = {
+        totalArea,
+        initialUsableArea,
+        finalUsableArea,
+        modulesEstimate,
+        potentialCapacity,
+        potentialCapacityLow: potentialCapacityRange.low,
+        potentialCapacityHigh: potentialCapacityRange.high,
+        gcr,
         projectCategory,
         installationType,
-        mapCenter,
-        location: { lat: mapCenter[0], lng: mapCenter[1] },
-        timezone: timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
-        country: country || '',
-        city: city || ''
-      });
+        latitude: mapCenter[0],
+        longitude: mapCenter[1],
+        country,
+        city,
+        timezone
+      };
+      
+      onComplete(results);
+      toast.success("Area mapping completed");
+    } else {
+      toast.error("Please draw an area on the map first");
     }
   };
   
-  const handleSkip = () => {
-    if (onComplete && initialCapacity) {
-      onComplete({
-        skipped: true,
-        potentialCapacity: initialCapacity
-      });
+  // Handle using initial capacity instead of mapped area
+  const handleUseInitialCapacity = () => {
+    if (initialCapacity) {
+      const results = {
+        useInitialCapacity: true,
+        initialCapacity,
+        latitude: mapCenter[0],
+        longitude: mapCenter[1],
+        country,
+        city,
+        timezone
+      };
+      
+      onComplete(results);
+      toast.success("Using initial capacity");
     }
   };
-  
-  const handleClearDrawing = () => {
-    if (drawnItemsRef.current) {
-      drawnItemsRef.current.clearLayers();
-      setDrawnArea(null);
-      setAreaAnalysis(null);
-    }
-  };
-  
+
   return (
-    <div className="w-full">
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-2xl">
-            <MapPin className="h-6 w-6 text-solar" /> 
-            Solar Installation Area Mapping
-          </CardTitle>
-          <CardDescription>
-            Draw polygons or shapes on the map to calculate potential solar installation area
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {initialCapacity && (
-            <Alert className="mb-4 bg-solar/10">
-              <AlertDescription className="flex items-center">
-                <Info className="h-4 w-4 mr-2" />
-                Initial capacity provided: {initialCapacity.toFixed(1)} kW
-              </AlertDescription>
-            </Alert>
-          )}
-          
-          <div className="mb-4">
-            <h3 className="text-lg font-semibold mb-2">Project Configuration</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="projectCategory">Project Category:</Label>
-                <Select
-                  value={projectCategory}
-                  onValueChange={setProjectCategory}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select project category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {gcrCategories.map(category => (
-                      <SelectItem key={category} value={category}>
-                        {category}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="installationType">Installation Type:</Label>
-                <Select
-                  value={installationType}
-                  onValueChange={setInstallationType}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select installation type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {projectCategory && installationTypes[projectCategory]?.map(type => (
-                      <SelectItem key={type} value={type}>
-                        {type}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
-            {projectCategory && installationType && (
-              <Alert className="mt-4 bg-blue-50">
-                <AlertDescription>
-                  <div className="space-y-1">
-                    <div><strong>Ground Coverage Ratio (GCR):</strong> {customGcr !== null ? (customGcr * 100).toFixed(1) : (getGcrValue(projectCategory, installationType) * 100).toFixed(1)}%</div>
-                    <div><strong>GCR Range:</strong> {(getGcrRange(projectCategory, installationType)[0] * 100).toFixed(1)}% - {(getGcrRange(projectCategory, installationType)[1] * 100).toFixed(1)}%</div>
-                    <div><strong>Description:</strong> {getInstallationDescription(projectCategory, installationType)}</div>
-                  </div>
-                </AlertDescription>
-              </Alert>
-            )}
+    <div className="space-y-6">
+      <div className="glass-card rounded-xl p-6 shadow-sm">
+        <h2 className="text-2xl font-semibold mb-4">🗺️ Solar Installation Area Mapping</h2>
+        
+        {initialCapacity && (
+          <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-6">
+            <p className="text-blue-800">
+              💡 Initial capacity provided: {initialCapacity.toFixed(1)} kW
+            </p>
           </div>
-          
-          <div className="mb-4">
-            <h3 className="text-lg font-semibold mb-2">Location Selection</h3>
-            <div className="flex flex-col sm:flex-row gap-2 mb-4">
-              <div className="flex-grow">
-                <Input 
-                  placeholder="Enter location or address"
-                  value={searchAddress}
-                  onChange={(e) => setSearchAddress(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearchAddress()}
-                />
-              </div>
-              <Button 
-                onClick={handleSearchAddress}
-                disabled={searchingAddress}
+        )}
+        
+        <div className="mb-6">
+          <h3 className="text-xl font-semibold mb-3">Project Configuration</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="space-y-2">
+              <Label htmlFor="projectCategory">Select Project Category</Label>
+              <Select 
+                value={projectCategory} 
+                onValueChange={setProjectCategory}
               >
-                {searchingAddress ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Search className="h-4 w-4 mr-2" />
-                )}
-                Search
-              </Button>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose project category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {gcrCategories.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category.charAt(0).toUpperCase() + category.slice(1)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="installationType">Select Installation Type</Label>
+              <Select 
+                value={installationType} 
+                onValueChange={setInstallationType}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose installation type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {getInstallationTypes(projectCategory).map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           
-          <div className="mb-4 relative">
-            <div 
-              ref={mapRef} 
-              id={mapId.current}
-              className="h-[500px] rounded-md border border-gray-200 shadow-inner bg-gray-50"
-            />
-            
-            {!mapLoaded && (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-50/80">
-                <div className="text-center">
-                  <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-solar" />
-                  <p>Loading map...</p>
-                </div>
-              </div>
-            )}
-            
-            {mapLoaded && (
-              <div className="absolute bottom-4 right-4 z-[1000]">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleClearDrawing}
+          <Card className="bg-amber-50 border-amber-200 mb-6">
+            <CardContent className="p-4">
+              <h4 className="text-lg font-medium mb-2">📊 Installation Configuration</h4>
+              <ul className="space-y-1 text-sm">
+                <li><span className="font-medium">Ground Coverage Ratio (GCR):</span> {(gcr * 100).toFixed(1)}%</li>
+                <li><span className="font-medium">GCR Range:</span> {(gcrRange[0] * 100).toFixed(1)}% - {(gcrRange[1] * 100).toFixed(1)}%</li>
+                <li><span className="font-medium">Description:</span> {getInstallationDescription(projectCategory, installationType)}</li>
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
+        
+        <div className="mb-6">
+          <h3 className="text-xl font-semibold mb-3">Location Selection</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="md:col-span-2 space-y-2">
+              <Label>Search location</Label>
+              <div className="flex space-x-2">
+                <Input 
+                  placeholder="Enter city, country or address" 
+                  defaultValue={defaultLocation || ""}
+                  onChange={(e) => setCity(e.target.value)}
+                  className="flex-1"
+                />
+                <Button
+                  onClick={handleSearchLocation}
+                  disabled={isLoading}
+                  className="min-w-20"
                 >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Clear Drawing
+                  {isLoading ? "Searching..." : (
+                    <>
+                      <Search className="w-4 h-4 mr-2" />
+                      Search
+                    </>
+                  )}
                 </Button>
               </div>
-            )}
-          </div>
-          
-          {areaAnalysis && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Installation Area Analysis</h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card>
-                  <CardHeader className="py-3">
-                    <CardTitle className="text-base">Total Area</CardTitle>
-                  </CardHeader>
-                  <CardContent className="py-2">
-                    <p className="text-2xl font-semibold">{areaAnalysis.totalArea.toFixed(1)} m²</p>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader className="py-3">
-                    <CardTitle className="text-base">Initial Usable Area</CardTitle>
-                  </CardHeader>
-                  <CardContent className="py-2">
-                    <p className="text-2xl font-semibold">{areaAnalysis.initialUsableArea.toFixed(1)} m²</p>
-                    <p className="text-xs text-muted-foreground">After 85% usability factor</p>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader className="py-3">
-                    <CardTitle className="text-base">Final Usable Area</CardTitle>
-                  </CardHeader>
-                  <CardContent className="py-2">
-                    <p className="text-2xl font-semibold">{areaAnalysis.finalUsableArea.toFixed(1)} m²</p>
-                    <p className="text-xs text-muted-foreground">After GCR application</p>
-                  </CardContent>
-                </Card>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card className="bg-green-50">
-                  <CardHeader className="py-3">
-                    <CardTitle className="text-base">Installation Area Analysis</CardTitle>
-                  </CardHeader>
-                  <CardContent className="py-2">
-                    <ul className="space-y-1">
-                      <li><strong>Total Area:</strong> {areaAnalysis.totalArea.toFixed(1)} m²</li>
-                      <li><strong>GCR Applied:</strong> {(areaAnalysis.gcr * 100).toFixed(1)}%</li>
-                      <li><strong>Final Usable Area:</strong> {areaAnalysis.finalUsableArea.toFixed(1)} m²</li>
-                      <li><strong>Estimated Modules:</strong> {areaAnalysis.modulesEstimate}</li>
-                      <li><strong>Potential Capacity:</strong> {areaAnalysis.potentialCapacityLow.toFixed(1)} - {areaAnalysis.potentialCapacityHigh.toFixed(1)} kW</li>
-                    </ul>
-                  </CardContent>
-                </Card>
-                
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <Label>Ground Coverage Ratio (GCR):</Label>
-                      <span className="font-semibold">{customGcr !== null ? (customGcr * 100).toFixed(1) : 0}%</span>
-                    </div>
-                    
-                    <Slider
-                      value={[customGcr || 0.4]}
-                      min={getGcrRange(projectCategory, installationType)[0]}
-                      max={getGcrRange(projectCategory, installationType)[1]}
-                      step={0.01}
-                      onValueChange={handleGcrChange}
-                    />
-                    
-                    <p className="text-xs text-muted-foreground">
-                      Recommended range: {(getGcrRange(projectCategory, installationType)[0] * 100).toFixed(1)}% - {(getGcrRange(projectCategory, installationType)[1] * 100).toFixed(1)}%
-                    </p>
-                  </div>
-                  
-                  {initialCapacity && (
-                    <Card className="bg-blue-50">
-                      <CardContent className="py-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-semibold">Capacity Difference</p>
-                            <p className="text-base">
-                              {((areaAnalysis.potentialCapacity - initialCapacity) / initialCapacity * 100).toFixed(1)}%
-                            </p>
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            Difference between mapped and initially provided capacity
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Current Location</Label>
+              <div className="flex">
+                <Button 
+                  variant="outline" 
+                  className="w-full" 
+                  onClick={() => {
+                    if (navigator.geolocation) {
+                      navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                          const { latitude, longitude } = position.coords;
+                          setMapCenter([latitude, longitude]);
+                          toast.success("Current location detected");
+                        },
+                        (error) => {
+                          toast.error("Error getting location: " + error.message);
+                        }
+                      );
+                    } else {
+                      toast.error("Geolocation is not supported by your browser");
+                    }
+                  }}
+                >
+                  <MapPin className="w-4 h-4 mr-2" />
+                  Detect My Location
+                </Button>
               </div>
             </div>
-          )}
-          
-          <div className="mt-6 flex flex-wrap gap-4 justify-end">
-            {areaAnalysis && (
+          </div>
+        </div>
+        
+        <div className="mb-6">
+          <div className="h-[500px] w-full border border-gray-300 rounded-md overflow-hidden">
+            <MapContainer 
+              center={mapCenter} 
+              zoom={18} 
+              style={{ height: "100%", width: "100%" }}
+            >
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              />
+              <TileLayer
+                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                attribution='Tiles &copy; Esri'
+              />
+              <FeatureGroup>
+                <EditControl
+                  position="topright"
+                  onCreated={handleCreated}
+                  draw={{
+                    rectangle: true,
+                    polygon: {
+                      allowIntersection: false,
+                      drawError: {
+                        color: '#e1e100',
+                        message: 'Polygon cannot intersect!'
+                      },
+                      shapeOptions: {
+                        color: '#97009c',
+                        fillOpacity: 0.3
+                      }
+                    },
+                    polyline: false,
+                    circle: true,
+                    circlemarker: false,
+                    marker: true
+                  }}
+                />
+              </FeatureGroup>
+            </MapContainer>
+          </div>
+        </div>
+        
+        {totalArea !== null && (
+          <div className="mb-6">
+            <h3 className="text-xl font-semibold mb-3">Installation Area Analysis</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div className="p-4 bg-gray-50 rounded-md text-center">
+                <div className="text-lg font-semibold">{totalArea.toFixed(1)} m²</div>
+                <div className="text-sm text-gray-600">Total Area</div>
+              </div>
+              
+              <div className="p-4 bg-gray-50 rounded-md text-center">
+                <div className="text-lg font-semibold">{initialUsableArea?.toFixed(1)} m²</div>
+                <div className="text-sm text-gray-600">Initial Usable Area</div>
+              </div>
+              
+              <div className="p-4 bg-gray-50 rounded-md text-center">
+                <div className="text-lg font-semibold">{finalUsableArea?.toFixed(1)} m²</div>
+                <div className="text-sm text-gray-600">Final Usable Area</div>
+              </div>
+            </div>
+            
+            <div className="mb-4">
+              <Label htmlFor="gcr" className="flex justify-between">
+                <span>Ground Coverage Ratio (GCR)</span>
+                <span>{(gcr * 100).toFixed(1)}%</span>
+              </Label>
+              <Slider
+                id="gcr"
+                min={gcrRange[0]}
+                max={gcrRange[1]}
+                step={0.01}
+                value={[gcr]}
+                onValueChange={(values) => setGcr(values[0])}
+                className="py-4"
+              />
+              <div className="text-xs text-gray-500 flex justify-between">
+                <span>Min: {(gcrRange[0] * 100).toFixed(1)}%</span>
+                <span>Max: {(gcrRange[1] * 100).toFixed(1)}%</span>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card className="bg-green-50 border-green-200">
+                <CardContent className="p-4">
+                  <h4 className="text-lg font-medium mb-2">📊 Installation Analysis</h4>
+                  <ul className="space-y-1">
+                    <li><span className="font-medium">Total Area:</span> {totalArea.toFixed(1)} m²</li>
+                    <li><span className="font-medium">GCR Applied:</span> {(gcr * 100).toFixed(1)}%</li>
+                    <li><span className="font-medium">Final Usable Area:</span> {finalUsableArea?.toFixed(1)} m²</li>
+                    <li><span className="font-medium">Estimated Modules:</span> {modulesEstimate}</li>
+                    <li><span className="font-medium">Potential Capacity:</span> {potentialCapacityRange?.low.toFixed(1)} - {potentialCapacityRange?.high.toFixed(1)} kW</li>
+                  </ul>
+                </CardContent>
+              </Card>
+              
+              {initialCapacity && (
+                <Card className="bg-blue-50 border-blue-200">
+                  <CardContent className="p-4">
+                    <h4 className="text-lg font-medium mb-2">🔄 Capacity Comparison</h4>
+                    <div className="mb-2">
+                      <div className="flex justify-between mb-1">
+                        <span>Initial Capacity:</span>
+                        <span>{initialCapacity.toFixed(1)} kW</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Mapped Capacity:</span>
+                        <span>{potentialCapacity?.toFixed(1)} kW</span>
+                      </div>
+                    </div>
+                    
+                    {potentialCapacity && (
+                      <div className="mt-4">
+                        <div className="flex justify-between text-sm">
+                          <span>Difference:</span>
+                          <span className={potentialCapacity > initialCapacity ? 'text-green-600' : 'text-red-600'}>
+                            {potentialCapacity > initialCapacity ? '+' : ''}
+                            {(((potentialCapacity - initialCapacity) / initialCapacity) * 100).toFixed(1)}%
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+        )}
+        
+        <div>
+          <h3 className="text-xl font-semibold mb-3">Navigation Options</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {totalArea !== null && (
               <Button 
-                variant="default" 
-                className="bg-solar hover:bg-solar-dark"
                 onClick={handleComplete}
+                className="bg-solar hover:bg-solar-dark text-white"
               >
                 Use Mapped Area
-                <ChevronsRight className="ml-2 h-4 w-4" />
               </Button>
             )}
             
             {initialCapacity && (
               <Button 
-                variant="outline"
-                onClick={handleSkip}
+                variant="outline" 
+                onClick={handleUseInitialCapacity}
               >
                 Use Initial Capacity
               </Button>
             )}
             
             <Button 
-              variant="ghost"
-              onClick={handleSkip}
+              variant="outline" 
+              onClick={handleUseInitialCapacity}
             >
               Skip Area Mapping
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 };
