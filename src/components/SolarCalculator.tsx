@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,7 +10,7 @@ import EnvironmentalBenefits from "@/components/EnvironmentalBenefits";
 import AnnualEnergyCheck from "@/components/AnnualEnergyCheck";
 import ElectricityDetails from "@/components/ElectricityDetails";
 import FinancialMetricsDisplay from "@/components/FinancialMetricsDisplay";
-import AdvancedSolarInputs from "@/components/AdvancedSolarInputs";
+import AdvancedSolarInputs from "@/components/advanced-solar-inputs";
 import { 
   calculateLevelizedCostOfEnergy, 
   calculateAnnualRevenue, 
