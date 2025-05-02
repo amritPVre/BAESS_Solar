@@ -18,6 +18,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { SolarProjectsProvider } from "@/hooks/useSolarProjects";
 import AuthGuard from "./components/AuthGuard";
 import SolarDesignerPage from "./pages/SolarDesignerPage";
+import AdvancedSolarCalculatorPage from "./pages/AdvancedSolarCalculatorPage";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +49,11 @@ const App = () => (
               <Route path="/solar-calculator" element={
                 <AuthGuard>
                   <SolarDesignerPage />
+                </AuthGuard>
+              } />
+              <Route path="/advanced-calculator" element={
+                <AuthGuard>
+                  <AdvancedSolarCalculatorPage />
                 </AuthGuard>
               } />
               {/* For backward compatibility - maintain both routes */}
