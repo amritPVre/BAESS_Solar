@@ -246,10 +246,21 @@ const AdvancedSolarCalculator: React.FC = () => {
               onDcAcRatioChange={setDcAcRatio}
             />
             {selectedPanel && (
-              <EfficiencyAdjustmentComponent 
-                selectedPanel={selectedPanel}
-                systemCapacity={systemCapacity}
-              />
+              <div className="mt-4 p-4 bg-blue-50 rounded-md border border-blue-100">
+                <h3 className="font-medium text-blue-800 mb-2">Design Summary</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p><span className="font-medium">Panel:</span> {selectedPanel?.manufacturer} {selectedPanel?.model}</p>
+                    <p><span className="font-medium">Panel Power:</span> {selectedPanel?.nominal_power_w}W</p>
+                    <p><span className="font-medium">Efficiency:</span> {selectedPanel?.efficiency_percent}%</p>
+                  </div>
+                  <div>
+                    <p><span className="font-medium">Total System Size:</span> {systemCapacity} kWp</p>
+                    {selectedInverter && <p><span className="font-medium">Inverter:</span> {selectedInverter?.manufacturer} {selectedInverter?.model}</p>}
+                    <p><span className="font-medium">DC/AC Ratio:</span> {dcAcRatio}%</p>
+                  </div>
+                </div>
+              </div>
             )}
           </motion.div>
         );
@@ -278,10 +289,21 @@ const AdvancedSolarCalculator: React.FC = () => {
               onLongitudeChange={setLongitude}
             />
             {selectedPanel && (
-              <EfficiencyAdjustmentComponent 
-                selectedPanel={selectedPanel}
-                systemCapacity={systemCapacity}
-              />
+              <div className="mt-4 p-4 bg-blue-50 rounded-md border border-blue-100">
+                <h3 className="font-medium text-blue-800 mb-2">Design Summary</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p><span className="font-medium">Panel:</span> {selectedPanel?.manufacturer} {selectedPanel?.model}</p>
+                    <p><span className="font-medium">Total System Size:</span> {systemCapacity} kWp</p>
+                    <p><span className="font-medium">DC/AC Ratio:</span> {dcAcRatio}%</p>
+                  </div>
+                  <div>
+                    <p><span className="font-medium">Tilt:</span> {tilt}°</p>
+                    <p><span className="font-medium">Azimuth:</span> {azimuth}° ({azimuth === 180 ? 'South' : azimuth < 180 ? 'East' : 'West'})</p>
+                    <p><span className="font-medium">Location:</span> {latitude.toFixed(4)}, {longitude.toFixed(4)}</p>
+                  </div>
+                </div>
+              </div>
             )}
             <div className="flex justify-center pt-4">
               <Button 
@@ -391,11 +413,11 @@ const AdvancedSolarCalculator: React.FC = () => {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-6 max-w-[95%] lg:max-w-[90%] xl:max-w-[85%] mx-auto">
       {/* Sticky Progress Bar and Steps Navigation */}
       <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm py-4 mb-8 border-b shadow-sm">
-        {/* Progress Bar with Step Labels */}
-        <div className="relative mb-2">
+        {/* Progress Bar */}
+        <div className="relative mb-8">
           <div className="h-3 bg-gray-200 rounded-full">
             <div 
               className="h-3 bg-gradient-to-r from-blue-500 to-green-500 rounded-full transition-all duration-500 ease-in-out" 
@@ -403,88 +425,52 @@ const AdvancedSolarCalculator: React.FC = () => {
             ></div>
           </div>
           
-          {/* Step Labels on Progress Bar - Fixed positioning to stay within container */}
-          <div className="flex justify-between w-full px-1 mt-2">
+          {/* Step Labels on Progress Bar */}
+          <div className="flex justify-between w-full mt-2">
             {steps.map((step, index) => {
-              // Calculate position for label based on index
-              const position = index / (steps.length - 1) * 100;
-              
-              // For first and last labels, add special positioning
-              let textAlignment = "text-center";
-              let extraStyles = {};
-              
-              if (index === 0) {
-                textAlignment = "text-left";
-                extraStyles = { left: "0", transform: "none" };
-              } else if (index === steps.length - 1) {
-                textAlignment = "text-right";
-                extraStyles = { right: "0", left: "auto", transform: "none" };
-              } else {
-                extraStyles = { 
-                  left: `${position}%`, 
-                  transform: 'translateX(-50%)'
-                };
-              }
+              const isActive = index <= currentStep;
               
               return (
                 <div 
                   key={step.id}
-                  className={`text-xs font-medium transition-all absolute ${
-                    index <= currentStep ? 'text-blue-600' : 'text-gray-500'
-                  } ${textAlignment}`}
-                  style={extraStyles}
-                >
-                  {step.title}
-                </div>
-              );
-            })}
-          </div>
-          
-          {/* Step Indicators */}
-          <div className="flex justify-between absolute -bottom-4 w-full">
-            {steps.map((step, index) => {
-              const position = index / (steps.length - 1) * 100;
-              
-              // Similar positioning logic for indicators as for labels
-              let extraStyles = {};
-              
-              if (index === 0) {
-                extraStyles = { left: "0", transform: "none" };
-              } else if (index === steps.length - 1) {
-                extraStyles = { right: "0", left: "auto", transform: "none" };
-              } else {
-                extraStyles = { 
-                  left: `${position}%`, 
-                  transform: 'translateX(-50%)'
-                };
-              }
-              
-              return (
-                <div 
-                  key={step.id}
-                  className={`flex flex-col items-center cursor-pointer transition-all absolute ${
-                    index <= currentStep ? 'opacity-100' : 'opacity-50'
+                  className={`text-xs font-medium pb-1 transition-all cursor-pointer ${
+                    isActive ? 'text-blue-600' : 'text-gray-500'
+                  } ${
+                    index === 0 ? 'text-left' : 
+                    index === steps.length - 1 ? 'text-right' : 'text-center'
                   }`}
+                  style={{ 
+                    width: index === 0 ? '25%' : 
+                           index === steps.length - 1 ? '25%' : '25%',
+                    paddingLeft: index === 0 ? '0' : '',
+                    paddingRight: index === steps.length - 1 ? '0' : '',
+                  }}
                   onClick={() => {
                     // Allow going to previous steps or to results if calculation is completed
                     if (index <= currentStep || (index === 3 && calculationCompleted)) {
                       setCurrentStep(index);
                     }
                   }}
-                  style={extraStyles}
                 >
                   <div 
-                    className={`h-8 w-8 rounded-full flex items-center justify-center transition-all ${
-                      index < currentStep ? 'bg-green-500 text-white' : 
-                      index === currentStep ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-500'
-                    } shadow-md`}
+                    className={`border-2 ${
+                      index < currentStep ? 'bg-green-500 border-green-500' :
+                      index === currentStep ? 'bg-blue-500 border-blue-500' :
+                      'bg-gray-100 border-gray-300'
+                    } h-5 w-5 rounded-full mb-1 flex items-center justify-center mx-auto ${
+                      index === 0 ? 'ml-0' :
+                      index === steps.length - 1 ? 'mr-0' : ''
+                    }`}
                   >
                     {index < currentStep ? (
-                      <Check className="h-5 w-5" />
+                      <Check className="h-3 w-3 text-white" />
                     ) : (
-                      index === currentStep ? step.icon : null
+                      <span className={`text-[10px] font-bold ${
+                        index === currentStep ? 'text-white' : 'text-gray-500'
+                      }`}>{index + 1}</span>
                     )}
                   </div>
+                  {step.title}
                 </div>
               );
             })}
@@ -492,7 +478,7 @@ const AdvancedSolarCalculator: React.FC = () => {
         </div>
         
         {/* Current Step Title and Description */}
-        <div className="mt-8 mb-4">
+        <div className="mb-4">
           <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             {steps[currentStep].title}
           </h2>
