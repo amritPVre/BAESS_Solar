@@ -56,11 +56,11 @@ const ProductionResults: React.FC<ProductionResultsProps> = ({
     value: value
   })) : [];
 
-  // Prepare monthly chart data
+  // Prepare monthly chart data - explicitly mapping to an array of objects for Recharts
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const monthlyChartData = results.outputs.ac_monthly.map((value, index) => ({
-    month: monthNames[index],
-    energy: value,
+  const monthlyChartData = monthNames.map((month, index) => ({
+    month: month,
+    energy: results.outputs.ac_monthly[index],
     dc: results.outputs.dc_monthly[index],
     irradiance: results.outputs.poa_monthly[index]
   }));
@@ -127,12 +127,12 @@ const ProductionResults: React.FC<ProductionResultsProps> = ({
               </div>
             )}
 
-            {/* Monthly Chart */}
+            {/* Monthly Chart - fixed to properly show data */}
             <div className="bg-white p-4 rounded border">
               <SolarChart
                 data={monthlyChartData}
                 xKey="month"
-                barKeys={["energy"]}
+                yKey="energy"
                 title="Monthly Energy Production"
                 type="bar"
                 color="#82ca9d"
