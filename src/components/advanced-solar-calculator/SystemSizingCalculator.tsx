@@ -154,14 +154,14 @@ const SystemSizingCalculator: React.FC<SystemSizingCalculatorProps> = ({
                   <Badge>{systemSizing.actualDcAcRatio.toFixed(1)}%</Badge>
                 </div>
                 {systemSizing.actualDcAcRatio < 110 ? (
-                  <Alert variant="warning" className="mt-2">
+                  <Alert variant="destructive" className="mt-2">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
                       DC/AC ratio is lower than recommended (110-130%). Consider reducing inverter size or increasing panel capacity.
                     </AlertDescription>
                   </Alert>
                 ) : systemSizing.actualDcAcRatio > 130 ? (
-                  <Alert variant="warning" className="mt-2">
+                  <Alert variant="destructive" className="mt-2">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
                       DC/AC ratio is higher than recommended (110-130%). Consider increasing inverter size or reducing panel capacity.

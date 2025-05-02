@@ -6,7 +6,7 @@ import { SolarPanel, SolarInverter } from "@/services/solarComponentsService";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { 
-  Panel as PanelIcon, 
+  Component as PanelIcon, 
   Zap, 
   Ruler, 
   Lightbulb 
