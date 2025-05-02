@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -404,22 +403,36 @@ const AdvancedSolarCalculator: React.FC = () => {
             ></div>
           </div>
           
-          {/* Step Labels on Progress Bar */}
-          <div className="flex justify-between absolute -top-7 w-full px-1">
+          {/* Step Labels on Progress Bar - Fixed positioning to stay within container */}
+          <div className="flex justify-between w-full px-1 mt-2">
             {steps.map((step, index) => {
-              // Calculate position for label
+              // Calculate position for label based on index
               const position = index / (steps.length - 1) * 100;
+              
+              // For first and last labels, add special positioning
+              let textAlignment = "text-center";
+              let extraStyles = {};
+              
+              if (index === 0) {
+                textAlignment = "text-left";
+                extraStyles = { left: "0", transform: "none" };
+              } else if (index === steps.length - 1) {
+                textAlignment = "text-right";
+                extraStyles = { right: "0", left: "auto", transform: "none" };
+              } else {
+                extraStyles = { 
+                  left: `${position}%`, 
+                  transform: 'translateX(-50%)'
+                };
+              }
+              
               return (
                 <div 
                   key={step.id}
-                  className={`text-xs font-medium transition-all ${
+                  className={`text-xs font-medium transition-all absolute ${
                     index <= currentStep ? 'text-blue-600' : 'text-gray-500'
-                  }`}
-                  style={{ 
-                    left: `${position}%`, 
-                    transform: 'translateX(-50%)',
-                    position: 'absolute'
-                  }}
+                  } ${textAlignment}`}
+                  style={extraStyles}
                 >
                   {step.title}
                 </div>
@@ -429,34 +442,52 @@ const AdvancedSolarCalculator: React.FC = () => {
           
           {/* Step Indicators */}
           <div className="flex justify-between absolute -bottom-4 w-full">
-            {steps.map((step, index) => (
-              <div 
-                key={step.id}
-                className={`flex flex-col items-center cursor-pointer transition-all ${index <= currentStep ? 'opacity-100' : 'opacity-50'}`}
-                onClick={() => {
-                  // Allow going to previous steps or to results if calculation is completed
-                  if (index <= currentStep || (index === 3 && calculationCompleted)) {
-                    setCurrentStep(index);
-                  }
-                }}
-                style={{
+            {steps.map((step, index) => {
+              const position = index / (steps.length - 1) * 100;
+              
+              // Similar positioning logic for indicators as for labels
+              let extraStyles = {};
+              
+              if (index === 0) {
+                extraStyles = { left: "0", transform: "none" };
+              } else if (index === steps.length - 1) {
+                extraStyles = { right: "0", left: "auto", transform: "none" };
+              } else {
+                extraStyles = { 
+                  left: `${position}%`, 
                   transform: 'translateX(-50%)'
-                }}
-              >
+                };
+              }
+              
+              return (
                 <div 
-                  className={`h-8 w-8 rounded-full flex items-center justify-center transition-all ${
-                    index < currentStep ? 'bg-green-500 text-white' : 
-                    index === currentStep ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-500'
-                  } shadow-md`}
+                  key={step.id}
+                  className={`flex flex-col items-center cursor-pointer transition-all absolute ${
+                    index <= currentStep ? 'opacity-100' : 'opacity-50'
+                  }`}
+                  onClick={() => {
+                    // Allow going to previous steps or to results if calculation is completed
+                    if (index <= currentStep || (index === 3 && calculationCompleted)) {
+                      setCurrentStep(index);
+                    }
+                  }}
+                  style={extraStyles}
                 >
-                  {index < currentStep ? (
-                    <Check className="h-5 w-5" />
-                  ) : (
-                    index === currentStep ? step.icon : null
-                  )}
+                  <div 
+                    className={`h-8 w-8 rounded-full flex items-center justify-center transition-all ${
+                      index < currentStep ? 'bg-green-500 text-white' : 
+                      index === currentStep ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-500'
+                    } shadow-md`}
+                  >
+                    {index < currentStep ? (
+                      <Check className="h-5 w-5" />
+                    ) : (
+                      index === currentStep ? step.icon : null
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
         

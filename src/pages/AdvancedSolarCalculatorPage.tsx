@@ -8,7 +8,7 @@ import { SunIcon } from "lucide-react";
 export function AdvancedSolarCalculatorPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 to-blue-50">
-      <div className="container mx-auto py-8 px-4 sm:px-6">
+      <div className="container mx-auto py-8 px-4 sm:px-6 max-w-5xl">
         <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-full bg-amber-400 flex items-center justify-center shadow-lg">
