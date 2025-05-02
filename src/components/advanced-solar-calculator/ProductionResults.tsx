@@ -65,6 +65,14 @@ const ProductionResults: React.FC<ProductionResultsProps> = ({
     irradiance: results.outputs.poa_monthly[index]
   }));
 
+  // Format losses value safely
+  const formatLosses = () => {
+    if (typeof results.inputs.losses === 'number') {
+      return results.inputs.losses.toFixed(2);
+    }
+    return String(results.inputs.losses || '0');
+  };
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -179,7 +187,7 @@ const ProductionResults: React.FC<ProductionResultsProps> = ({
                   </div>
                   <div className="grid grid-cols-2">
                     <span className="text-muted-foreground">System Losses:</span>
-                    <span>{results.inputs.losses.toFixed(2)}%</span>
+                    <span>{formatLosses()}%</span>
                   </div>
                   <div className="grid grid-cols-2">
                     <span className="text-muted-foreground">Tilt/Azimuth:</span>
