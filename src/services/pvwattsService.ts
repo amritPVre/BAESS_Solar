@@ -6,12 +6,17 @@ import { toast } from "sonner";
 
 export const calculatePVWatts = async (params: Omit<PVWattsRequest, 'api_key'>): Promise<PVWattsResponse> => {
   try {
+    console.log('Calling PVWatts API with URL:', PVWATTS_BASE_URL);
+    console.log('Using parameters:', params);
+    
     const response = await axios.get(PVWATTS_BASE_URL, {
       params: {
         ...params,
         api_key: PVWATTS_API_KEY,
       },
     });
+    
+    console.log('PVWatts API response version:', response.data.version);
     return response.data;
   } catch (error) {
     console.error('Error calculating PVWatts:', error);
