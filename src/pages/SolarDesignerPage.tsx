@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import SolarCalculator from "@/components/SolarCalculator";
 import { SolarProject } from "@/types/solarProject";
+import ReturnToDashboardButton from "@/components/ui/ReturnToDashboardButton";
 
 export function SolarDesignerPage() {
   // Store location details as they're updated
@@ -86,7 +87,10 @@ export function SolarDesignerPage() {
   
   return (
     <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-bold mb-8 text-center">Solar Financial Tool</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Solar Financial Tool</h1>
+        <ReturnToDashboardButton />
+      </div>
       
       <Card>
         <CardContent className="p-6">

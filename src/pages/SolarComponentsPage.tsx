@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Helmet } from "react-helmet";
 import Header from "@/components/Header";
@@ -11,6 +10,7 @@ import AuthGuard from "@/components/AuthGuard";
 import { useAuth } from "@/hooks/useAuth";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ReturnToDashboardButton from "@/components/ui/ReturnToDashboardButton";
 
 const SolarComponentsPage = () => {
   const { user } = useAuth();
@@ -37,13 +37,14 @@ const SolarComponentsPage = () => {
       <Header />
       
       <div className="container mx-auto py-6">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight mb-2">Solar Components Library</h1>
-          <p className="text-muted-foreground">
-            Browse, select, and manage solar panels and inverters for your solar designs.
-          </p>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold tracking-tight">Solar Components Library</h1>
+          <ReturnToDashboardButton />
         </div>
-
+        <p className="text-muted-foreground mb-8">
+          Browse, select, and manage solar panels and inverters for your solar designs.
+        </p>
+        
         {isAdmin && (
           <div className="mb-8">
             <Tabs 

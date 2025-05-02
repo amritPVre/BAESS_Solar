@@ -7,6 +7,7 @@ import { BOQForm } from "@/components/boq/BOQForm";
 import { BOQResults } from "@/components/boq/BOQResults";
 import { BOQChat } from "@/components/boq/BOQChat";
 import SectionHeader from "@/components/ui/SectionHeader";
+import ReturnToDashboardButton from "@/components/ui/ReturnToDashboardButton";
 
 const BOQGenerator: React.FC = () => {
   const [activeTab, setActiveTab] = useState("chat");
@@ -19,11 +20,14 @@ const BOQGenerator: React.FC = () => {
 
   return (
     <div className="container mx-auto py-6">
-      <SectionHeader
-        title="Solar PV BOQ Generator"
-        description="Generate a detailed Bill of Quantities for your solar PV installation"
-        icon={<FileText className="h-6 w-6" />}
-      />
+      <div className="flex justify-between items-center mb-6">
+        <SectionHeader
+          title="Solar PV BOQ Generator"
+          description="Generate a detailed Bill of Quantities for your solar PV installation"
+          icon={<FileText className="h-6 w-6" />}
+        />
+        <ReturnToDashboardButton />
+      </div>
 
       <div className="mt-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
