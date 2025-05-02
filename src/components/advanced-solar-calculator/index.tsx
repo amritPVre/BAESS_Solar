@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -333,10 +332,10 @@ const AdvancedSolarCalculator: React.FC = () => {
                     </h3>
                     <div className="text-sm space-y-1">
                       <p><span className="font-medium">Panel:</span> {selectedPanel?.manufacturer} {selectedPanel?.model}</p>
-                      <p><span className="font-medium">Power Rating:</span> {selectedPanel?.power_rating}W</p>
+                      <p><span className="font-medium">Power Rating:</span> {selectedPanel?.nominal_power_w}W</p>
                       <p><span className="font-medium">Efficiency:</span> {selectedPanel?.efficiency_percent}%</p>
                       <p><span className="font-medium">Inverter:</span> {selectedInverter?.manufacturer} {selectedInverter?.model}</p>
-                      <p><span className="font-medium">Inverter Rating:</span> {selectedInverter?.power_rating}kW</p>
+                      <p><span className="font-medium">Inverter Rating:</span> {selectedInverter?.nominal_ac_power_kw}kW</p>
                     </div>
                   </div>
                   
