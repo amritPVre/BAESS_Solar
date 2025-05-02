@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -183,15 +184,17 @@ const AdvancedSolarCalculator: React.FC = () => {
         setError(`API Error: ${response.errors.join(', ')}`);
         console.error('PVWatts API Errors:', response.errors);
         toast.error(`API Error: ${response.errors[0]}`);
-      } else {
-        setResults(response);
-        processHourlyData(response);
-        setCalculationCompleted(true);
-        toast.success("Energy calculation completed successfully");
-        
-        // Navigate to results step
-        setCurrentStep(3); // Index of the results step
+      } else if (response.warnings && response.warnings.length > 0) {
+        setError(`API Warning: ${response.warnings.join(', ')}`);
+        console.warn('PVWatts API Warnings:', response.warnings);
       }
+      setResults(response);
+      processHourlyData(response);
+      setCalculationCompleted(true);
+      toast.success("Energy calculation completed successfully");
+      
+      // Navigate to results step
+      setCurrentStep(3); // Index of the results step
     } catch (err) {
       console.error('Error calculating energy production:', err);
       setError('Failed to calculate energy production. Please check your inputs and try again.');
@@ -275,6 +278,12 @@ const AdvancedSolarCalculator: React.FC = () => {
               onLatitudeChange={setLatitude}
               onLongitudeChange={setLongitude}
             />
+            {selectedPanel && (
+              <EfficiencyAdjustmentComponent 
+                selectedPanel={selectedPanel}
+                systemCapacity={systemCapacity}
+              />
+            )}
             <div className="flex justify-center pt-4">
               <Button 
                 onClick={handleCalculate}
@@ -384,19 +393,42 @@ const AdvancedSolarCalculator: React.FC = () => {
 
   return (
     <div className="p-6">
-      {/* Progress Bar and Steps Navigation */}
-      <div className="mb-8">
-        {/* Progress Indicator */}
-        <div className="relative mb-6">
-          <div className="h-2 bg-gray-200 rounded-full">
+      {/* Sticky Progress Bar and Steps Navigation */}
+      <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm py-4 mb-8 border-b shadow-sm">
+        {/* Progress Bar with Step Labels */}
+        <div className="relative mb-2">
+          <div className="h-3 bg-gray-200 rounded-full">
             <div 
-              className="h-2 bg-gradient-to-r from-blue-500 to-green-500 rounded-full transition-all duration-500 ease-in-out" 
+              className="h-3 bg-gradient-to-r from-blue-500 to-green-500 rounded-full transition-all duration-500 ease-in-out" 
               style={{ width: `${progressPercentage}%` }}
             ></div>
           </div>
           
+          {/* Step Labels on Progress Bar */}
+          <div className="flex justify-between absolute -top-7 w-full px-1">
+            {steps.map((step, index) => {
+              // Calculate position for label
+              const position = index / (steps.length - 1) * 100;
+              return (
+                <div 
+                  key={step.id}
+                  className={`text-xs font-medium transition-all ${
+                    index <= currentStep ? 'text-blue-600' : 'text-gray-500'
+                  }`}
+                  style={{ 
+                    left: `${position}%`, 
+                    transform: 'translateX(-50%)',
+                    position: 'absolute'
+                  }}
+                >
+                  {step.title}
+                </div>
+              );
+            })}
+          </div>
+          
           {/* Step Indicators */}
-          <div className="flex justify-between mt-2">
+          <div className="flex justify-between absolute -bottom-4 w-full">
             {steps.map((step, index) => (
               <div 
                 key={step.id}
@@ -407,34 +439,33 @@ const AdvancedSolarCalculator: React.FC = () => {
                     setCurrentStep(index);
                   }
                 }}
+                style={{
+                  transform: 'translateX(-50%)'
+                }}
               >
                 <div 
-                  className={`h-10 w-10 rounded-full flex items-center justify-center transition-all ${
+                  className={`h-8 w-8 rounded-full flex items-center justify-center transition-all ${
                     index < currentStep ? 'bg-green-500 text-white' : 
                     index === currentStep ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-500'
-                  }`}
+                  } shadow-md`}
                 >
                   {index < currentStep ? (
-                    <Check className="h-6 w-6" />
+                    <Check className="h-5 w-5" />
                   ) : (
-                    <span className="text-sm font-medium">{index + 1}</span>
+                    index === currentStep ? step.icon : null
                   )}
                 </div>
-                <span className="text-xs mt-1 hidden sm:block">{step.title}</span>
               </div>
             ))}
           </div>
         </div>
         
         {/* Current Step Title and Description */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            {steps[currentStep].icon}
-            <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              {steps[currentStep].title}
-            </h2>
-          </div>
-          <p className="text-gray-600 ml-14">{steps[currentStep].description}</p>
+        <div className="mt-8 mb-4">
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            {steps[currentStep].title}
+          </h2>
+          <p className="text-gray-600">{steps[currentStep].description}</p>
         </div>
       </div>
 

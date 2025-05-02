@@ -3,7 +3,7 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SolarPanel } from "@/services/solarComponentsService";
 import { Badge } from "@/components/ui/badge";
-import { Lightbulb } from "lucide-react";
+import { ClipboardList } from "lucide-react";
 
 interface EfficiencyAdjustmentProps {
   selectedPanel: SolarPanel | null;
@@ -74,37 +74,33 @@ const EfficiencyAdjustmentComponent: React.FC<EfficiencyAdjustmentProps> = ({
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2">
-          <Lightbulb className="h-5 w-5 text-primary" />
-          Panel Efficiency Adjustment
+          <ClipboardList className="h-5 w-5 text-primary" />
+          Design Summary
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-muted-foreground">Panel Efficiency:</span>
-              <Badge>{selectedPanel.efficiency_percent?.toFixed(1)}%</Badge>
+              <span className="text-sm text-muted-foreground">System Size:</span>
+              <Badge>{systemCapacity} kW</Badge>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">PVWatts Module Type:</span>
-              <Badge variant="outline">{efficiencyAdjustment.moduleTypeName} ({efficiencyAdjustment.moduleType === 0 ? 15 : efficiencyAdjustment.moduleType === 1 ? 19 : 10}%)</Badge>
+              <span className="text-sm text-muted-foreground">Panel Type:</span>
+              <Badge variant="outline">{selectedPanel.manufacturer} {selectedPanel.model}</Badge>
             </div>
           </div>
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-muted-foreground">Adjustment Factor:</span>
-              <Badge variant="secondary">{efficiencyAdjustment.adjustmentFactor.toFixed(3)}</Badge>
+              <span className="text-sm text-muted-foreground">Panel Efficiency:</span>
+              <Badge variant="secondary">{selectedPanel.efficiency_percent?.toFixed(1)}%</Badge>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Adjusted Capacity:</span>
-              <Badge variant="secondary">{efficiencyAdjustment.adjustedCapacity.toFixed(2)} kW</Badge>
+              <span className="text-sm text-muted-foreground">PVWatts Module Type:</span>
+              <Badge variant="secondary">{efficiencyAdjustment.moduleTypeName}</Badge>
             </div>
           </div>
         </div>
-        
-        <p className="text-xs text-muted-foreground mt-4">
-          PVWatts only supports three module types with fixed efficiencies. Your actual panel efficiency is adjusted to match the closest PVWatts module type.
-        </p>
       </CardContent>
     </Card>
   );

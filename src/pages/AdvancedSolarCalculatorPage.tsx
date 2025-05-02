@@ -21,13 +21,6 @@ export function AdvancedSolarCalculatorPage() {
           <ReturnToDashboardButton className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-none" />
         </div>
         
-        <div className="mb-6">
-          <p className="text-gray-600 max-w-3xl">
-            Design your solar system by selecting components, configuring parameters, and estimating 
-            energy production with our advanced PVWatts-powered calculator.
-          </p>
-        </div>
-        
         <Card className="border-none shadow-xl bg-white/90 backdrop-blur-sm">
           <AdvancedSolarCalculator />
         </Card>
