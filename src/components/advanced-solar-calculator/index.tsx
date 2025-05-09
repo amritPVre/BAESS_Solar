@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -6,8 +7,9 @@ import {
   BarChart3, 
   Calculator, 
   Download, 
-  Layers, // Changed from LayersThree
+  Layers,
   LineChart, 
+  MapPin,
   Settings, 
   Sun 
 } from "lucide-react";
@@ -17,23 +19,17 @@ import SystemConfiguration from "../advanced-solar-calculator/SystemConfiguratio
 import ComponentSelector from "./ComponentSelector";
 import EfficiencyAdjustment from "./EfficiencyAdjustment";
 import ProductionResults from "./ProductionResults";
-import SystemSizingCalculator from "./SystemSizingCalculator";
 import AreaCalculator from "./AreaCalculator";
-
-interface SystemSizingCalculatorProps {
-  selectedPanel: any;
-  selectedInverter: any;
-  capacity: number;
-  onCapacityChange: React.Dispatch<React.SetStateAction<number>>;
-  onInverterParamsChange: React.Dispatch<React.SetStateAction<InverterParams | null>>;
-  areaBasedLayout: any;
-}
+import LocationInputs from "../advanced-solar-inputs/LocationInputs";
+import { Card } from "@/components/ui/card";
 
 const AdvancedSolarCalculator: React.FC = () => {
   // Location parameters
   const [latitude, setLatitude] = useState(40.7128);
   const [longitude, setLongitude] = useState(-74.0060);
   const [timezone, setTimezone] = useState("America/New_York");
+  const [country, setCountry] = useState("United States");
+  const [city, setCity] = useState("New York");
   
   // PV system parameters
   const [tilt, setTilt] = useState(30);
@@ -56,6 +52,7 @@ const AdvancedSolarCalculator: React.FC = () => {
   
   // Inverter configuration
   const [inverterParams, setInverterParams] = useState<InverterParams | null>(null);
+  const [dcAcRatio, setDcAcRatio] = useState(120); // Fixed value
   
   // Results state
   const [results, setResults] = useState<SolarCalculationResult | null>(null);
@@ -65,6 +62,29 @@ const AdvancedSolarCalculator: React.FC = () => {
   // Step tracking
   const [currentStep, setCurrentStep] = useState(1);
   const [completedSteps, setCompletedSteps] = useState<Record<number, boolean>>({});
+
+  // When components are selected, automatically go to location tab
+  useEffect(() => {
+    if (selectedPanel && selectedInverter) {
+      setCompletedSteps(prev => ({...prev, 1: true}));
+      updateModuleParameters();
+    }
+  }, [selectedPanel, selectedInverter]);
+  
+  // Update module parameters when panel is selected
+  const updateModuleParameters = () => {
+    if (selectedPanel) {
+      const panelLength = selectedPanel.length || 1700; // mm
+      const panelWidth = selectedPanel.width || 1000; // mm
+      const panelArea = (panelLength * panelWidth) / 1000000; // m²
+      const panelEfficiency = selectedPanel.efficiency || 20; // %
+      const panelPower = selectedPanel.power_rating || selectedPanel.power || 400; // W
+      
+      setModuleArea(panelArea);
+      setModuleEfficiency(panelEfficiency / 100);
+      setModuleWattPeak(panelPower);
+    }
+  };
 
   // Handle area calculator results
   const handleAreaCalculation = (capacityKw: number, areaM2: number, moduleCount: number, configs?: any[]) => {
@@ -102,6 +122,22 @@ const AdvancedSolarCalculator: React.FC = () => {
       setPolygonConfigs([]);
     }
   };
+
+  // Calculate inverter parameters based on capacity
+  useEffect(() => {
+    if (selectedInverter && capacity > 0) {
+      const inverterPowerKw = selectedInverter.power_rating || selectedInverter.nominal_ac_power_kw || 1;
+      const suggestedInverterCount = Math.max(1, Math.ceil(capacity / inverterPowerKw / (dcAcRatio / 100)));
+      
+      setInverterParams({
+        inverter_model: selectedInverter.model || selectedInverter.id,
+        quantity: suggestedInverterCount,
+        dc_ac_ratio: dcAcRatio / 100,
+        power: inverterPowerKw,
+        efficiency: selectedInverter.efficiency || 0.96
+      });
+    }
+  }, [selectedInverter, capacity, dcAcRatio]);
 
   const handleCalculate = () => {
     setCalculating(true);
@@ -152,8 +188,8 @@ const AdvancedSolarCalculator: React.FC = () => {
       newCompletedSteps[1] = false;
     }
     
-    // Step 2: System sizing parameters defined
-    if (capacity > 0) {
+    // Step 2: Location parameters defined
+    if (latitude && longitude) {
       newCompletedSteps[2] = true;
     } else {
       newCompletedSteps[2] = false;
@@ -166,7 +202,7 @@ const AdvancedSolarCalculator: React.FC = () => {
     }
     
     setCompletedSteps(newCompletedSteps);
-  }, [selectedPanel, selectedInverter, capacity, activeTab, completedSteps]);
+  }, [selectedPanel, selectedInverter, latitude, longitude, activeTab, completedSteps]);
   
   // Update current step based on active tab
   useEffect(() => {
@@ -174,7 +210,7 @@ const AdvancedSolarCalculator: React.FC = () => {
       case 'components':
         setCurrentStep(1);
         break;
-      case 'sizing':
+      case 'location':
         setCurrentStep(2);
         break;
       case 'areas':
@@ -224,7 +260,7 @@ const AdvancedSolarCalculator: React.FC = () => {
                 <div className={`w-4 h-4 mb-1 mx-auto rounded-full flex items-center justify-center text-[10px] font-bold ${completedSteps[2] ? 'bg-primary text-primary-foreground' : 'bg-muted border border-input'}`}>
                   {completedSteps[2] ? '✓' : '2'}
                 </div>
-                <span className="text-xs hidden md:inline-block">System Sizing</span>
+                <span className="text-xs hidden md:inline-block">Location</span>
               </div>
               <div className="text-center">
                 <div className={`w-4 h-4 mb-1 mx-auto rounded-full flex items-center justify-center text-[10px] font-bold ${completedSteps[3] ? 'bg-primary text-primary-foreground' : 'bg-muted border border-input'}`}>
@@ -255,11 +291,11 @@ const AdvancedSolarCalculator: React.FC = () => {
             <Calculator className="h-4 w-4 mr-2" />
             Components
           </TabsTrigger>
-          <TabsTrigger value="sizing">
-            <Sun className="h-4 w-4 mr-2" />
-            System Sizing
+          <TabsTrigger value="location">
+            <MapPin className="h-4 w-4 mr-2" />
+            Location
           </TabsTrigger>
-          <TabsTrigger value="areas">
+          <TabsTrigger value="areas" disabled={!selectedPanel}>
             <Layers className="h-4 w-4 mr-2" />
             PV Areas
           </TabsTrigger>
@@ -284,53 +320,35 @@ const AdvancedSolarCalculator: React.FC = () => {
           <div className="flex justify-between mt-6">
             <div></div>
             <Button
-              onClick={() => setActiveTab("sizing")}
+              onClick={() => setActiveTab("location")}
               className="bg-primary"
               disabled={!selectedPanel || !selectedInverter}
             >
-              Continue to System Sizing
+              Continue to Location
             </Button>
           </div>
         </TabsContent>
         
-        <TabsContent value="sizing">
-          <SystemSizingCalculator
-            selectedPanel={selectedPanel}
-            selectedInverter={selectedInverter}
-            capacity={capacity}
-            onCapacityChange={setCapacity}
-            onInverterParamsChange={setInverterParams}
-            areaBasedLayout={areaBasedLayout}
-          />
-          
-          {selectedPanel && (
-            <div className="mt-6 bg-muted/20 p-4 rounded-md border">
-              <h3 className="text-lg font-semibold mb-2">Design Summary</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Panel</p>
-                  <p className="font-medium">{selectedPanel.manufacturer} {selectedPanel.model}</p>
-                  <p className="text-sm">{selectedPanel.power}W, {selectedPanel.efficiency}% efficiency</p>
-                </div>
-                
-                {selectedInverter && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Inverter</p>
-                    <p className="font-medium">{selectedInverter.manufacturer} {selectedInverter.model}</p>
-                    <p className="text-sm">{selectedInverter.power}W, {selectedInverter.efficiency}% efficiency</p>
-                  </div>
-                )}
-                
-                <div>
-                  <p className="text-sm text-muted-foreground">System Size</p>
-                  <p className="font-medium">{capacity.toFixed(2)} kWp</p>
-                  {areaBasedLayout && (
-                    <p className="text-sm">{areaBasedLayout.moduleCount} modules in {areaBasedLayout.areaM2.toFixed(1)} m²</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
+        <TabsContent value="location">
+          <Card className="p-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-amber-500" />
+              Location Settings
+            </h2>
+            
+            <LocationInputs 
+              latitude={latitude}
+              longitude={longitude}
+              timezone={timezone}
+              country={country}
+              city={city}
+              setLatitude={setLatitude}
+              setLongitude={setLongitude}
+              setTimezone={setTimezone}
+              setCountry={setCountry}
+              setCity={setCity}
+            />
+          </Card>
           
           <div className="flex justify-between mt-6">
             <Button
@@ -342,7 +360,7 @@ const AdvancedSolarCalculator: React.FC = () => {
             <Button
               onClick={() => setActiveTab("areas")}
               className="bg-primary"
-              disabled={!capacity || capacity <= 0}
+              disabled={!latitude || !longitude}
             >
               Continue to PV Areas
             </Button>
@@ -353,7 +371,9 @@ const AdvancedSolarCalculator: React.FC = () => {
           {selectedPanel ? (
             <AreaCalculator 
               selectedPanel={selectedPanel} 
-              onCapacityCalculated={handleAreaCalculation} 
+              onCapacityCalculated={handleAreaCalculation}
+              latitude={latitude}
+              longitude={longitude}
             />
           ) : (
             <div className="p-8 text-center">
@@ -369,7 +389,7 @@ const AdvancedSolarCalculator: React.FC = () => {
           
           <div className="flex justify-between mt-6">
             <Button
-              onClick={() => setActiveTab("sizing")}
+              onClick={() => setActiveTab("location")}
               variant="outline"
             >
               Back
@@ -491,7 +511,7 @@ const AdvancedSolarCalculator: React.FC = () => {
                 arrayType,
                 latitude,
                 longitude,
-                timezone: timezone // Fixed: changed solarTimezone to timezone
+                timezone
               }}
               selectedPanel={selectedPanel}
               selectedInverter={selectedInverter}
