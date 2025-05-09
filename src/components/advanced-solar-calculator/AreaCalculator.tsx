@@ -6,9 +6,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { 
   Building, 
-  LayersThree, 
+  Layers,
   MapPin, 
-  Polygon as PolygonIcon,
   Square,
   Trash
 } from 'lucide-react';
@@ -385,7 +384,7 @@ const AreaCalculator: React.FC<AreaCalculatorProps> = ({ selectedPanel, onCapaci
         <div className="mb-6 flex flex-col space-y-2">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold flex items-center">
-              <LayersThree className="h-5 w-5 mr-2 text-primary" />
+              <Layers className="h-5 w-5 mr-2 text-primary" />
               Define PV Array Areas
             </h2>
             

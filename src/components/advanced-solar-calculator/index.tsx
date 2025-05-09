@@ -1,9 +1,16 @@
-
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { BarChart3, Calculator, Download, LayersThree, LineChart, Settings, Sun } from "lucide-react";
+import { 
+  BarChart3, 
+  Calculator, 
+  Download, 
+  Layers, // Changed from LayersThree
+  LineChart, 
+  Settings, 
+  Sun 
+} from "lucide-react";
 import { calculateSolarEnergy } from "@/utils/solarEnergyCalculation";
 import { InverterParams, SolarCalculationResult, SolarParams } from "@/types/solarCalculations";
 import SystemConfiguration from "../advanced-solar-calculator/SystemConfiguration";
@@ -12,6 +19,15 @@ import EfficiencyAdjustment from "./EfficiencyAdjustment";
 import ProductionResults from "./ProductionResults";
 import SystemSizingCalculator from "./SystemSizingCalculator";
 import AreaCalculator from "./AreaCalculator";
+
+interface SystemSizingCalculatorProps {
+  selectedPanel: any;
+  selectedInverter: any;
+  capacity: number;
+  onCapacityChange: React.Dispatch<React.SetStateAction<number>>;
+  onInverterParamsChange: React.Dispatch<React.SetStateAction<InverterParams | null>>;
+  areaBasedLayout: any;
+}
 
 const AdvancedSolarCalculator: React.FC = () => {
   // Location parameters
@@ -244,7 +260,7 @@ const AdvancedSolarCalculator: React.FC = () => {
             System Sizing
           </TabsTrigger>
           <TabsTrigger value="areas">
-            <LayersThree className="h-4 w-4 mr-2" />
+            <Layers className="h-4 w-4 mr-2" />
             PV Areas
           </TabsTrigger>
           <TabsTrigger value="configuration">

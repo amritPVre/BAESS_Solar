@@ -1,3 +1,4 @@
+
 import * as pvwatts from 'pvwatts';
 import { SolarCalculationResult, SolarParams } from "@/types/solarCalculations";
 import { calculateSystemDetails } from './systemDetailsCalculation';
@@ -6,29 +7,11 @@ import { calculateEnergyProduction } from './energyProductionCalculation';
 import { calculateYearlyProduction } from './yearlyProductionCalculation';
 
 export interface InverterParams {
-  power: number;
-  efficiency: number;
-  cost: number;
-  name: string;
-  manufacturer: string;
-  model: string;
-}
-
-export interface SolarParams {
-  latitude: number;
-  longitude: number;
-  timezone: string;
-  surface_tilt: number;
-  surface_azimuth: number; // -180 to 180 range
-  module_efficiency: number;
-  performance_ratio: number;
-  plant_capacity_kw: number;
-  module_area: number;
-  module_watt_peak: number;
-  inverterParams?: InverterParams | null;
-  array_type?: number; // Added for PVWatts integration
-  losses?: number;     // Added for PVWatts integration
-  polygonConfigs?: any[]; // Added for multi-area support
+  inverter_model: string;
+  quantity: number;
+  dc_ac_ratio: number;
+  power?: number;
+  efficiency?: number;
 }
 
 // Main calculation function
@@ -87,7 +70,7 @@ export function calculateSolarEnergy(params: SolarParams): SolarCalculationResul
     plant_capacity_kw,
     performance_ratio,
     module_efficiency,
-    systemDetails.effective_inverter_efficiency,
+    systemDetails.inverter_efficiency,
     pvWattsParams
   );
 
@@ -111,6 +94,9 @@ export function calculateSolarEnergy(params: SolarParams): SolarCalculationResul
         losses
       }
     },
-    yearlyProductionByMonth: energyProductionData.monthly,
+    location: {
+      latitude,
+      longitude
+    }
   };
 }

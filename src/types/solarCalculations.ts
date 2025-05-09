@@ -1,3 +1,4 @@
+
 export interface SolarCalculationResult {
   energy: EnergyData;
   irradiation: IrradiationData;
@@ -7,6 +8,7 @@ export interface SolarCalculationResult {
     latitude: number;
     longitude: number;
   };
+  timezone?: string; // Added to fix errors
 }
 
 export interface EnergyData {
@@ -51,6 +53,12 @@ export interface InverterParams {
   inverter_model: string;
   quantity: number;
   dc_ac_ratio: number;
+  power?: number;
+  efficiency?: number;
+  // These properties are used in some components but not in the main calculation
+  specifications?: any;
+  configuration?: any;
+  model?: string;
 }
 
 export interface SolarParams {
@@ -89,4 +97,103 @@ export interface SolarPanel {
   temperatureCoefficient: number;
   createdAt: string;
   updatedAt: string;
+}
+
+// Add missing types for financial calculator 
+export interface Currency {
+  code: string;
+  symbol: string;
+  name: string;
+}
+
+export interface ElectricityData {
+  price: number;
+  annualConsumption: number;
+  annualExport: number;
+  exportPrice: number;
+  annualPriceIncrease: number;
+}
+
+export interface OMParams {
+  annualOMCost: number;
+  inverterReplacementYear: number;
+  inverterReplacementCost: number;
+}
+
+export interface ProjectCost {
+  totalCost: number;
+  costPerWatt: number;
+  additionalCosts: number;
+  subsidyAmount: number;
+  depreciation: number;
+}
+
+export interface RegionalData {
+  sunshineHours: number;
+  carbonIntensity: number;
+  electricityTax: number;
+}
+
+export interface FinancialSettings {
+  interestRate: number;
+  inflationRate: number;
+  discountRate: number;
+  loanTerm: number;
+  loanAmount: number;
+  downPayment: number;
+}
+
+export interface FinancialMetrics {
+  paybackPeriod: number;
+  roi: number;
+  npv: number;
+  irr: number;
+  lcoe: number;
+  savingsLifetime: number;
+  firstYearSavings: number;
+  carbonOffsetTons: number;
+}
+
+// Interface for PVWatts API response
+export interface PVWattsResponse {
+  inputs: any;
+  outputs: {
+    ac_monthly: number[];
+    dc_monthly: number[];
+    poa_monthly: number[];
+    ac_annual: number;
+    solrad_annual: number;
+    capacity_factor: number;
+    ac: number[];
+  };
+  station_info: {
+    lat: number;
+    lon: number;
+    elev: number;
+    tz: number;
+    location: string;
+    city: string;
+    state: string;
+    solar_resource_file: string;
+    distance: number;
+  };
+  version: string;
+  errors: string[];
+  warnings: string[];
+}
+
+// Add missing Year interfaces
+export interface YearData {
+  year: number;
+  energy_production: number;
+  energy_value: number;
+  loan_payment: number;
+  om_cost: number;
+  net_savings: number;
+  cumulative_savings: number;
+}
+
+export interface YearlyFinancialData {
+  years: YearData[];
+  metrics: FinancialMetrics;
 }
