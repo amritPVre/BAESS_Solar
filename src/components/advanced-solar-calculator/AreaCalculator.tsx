@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Layers, Map, Trash2, Square, Hexagon, StopCircle } from 'lucide-react'; 
 import { toast } from 'sonner';
 
-// Replace these values with your actual Google Maps API key and map ID
-const GOOGLE_MAPS_API_KEY = "YOUR_GOOGLE_MAPS_API_KEY"; // Replace with your API key
-const GOOGLE_MAPS_ID = "YOUR_GOOGLE_MAPS_ID"; // Replace with your map ID
+// Get the Google Maps API key and Map ID from environment variables
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+const GOOGLE_MAPS_ID = import.meta.env.VITE_GOOGLE_MAPS_ID || '';
 
 // Define libraries array for Google Maps
 const libraries = ["geometry", "drawing"] as ("geometry" | "drawing" | "places" | "visualization")[];
@@ -75,6 +75,9 @@ const AreaCalculator: React.FC<AreaCalculatorProps> = ({
     // Show a toast if API key is missing
     if (!GOOGLE_MAPS_API_KEY) {
       toast.error('Google Maps API key is missing. Please add it to your environment variables as VITE_GOOGLE_MAPS_API_KEY.');
+    }
+    if (!GOOGLE_MAPS_ID) {
+      toast.warning('Google Maps ID is missing. Please add it to your environment variables as VITE_GOOGLE_MAPS_ID for enhanced map styling.');
     }
   }, []);
 
