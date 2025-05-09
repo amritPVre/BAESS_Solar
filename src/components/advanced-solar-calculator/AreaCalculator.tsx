@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { GoogleMap, LoadScript } from '@react-google-maps/api';
 import type { SolarPanel } from '@/types/components';
@@ -562,8 +563,10 @@ const AreaCalculator: React.FC<AreaCalculatorProps> = ({
     const polyUtil = window.google.maps.geometry.poly;
 
     // Module dimensions (meters)
-    const panelLengthM = (selectedPanel.length || 1700) / 1000;
-    const panelWidthM = (selectedPanel.width || 1000) / 1000;
+    // Fix the error: Accessing 'length' property on a number type
+    // Use the length value from selectedPanel, not as property access on a number
+    const panelLengthM = selectedPanel.length !== undefined ? selectedPanel.length / 1000 : 1.7;
+    const panelWidthM = selectedPanel.width !== undefined ? selectedPanel.width / 1000 : 1.0;
     const adjacentGapM = layoutParams.adjacentGap / 1000;
     const moduleDim = layoutParams.orientation === 'landscape'
       ? { width: panelLengthM, height: panelWidthM }
@@ -873,7 +876,7 @@ const AreaCalculator: React.FC<AreaCalculatorProps> = ({
                         boundsLiteral.extend(moduleNW);
                         
                         // Create rectangle for this module
-                        const rectangle = new google.maps.Rectangle({
+                        const rectangle = new window.google.maps.Rectangle({
                           strokeColor: '#003366',
                           strokeOpacity: 0.8,
                           strokeWeight: 1,
@@ -900,7 +903,7 @@ const AreaCalculator: React.FC<AreaCalculatorProps> = ({
                       });
                       
                       // Draw table outline
-                      const tablePolygon = new google.maps.Polygon({
+                      const tablePolygon = new window.google.maps.Polygon({
                         paths: tableCorners,
                         strokeColor: '#FF0000',
                         strokeOpacity: 0.8,  // Increased from 0.5
@@ -1068,7 +1071,7 @@ const AreaCalculator: React.FC<AreaCalculatorProps> = ({
                         boundsLiteral.extend(moduleNW);
                         
                         // Create rectangle for this module
-                        const rectangle = new google.maps.Rectangle({
+                        const rectangle = new window.google.maps.Rectangle({
                           strokeColor: '#003366',
                           strokeOpacity: 0.8,
                           strokeWeight: 1,
@@ -1095,7 +1098,7 @@ const AreaCalculator: React.FC<AreaCalculatorProps> = ({
                       });
                       
                       // Draw carport outline
-                      const carportPolygon = new google.maps.Polygon({
+                      const carportPolygon = new window.google.maps.Polygon({
                         paths: carportCorners,
                         strokeColor: '#4B0082', // Indigo for carport
                         strokeOpacity: 0.8,
@@ -1419,8 +1422,7 @@ const AreaCalculator: React.FC<AreaCalculatorProps> = ({
                   streetViewControl: false,
                   mapTypeId: "satellite",
                   gestureHandling: "greedy",
-                  // Comment out mapId if causing issues with custom styles
-                  // mapId: GOOGLE_MAPS_ID,
+                  // mapId: GOOGLE_MAPS_ID, // Comment out mapId if causing issues with custom styles
                   mapTypeControl: true,
                   fullscreenControl: true,
                   zoomControl: true
