@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { SliderRange, SliderOutput } from "@/components/ui/SliderRange";
+import { Button } from "@/components/ui/button";
 import { InverterParams } from '@/types/solarCalculations';
 import { Settings, Battery } from 'lucide-react';
 
@@ -23,9 +22,9 @@ const SystemSizingCalculator: React.FC<SystemSizingCalculatorProps> = ({
   areaBasedLayout
 }) => {
   const [moduleCount, setModuleCount] = useState(25);
-  const [dcAcRatio, setDcAcRatio] = useState(120); // 1.2 default ratio
   const [inverterCount, setInverterCount] = useState(1);
   const [acCapacity, setAcCapacity] = useState(0);
+  const dcAcRatio = 120; // Fixed value, no longer user input
 
   // Calculate system sizing whenever inputs change
   useEffect(() => {
@@ -56,24 +55,12 @@ const SystemSizingCalculator: React.FC<SystemSizingCalculatorProps> = ({
       onInverterParamsChange({
         inverter_model: selectedInverter.model || selectedInverter.id,
         quantity: inverterCount,
-        dc_ac_ratio: calculatedDcAcRatio * 100,
+        dc_ac_ratio: dcAcRatio,
         power: inverterPowerKw,
         efficiency: selectedInverter.efficiency || 0.96
       });
     }
-  }, [selectedPanel, selectedInverter, moduleCount, inverterCount, areaBasedLayout, onCapacityChange, onInverterParamsChange, capacity]);
-
-  // Update module count when panel selection changes
-  useEffect(() => {
-    if (!areaBasedLayout && selectedPanel) {
-      // Default to a reasonable system size based on panel power
-      const panelPowerKw = (selectedPanel.power_rating || selectedPanel.power) / 1000;
-      const defaultCapacityKw = 10; // Target 10 kW system as default
-      const suggestedModuleCount = Math.ceil(defaultCapacityKw / panelPowerKw);
-      
-      setModuleCount(suggestedModuleCount);
-    }
-  }, [selectedPanel, areaBasedLayout]);
+  }, [selectedPanel, selectedInverter, moduleCount, inverterCount, areaBasedLayout, onCapacityChange, onInverterParamsChange, capacity, dcAcRatio]);
 
   // Update inverter count when inverter selection changes
   useEffect(() => {
@@ -109,21 +96,11 @@ const SystemSizingCalculator: React.FC<SystemSizingCalculatorProps> = ({
               <div className="mb-4">
                 <div className="flex justify-between mb-2">
                   <span className="font-medium">Number of Panels</span>
-                  <span className="font-bold text-right">{moduleCount}</span>
+                  <span className="font-bold text-right">{moduleCount || 0}</span>
                 </div>
                 
-                <SliderRange 
-                  value={moduleCount}
-                  onChange={setModuleCount}
-                  min={1}
-                  max={200}
-                  step={1}
-                  disabled={hasAreaBasedLayout}
-                  className="mb-1"
-                />
-                
                 {hasAreaBasedLayout && (
-                  <p className="text-xs text-orange-500 mt-1">
+                  <p className="text-xs text-orange-500 mt-1 mb-2">
                     Module count determined by area calculation
                   </p>
                 )}
@@ -138,11 +115,11 @@ const SystemSizingCalculator: React.FC<SystemSizingCalculatorProps> = ({
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-500">Panel Power</span>
-                  <span className="text-sm font-medium">{panelPowerW} W</span>
+                  <span className="text-sm font-medium">{panelPowerW || 0} W</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-500">Total DC Capacity</span>
-                  <span className="text-sm font-medium">{capacity.toFixed(2)} kWp</span>
+                  <span className="text-sm font-medium">{capacity ? capacity.toFixed(2) : "0.00"} kWp</span>
                 </div>
               </div>
             </div>
@@ -163,30 +140,6 @@ const SystemSizingCalculator: React.FC<SystemSizingCalculatorProps> = ({
                   <span className="font-medium">Number of Inverters</span>
                   <span className="font-bold text-right">{inverterCount}</span>
                 </div>
-                <SliderRange 
-                  value={inverterCount}
-                  onChange={setInverterCount}
-                  min={1}
-                  max={10}
-                  step={1}
-                />
-              </div>
-              
-              <div className="mb-4">
-                <div className="flex justify-between mb-2">
-                  <span className="font-medium">DC/AC Ratio (%)</span>
-                  <span className="font-bold text-right">{dcAcRatio}</span>
-                </div>
-                <SliderRange 
-                  value={dcAcRatio}
-                  onChange={setDcAcRatio}
-                  min={100}
-                  max={150}
-                  step={1}
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Recommended range: 110-130%
-                </p>
               </div>
               
               <div className="space-y-2 border-t pt-3">
@@ -198,20 +151,20 @@ const SystemSizingCalculator: React.FC<SystemSizingCalculatorProps> = ({
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-500">Inverter Power</span>
-                  <span className="text-sm font-medium">{inverterPowerKw > 0 ? `${inverterPowerKw} kW` : '-'}</span>
+                  <span className="text-sm font-medium">{inverterPowerKw > 0 ? `${inverterPowerKw} kW` : '0 kW'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-500">Total AC Capacity</span>
-                  <span className="text-sm font-medium">{acCapacity > 0 ? `${acCapacity.toFixed(2)} kW` : '-'}</span>
+                  <span className="text-sm font-medium">{acCapacity > 0 ? `${acCapacity.toFixed(2)} kW` : '0.00 kW'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">Actual DC/AC Ratio</span>
+                  <span className="text-sm text-gray-500">DC/AC Ratio</span>
                   <span className={`text-sm font-medium ${
                     acCapacity === 0 ? '' :
                     capacity / acCapacity < 1.1 ? 'text-amber-600' : 
                     capacity / acCapacity > 1.3 ? 'text-amber-600' : 'text-green-600'
                   }`}>
-                    {acCapacity > 0 ? `${(capacity / acCapacity * 100).toFixed(1)}%` : '-'}
+                    {acCapacity > 0 ? `${(capacity / acCapacity * 100).toFixed(1)}%` : '0.0%'}
                   </span>
                 </div>
               </div>
@@ -250,16 +203,21 @@ const SystemSizingCalculator: React.FC<SystemSizingCalculatorProps> = ({
             
             <div>
               <p className="text-sm text-gray-500">System Size</p>
-              <p className="font-medium">{capacity > 0 ? `${capacity.toFixed(2)} kWp` : '-'}</p>
+              <p className="font-medium">{capacity > 0 ? `${capacity.toFixed(2)} kWp` : '0.00 kWp'}</p>
               <p className="text-sm">
                 {moduleCount > 0 
-                  ? `${moduleCount} modules${hasAreaBasedLayout ? ` in ${areaBasedLayout.areaM2.toFixed(1)} m²` : ''}` 
-                  : '-'}
+                  ? `${moduleCount} modules${hasAreaBasedLayout ? ` in ${areaBasedLayout.areaM2 ? areaBasedLayout.areaM2.toFixed(1) : '0.0'} m²` : ''}` 
+                  : '0 modules'}
               </p>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      <div className="flex justify-between mt-4">
+        <Button variant="outline">Back</Button>
+        <Button>Continue to PV Areas</Button>
+      </div>
     </div>
   );
 };
