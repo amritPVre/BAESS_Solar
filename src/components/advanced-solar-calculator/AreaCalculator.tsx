@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { GoogleMap, LoadScript } from '@react-google-maps/api';
 import type { SolarPanel } from '@/types/components';
@@ -31,6 +32,11 @@ interface PolygonConfig {
   tiltAngle: number;
 }
 
+interface PolygonInfo {
+  polygon: google.maps.Polygon;
+  area: number;
+}
+
 const structureTypes = [
   { id: 'ballasted', name: 'Ballasted Flat Roof', groundCoverageRatio: 0.5 },
   { id: 'fixed_tilt', name: 'Fixed Tilt Ground Mount', groundCoverageRatio: 0.4 },
@@ -45,16 +51,15 @@ const AreaCalculator: React.FC<AreaCalculatorProps> = ({
   longitude 
 }) => {
   const [map, setMap] = useState<google.maps.Map | null>(null);
-  const [polygons, setPolygons] = useState<google.maps.Polygon[]>([]);
-  const [drawingMode, setDrawingMode] = useState(false);
-  const [currentPath, setCurrentPath] = useState<google.maps.LatLng[]>([]);
+  const [polygons, setPolygons] = useState<PolygonInfo[]>([]);
   const [totalArea, setTotalArea] = useState(0);
   const [totalCapacity, setTotalCapacity] = useState(0);
   const [totalModules, setTotalModules] = useState(0);
   const [polygonConfigs, setPolygonConfigs] = useState<PolygonConfig[]>([]);
   const [structureType, setStructureType] = useState(structureTypes[0]);
-  const [drawingManagerRef, setDrawingManagerRef] = useState<google.maps.drawing.DrawingManager | null>(null);
+  const drawingManagerRef = useRef<google.maps.drawing.DrawingManager | null>(null);
   const [instructionsVisible, setInstructionsVisible] = useState(true);
+  const calculationPendingRef = useRef(false);
 
   const mapRef = useRef<HTMLDivElement>(null);
   const mapContainerStyle = {
@@ -75,9 +80,6 @@ const AreaCalculator: React.FC<AreaCalculatorProps> = ({
     // Show a toast if API key is missing
     if (!GOOGLE_MAPS_API_KEY) {
       toast.error('Google Maps API key is missing. Please add it to your environment variables as VITE_GOOGLE_MAPS_API_KEY.');
-    }
-    if (!GOOGLE_MAPS_ID) {
-      toast.warning('Google Maps ID is missing. Please add it to your environment variables as VITE_GOOGLE_MAPS_ID for enhanced map styling.');
     }
   }, []);
 
@@ -120,7 +122,7 @@ const AreaCalculator: React.FC<AreaCalculatorProps> = ({
         });
         
         drawingManager.setMap(googleMap);
-        setDrawingManagerRef(drawingManager);
+        drawingManagerRef.current = drawingManager;
         
         // Add polygon complete listener
         window.google.maps.event.addListener(drawingManager, 'polygoncomplete', (polygon: google.maps.Polygon) => {
@@ -140,90 +142,139 @@ const AreaCalculator: React.FC<AreaCalculatorProps> = ({
     }
   }, []);
 
-  const handlePolygonComplete = (polygon: google.maps.Polygon) => {
+  // Calculate area of a polygon
+  const calculatePolygonArea = useCallback((polygon: google.maps.Polygon): number => {
+    try {
+      if (!window.google || !window.google.maps || !window.google.maps.geometry || !window.google.maps.geometry.spherical) {
+        console.error("Google Maps geometry library not loaded");
+        return 0;
+      }
+      
+      const path = polygon.getPath();
+      return window.google.maps.geometry.spherical.computeArea(path);
+    } catch (error) {
+      console.error("Error calculating area:", error);
+      return 0;
+    }
+  }, []);
+
+  const handlePolygonComplete = useCallback((polygon: google.maps.Polygon) => {
+    // Calculate the area for this polygon
+    const area = calculatePolygonArea(polygon);
+    
     // Add the polygon to our state
-    setPolygons(prev => [...prev, polygon]);
+    setPolygons(prev => [...prev, { polygon, area }]);
     
     // Set up listeners for polygon changes
     setupPolygonListeners(polygon);
     
     // Switch drawing manager back to non-drawing mode
-    if (drawingManagerRef) {
-      drawingManagerRef.setDrawingMode(null);
+    if (drawingManagerRef.current) {
+      drawingManagerRef.current.setDrawingMode(null);
     }
-  };
+  }, [calculatePolygonArea]);
   
-  const handleRectangleComplete = (rectangle: google.maps.Rectangle) => {
+  const handleRectangleComplete = useCallback((rectangle: google.maps.Rectangle) => {
     const bounds = rectangle.getBounds();
     if (!bounds) {
       console.error("Rectangle bounds are undefined");
       return;
     }
     
-    // Convert rectangle to polygon
-    const ne = bounds.getNorthEast();
-    const sw = bounds.getSouthWest();
-    const nw = new google.maps.LatLng(ne.lat(), sw.lng());
-    const se = new google.maps.LatLng(sw.lat(), ne.lng());
-    
-    // Create polygon path in clockwise order
-    const path = [ne, se, sw, nw];
-    
-    // Create a polygon instead of using the rectangle directly
-    const polygon = new google.maps.Polygon({
-      paths: path,
-      fillColor: '#FF0000',
-      fillOpacity: 0.3,
-      strokeWeight: 2,
-      strokeColor: '#FF0000',
-      clickable: true, 
-      editable: true,
-      draggable: true,
-      map: map
-    });
-    
-    // Remove the rectangle
-    rectangle.setMap(null);
-    
-    // Add the polygon to our state
-    setPolygons(prev => [...prev, polygon]);
-    
-    // Set up listeners for polygon changes
-    setupPolygonListeners(polygon);
-    
-    // Switch drawing manager back to non-drawing mode
-    if (drawingManagerRef) {
-      drawingManagerRef.setDrawingMode(null);
+    try {
+      // Convert rectangle to polygon
+      const ne = bounds.getNorthEast();
+      const sw = bounds.getSouthWest();
+      const nw = new google.maps.LatLng(ne.lat(), sw.lng());
+      const se = new google.maps.LatLng(sw.lat(), ne.lng());
+      
+      // Create polygon path in clockwise order
+      const path = [ne, se, sw, nw];
+      
+      // Create a polygon instead of using the rectangle directly
+      const polygon = new window.google.maps.Polygon({
+        paths: path,
+        fillColor: '#FF0000',
+        fillOpacity: 0.3,
+        strokeWeight: 2,
+        strokeColor: '#FF0000',
+        clickable: true, 
+        editable: true,
+        draggable: true,
+        map: map
+      });
+      
+      // Remove the rectangle
+      rectangle.setMap(null);
+      
+      // Calculate the area
+      const area = calculatePolygonArea(polygon);
+      
+      // Add the polygon to our state
+      setPolygons(prev => [...prev, { polygon, area }]);
+      
+      // Set up listeners for polygon changes
+      setupPolygonListeners(polygon);
+      
+      // Switch drawing manager back to non-drawing mode
+      if (drawingManagerRef.current) {
+        drawingManagerRef.current.setDrawingMode(null);
+      }
+    } catch (error) {
+      console.error("Error converting rectangle to polygon:", error);
     }
-  };
+  }, [map, calculatePolygonArea]);
   
-  const setupPolygonListeners = (polygon: google.maps.Polygon) => {
-    // Set up listeners for polygon changes
-    google.maps.event.addListener(polygon, 'mouseup', () => calculateAreaAndCapacity());
+  const setupPolygonListeners = useCallback((polygon: google.maps.Polygon) => {
+    const handlePolygonChange = () => {
+      // Debounce calculations
+      if (calculationPendingRef.current) return;
+      calculationPendingRef.current = true;
+      
+      setTimeout(() => {
+        // Update the area for this specific polygon
+        setPolygons(prevPolygons => {
+          return prevPolygons.map(p => {
+            if (p.polygon === polygon) {
+              const newArea = calculatePolygonArea(polygon);
+              return { polygon, area: newArea };
+            }
+            return p;
+          });
+        });
+        
+        // Allow new calculations
+        calculationPendingRef.current = false;
+      }, 100);
+    };
+    
+    // Setup event listeners for polygon changes (with debounce)
+    google.maps.event.addListener(polygon, 'mouseup', handlePolygonChange);
     
     const path = polygon.getPath();
-    google.maps.event.addListener(path, 'set_at', () => calculateAreaAndCapacity());
-    google.maps.event.addListener(path, 'insert_at', () => calculateAreaAndCapacity());
-    google.maps.event.addListener(path, 'remove_at', () => calculateAreaAndCapacity());
-    
-    // Calculate area immediately after creation
-    calculateAreaAndCapacity();
-  };
+    google.maps.event.addListener(path, 'set_at', handlePolygonChange);
+    google.maps.event.addListener(path, 'insert_at', handlePolygonChange);
+    google.maps.event.addListener(path, 'remove_at', handlePolygonChange);
+  }, [calculatePolygonArea]);
 
-  // Calculate area and capacity for all polygons
-  const calculateAreaAndCapacity = useCallback(() => {
+  // Recalculate area and capacity when polygons change
+  useEffect(() => {
     if (!selectedPanel) return;
     
+    // Calculate total area
     let area = 0;
-    let capacity = 0;
-    let moduleCount = 0;
+    polygons.forEach(poly => {
+      area += poly.area;
+    });
+    
+    setTotalArea(area);
+    
+    // Generate polygon configs
     const configs: PolygonConfig[] = [];
-
-    polygons.forEach((polygon, index) => {
-      const path = polygon.getPath();
-      const polygonArea = google.maps.geometry.spherical.computeArea(path);
-      area += polygonArea;
-
+    let totalModuleCount = 0;
+    let totalCapacityKw = 0;
+    
+    polygons.forEach((poly, index) => {
       // Default values for this polygon
       const tiltAngle = structureType.id === 'ballasted' ? 10 : 
                         structureType.id === 'fixed_tilt' ? 25 : 
@@ -233,14 +284,14 @@ const AreaCalculator: React.FC<AreaCalculatorProps> = ({
       const azimuth = 180; // Default to south-facing
       
       // Calculate module count based on area and ground coverage ratio
-      const polygonAreaM2 = polygonArea;
+      const polygonAreaM2 = poly.area;
       const moduleArea = (selectedPanel.length / 1000) * (selectedPanel.width / 1000); // Convert to m²
       const modulesPerArea = Math.floor(polygonAreaM2 * structureType.groundCoverageRatio / moduleArea);
       
-      moduleCount += modulesPerArea;
+      totalModuleCount += modulesPerArea;
 
       const capacityForPolygon = (modulesPerArea * (selectedPanel.power_rating || selectedPanel.power)) / 1000;
-      capacity += capacityForPolygon;
+      totalCapacityKw += capacityForPolygon;
 
       configs.push({
         id: index,
@@ -253,31 +304,32 @@ const AreaCalculator: React.FC<AreaCalculatorProps> = ({
       });
     });
 
-    setTotalArea(area);
-    setTotalCapacity(capacity);
-    setTotalModules(moduleCount);
+    setTotalModules(totalModuleCount);
+    setTotalCapacity(totalCapacityKw);
     setPolygonConfigs(configs);
-
-    onCapacityCalculated(capacity, area, moduleCount, configs);
+    
+    // Update parent component
+    onCapacityCalculated(totalCapacityKw, area, totalModuleCount, configs);
+    
   }, [polygons, selectedPanel, structureType, onCapacityCalculated]);
 
   // Start drawing mode with the drawing manager
   const startDrawingPolygon = () => {
-    if (drawingManagerRef) {
-      drawingManagerRef.setDrawingMode(google.maps.drawing.OverlayType.POLYGON);
+    if (drawingManagerRef.current) {
+      drawingManagerRef.current.setDrawingMode(google.maps.drawing.OverlayType.POLYGON);
     }
   };
   
   // Start drawing rectangle with the drawing manager
   const startDrawingRectangle = () => {
-    if (drawingManagerRef) {
-      drawingManagerRef.setDrawingMode(google.maps.drawing.OverlayType.RECTANGLE);
+    if (drawingManagerRef.current) {
+      drawingManagerRef.current.setDrawingMode(google.maps.drawing.OverlayType.RECTANGLE);
     }
   };
 
   // Clear all polygons
-  const clearAllPolygons = () => {
-    polygons.forEach(polygon => {
+  const clearAllPolygons = useCallback(() => {
+    polygons.forEach(({ polygon }) => {
       polygon.setMap(null);
     });
     setPolygons([]);
@@ -286,7 +338,7 @@ const AreaCalculator: React.FC<AreaCalculatorProps> = ({
     setTotalModules(0);
     setPolygonConfigs([]);
     onCapacityCalculated(0, 0, 0, []);
-  };
+  }, [polygons, onCapacityCalculated]);
 
   return (
     <div className="space-y-6">
@@ -414,7 +466,8 @@ const AreaCalculator: React.FC<AreaCalculatorProps> = ({
                   streetViewControl: false,
                   mapTypeId: "satellite",
                   gestureHandling: "greedy",
-                  mapId: GOOGLE_MAPS_ID, // Use the mapId constant here
+                  // Remove mapId if causing issues with custom styles
+                  // mapId: GOOGLE_MAPS_ID,
                   mapTypeControl: true,
                   fullscreenControl: true,
                   zoomControl: true
