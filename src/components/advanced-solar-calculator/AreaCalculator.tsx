@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { GoogleMap, LoadScript } from '@react-google-maps/api';
 import type { SolarPanel } from '@/types/components';
@@ -7,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Layers, Map, Trash2, Square, Hexagon, StopCircle } from 'lucide-react'; 
 import { toast } from 'sonner';
 
-// Get the Google Maps API key from environment variables
-const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+// Replace these values with your actual Google Maps API key and map ID
+const GOOGLE_MAPS_API_KEY = "YOUR_GOOGLE_MAPS_API_KEY"; // Replace with your API key
+const GOOGLE_MAPS_ID = "YOUR_GOOGLE_MAPS_ID"; // Replace with your map ID
 
 // Define libraries array for Google Maps
 const libraries = ["geometry", "drawing"] as ("geometry" | "drawing" | "places" | "visualization")[];
@@ -411,7 +411,7 @@ const AreaCalculator: React.FC<AreaCalculatorProps> = ({
                   streetViewControl: false,
                   mapTypeId: "satellite",
                   gestureHandling: "greedy",
-                  mapId: "142c120910df35ea", // Added map ID for enhanced styling
+                  mapId: GOOGLE_MAPS_ID, // Use the mapId constant here
                   mapTypeControl: true,
                   fullscreenControl: true,
                   zoomControl: true
