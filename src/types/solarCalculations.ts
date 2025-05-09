@@ -7,8 +7,12 @@ export interface SolarCalculationResult {
   location: {
     latitude: number;
     longitude: number;
+    lat?: number;  // Added for compatibility
+    lng?: number;  // Added for compatibility
   };
-  timezone?: string; // Added to fix errors
+  timezone?: string;
+  country?: string;  // Added for compatibility
+  city?: string;     // Added for compatibility
 }
 
 export interface EnergyData {
@@ -55,10 +59,11 @@ export interface InverterParams {
   dc_ac_ratio: number;
   power?: number;
   efficiency?: number;
-  // These properties are used in some components but not in the main calculation
-  specifications?: any;
-  configuration?: any;
-  model?: string;
+  count?: number;        // Added for compatibility
+  dcRatio?: number;      // Added for compatibility
+  model?: string;        // Added for compatibility
+  specifications?: any;  // Added for compatibility
+  configuration?: any;   // Added for compatibility
 }
 
 export interface SolarParams {
@@ -97,61 +102,115 @@ export interface SolarPanel {
   temperatureCoefficient: number;
   createdAt: string;
   updatedAt: string;
+  power_rating?: number; // Added for compatibility
 }
 
-// Add missing types for financial calculator 
+// Enhanced types for financial calculator 
 export interface Currency {
-  code: string;
+  code?: string;
   symbol: string;
   name: string;
+  country?: string;  // Added for compatibility
 }
 
 export interface ElectricityData {
-  price: number;
-  annualConsumption: number;
-  annualExport: number;
-  exportPrice: number;
-  annualPriceIncrease: number;
+  price?: number;
+  annualConsumption?: number;
+  annualExport?: number;
+  exportPrice?: number;
+  annualPriceIncrease?: number;
+  
+  // Added for compatibility with financialCalculator.ts
+  system_type?: string;
+  consumption?: any;
+  tariff?: {
+    type: string;
+    rate?: number;
+    slabs?: Array<{ units: number; rate: number }>;
+  };
+  yearly_amount?: number;
 }
 
 export interface OMParams {
-  annualOMCost: number;
-  inverterReplacementYear: number;
-  inverterReplacementCost: number;
+  annualOMCost?: number;
+  inverterReplacementYear?: number;
+  inverterReplacementCost?: number;
+  
+  // Added for compatibility with financialCalculator.ts
+  yearly_om_cost?: number;
+  om_escalation?: number;
+  tariff_escalation?: number;
 }
 
 export interface ProjectCost {
-  totalCost: number;
-  costPerWatt: number;
-  additionalCosts: number;
-  subsidyAmount: number;
-  depreciation: number;
+  totalCost?: number;
+  costPerWatt?: number;
+  additionalCosts?: number;
+  subsidyAmount?: number;
+  depreciation?: number;
+  
+  // Added for compatibility with financialCalculator.ts
+  base_cost_usd?: number;
+  base_cost_local?: number;
+  cost_per_kw_usd?: number;
+  cost_per_kw_local?: number;
+  cost_local?: number;
+  currency?: string;
+  currency_symbol?: string;
 }
 
 export interface RegionalData {
-  sunshineHours: number;
-  carbonIntensity: number;
-  electricityTax: number;
+  sunshineHours?: number;
+  carbonIntensity?: number;
+  electricityTax?: number;
+  
+  // Added for compatibility with financialCalculator.ts
+  countries?: string[];
+  cost_per_kw?: number;
+  default_tariff?: number;
+  om_cost_percent?: number;
+  default_escalation?: number;
 }
 
 export interface FinancialSettings {
-  interestRate: number;
-  inflationRate: number;
-  discountRate: number;
-  loanTerm: number;
-  loanAmount: number;
-  downPayment: number;
+  interestRate?: number;
+  inflationRate?: number;
+  discountRate?: number;
+  loanTerm?: number;
+  loanAmount?: number;
+  downPayment?: number;
+  
+  // Added for compatibility with financialCalculator.ts
+  region?: string;
+  country?: string;
+  currency?: string;
+  currency_symbol?: string;
+  exchange_rate?: number;
+  regional_data?: RegionalData;
 }
 
 export interface FinancialMetrics {
-  paybackPeriod: number;
-  roi: number;
-  npv: number;
-  irr: number;
-  lcoe: number;
-  savingsLifetime: number;
-  firstYearSavings: number;
-  carbonOffsetTons: number;
+  paybackPeriod?: number;
+  roi?: number;
+  npv?: number;
+  irr?: number;
+  lcoe?: number;
+  savingsLifetime?: number;
+  firstYearSavings?: number;
+  carbonOffsetTons?: number;
+  
+  // Added for compatibility with financialCalculator.ts
+  payback_period?: number;
+  yearly_details?: YearlyDetail[];
+  cash_flows?: number[];
+  system_type?: string;
+  summary?: {
+    total_energy_25yr: number;
+    total_revenue_25yr: number;
+    total_om_cost_25yr: number;
+    net_revenue_25yr: number;
+    revenue_type: string;
+  };
 }
 
 // Interface for PVWatts API response
@@ -164,7 +223,7 @@ export interface PVWattsResponse {
     ac_annual: number;
     solrad_annual: number;
     capacity_factor: number;
-    ac: number[];
+    ac?: number[];
   };
   station_info: {
     lat: number;
@@ -196,4 +255,15 @@ export interface YearData {
 export interface YearlyFinancialData {
   years: YearData[];
   metrics: FinancialMetrics;
+}
+
+// Add YearlyDetail interface for FinancialMetrics
+export interface YearlyDetail {
+  year: number;
+  degradation_factor?: number;
+  energy_output?: number;
+  om_cost: number;
+  net_cash_flow: number;
+  revenue?: number;
+  savings?: number;
 }

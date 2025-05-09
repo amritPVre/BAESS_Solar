@@ -20,6 +20,7 @@ const FinancialMetricsDisplay: React.FC<FinancialMetricsDisplayProps> = ({
     npv,
     irr,
     roi,
+    paybackPeriod,
     payback_period,
     yearly_details,
     cash_flows,
@@ -27,7 +28,9 @@ const FinancialMetricsDisplay: React.FC<FinancialMetricsDisplayProps> = ({
     summary
   } = financialMetrics;
 
-  const isInfinitePayback = !isFinite(payback_period) || payback_period > 25;
+  // Use either paybackPeriod or payback_period (for compatibility)
+  const effectivePaybackPeriod = payback_period ?? paybackPeriod ?? 0;
+  const isInfinitePayback = !isFinite(effectivePaybackPeriod) || effectivePaybackPeriod > 25;
   
   // Format payback period
   const formatPayback = () => {
@@ -40,13 +43,13 @@ const FinancialMetricsDisplay: React.FC<FinancialMetricsDisplayProps> = ({
   };
 
   // Prepare data for cumulative cash flow chart
-  const cumulativeCashFlow = cash_flows.reduce((acc, val, idx) => {
+  const cumulativeCashFlow = (cash_flows || []).reduce((acc, val, idx) => {
     const prev = idx > 0 ? acc[idx - 1] : 0;
     acc.push(prev + val);
     return acc;
   }, [] as number[]);
 
-  const cashFlowChartData = cash_flows.map((value, index) => ({
+  const cashFlowChartData = (cash_flows || []).map((value, index) => ({
     year: index,
     cashFlow: index > 0 ? value : 0, // Skip initial investment for clarity
     cumulativeCashFlow: cumulativeCashFlow[index]

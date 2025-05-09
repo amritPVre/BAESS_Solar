@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -188,8 +187,8 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSavePr
     
     // Update location if available
     if (results.location) {
-      setLatitude(results.location.lat);
-      setLongitude(results.location.lng);
+      setLatitude(results.location.latitude);
+      setLongitude(results.location.longitude);
     }
     
     // Update timezone if available
@@ -419,7 +418,10 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSavePr
           orientation: "south", // Default
           solarIrradiance: 5, // Default
           shadingFactor: 5, // Default
-          location: advancedCalculationResults?.location || { lat: 40.7128, lng: -74.0060 },
+          location: {
+            lat: advancedCalculationResults?.location?.latitude || 40.7128,
+            lng: advancedCalculationResults?.location?.longitude || -74.0060
+          },
           timezone: advancedCalculationResults?.timezone || "America/New_York",
           country: "United States", // Default
           city: "New York", // Default
@@ -475,7 +477,10 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSavePr
           orientation: "south", // Default
           solarIrradiance: 5, // Default
           shadingFactor: 5, // Default
-          location: advancedCalculationResults?.location || { lat: 40.7128, lng: -74.0060 },
+          location: {
+            lat: advancedCalculationResults?.location?.latitude || 40.7128,
+            lng: advancedCalculationResults?.location?.longitude || -74.0060
+          },
           timezone: advancedCalculationResults?.timezone || "America/New_York",
           country: "United States", // Default
           city: "New York", // Default
@@ -784,7 +789,10 @@ const SolarCalculator: React.FC<SolarCalculatorProps> = ({ projectData, onSavePr
                     co2Reduction={co2Reduction}
                     treesEquivalent={treesEquivalent}
                     vehicleMilesOffset={vehicleMilesOffset}
-                    location={advancedCalculationResults?.location || { lat: 40.7128, lng: -74.0060 }}
+                    location={{
+                      lat: advancedCalculationResults?.location?.latitude || 40.7128,
+                      lng: advancedCalculationResults?.location?.longitude || -74.0060
+                    }}
                     timezone={advancedCalculationResults?.timezone || "America/New_York"}
                     country={"United States"}
                     city={"New York"}

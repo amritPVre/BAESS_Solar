@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -72,6 +71,7 @@ const AdvancedSolarInputs: React.FC<AdvancedSolarInputsProps> = ({
   
   // Calculation state
   const [calculating, setCalculating] = useState(false);
+  const [results, setResults] = useState<SolarCalculationResult | null>(null);
 
   const handleCalculate = () => {
     setCalculating(true);
@@ -105,7 +105,7 @@ const AdvancedSolarInputs: React.FC<AdvancedSolarInputsProps> = ({
       setCapacity(calculationResults.system.calculated_capacity);
       
       // Pass results to parent
-      onCalculationComplete(calculationResults);
+      handleCalculationComplete(calculationResults);
       
       toast.success("Solar energy calculations completed!");
     } catch (error) {
@@ -113,6 +113,27 @@ const AdvancedSolarInputs: React.FC<AdvancedSolarInputsProps> = ({
       toast.error(error instanceof Error ? error.message : "Error in solar calculations");
     } finally {
       setCalculating(false);
+    }
+  };
+  
+  const handleCalculationComplete = (results: SolarCalculationResult) => {
+    if (results) {
+      // Store the results
+      setResults(results);
+      
+      // Pass the results to the parent component
+      onCalculationComplete({
+        ...results,
+        location: {
+          latitude: results.location.latitude,
+          longitude: results.location.longitude,
+          lat: results.location.latitude, // Add lat/lng for compatibility
+          lng: results.location.longitude
+        },
+        timezone,
+        country: "United States", // Default values for now
+        city: "New York"          // Default values for now
+      });
     }
   };
   

@@ -60,11 +60,11 @@ const InverterConfiguration: React.FC<InverterConfigurationProps> = ({ onConfigC
     if (!useInverter) return;
     
     const config: InverterParams = {
-      model: selectedInverter,
+      inverter_model: selectedInverter,
+      quantity: numInverters,
+      dc_ac_ratio: dcAcRatio,
       power: acPower,
       efficiency: efficiency,
-      count: numInverters,
-      dcRatio: dcAcRatio,
       specifications: {
         nominal_ac_power: acPower,
         max_efficiency: efficiency
