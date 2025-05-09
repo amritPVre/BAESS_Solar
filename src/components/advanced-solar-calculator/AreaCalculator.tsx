@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { GoogleMap, LoadScript } from '@react-google-maps/api';
 import type { SolarPanel } from '@/types/components';
@@ -515,8 +514,10 @@ const AreaCalculator: React.FC<AreaCalculatorProps> = ({
     
     // Calculate theoretical module counts just for display
     if (calculatedTotalArea > 0 && selectedPanel) {
-      const panelLength = selectedPanel.length || 1700; // mm
-      const panelWidth = selectedPanel.width || 1000; // mm
+      // Fix: Check if length and width are numbers or undefined, and provide fallbacks
+      const panelLength = typeof selectedPanel.length === 'number' ? selectedPanel.length : 1700;
+      const panelWidth = typeof selectedPanel.width === 'number' ? selectedPanel.width : 1000;
+      
       const moduleArea = (panelLength * panelWidth) / 1000000; // m²
       const gcr = structureType.groundCoverageRatio;
       const calculatedModuleCount = Math.floor((calculatedTotalArea * gcr) / moduleArea);
@@ -563,10 +564,13 @@ const AreaCalculator: React.FC<AreaCalculatorProps> = ({
     const polyUtil = window.google.maps.geometry.poly;
 
     // Module dimensions (meters)
-    // Fix the error: Accessing 'length' property on a number type
-    // Use the length value from selectedPanel, not as property access on a number
-    const panelLengthM = selectedPanel.length !== undefined ? selectedPanel.length / 1000 : 1.7;
-    const panelWidthM = selectedPanel.width !== undefined ? selectedPanel.width / 1000 : 1.0;
+    // Fix: Check if length and width are numbers or undefined, and provide fallbacks
+    const panelLength = typeof selectedPanel.length === 'number' ? selectedPanel.length : 1700;
+    const panelWidth = typeof selectedPanel.width === 'number' ? selectedPanel.width : 1000;
+    
+    const panelLengthM = panelLength / 1000;
+    const panelWidthM = panelWidth / 1000;
+    
     const adjacentGapM = layoutParams.adjacentGap / 1000;
     const moduleDim = layoutParams.orientation === 'landscape'
       ? { width: panelLengthM, height: panelWidthM }
