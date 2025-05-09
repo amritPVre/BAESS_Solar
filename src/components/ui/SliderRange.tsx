@@ -10,12 +10,13 @@ interface SliderRangeProps {
   max?: number;
   step?: number;
   className?: string;
+  disabled?: boolean; // Added disabled property
 }
 
 export const SliderRange: React.FC<SliderRangeProps> = React.forwardRef<
   React.ElementRef<typeof SliderPrimitive.Root>,
   SliderRangeProps
->(({ className, value, onChange, min = 0, max = 100, step = 1, ...props }, ref) => {
+>(({ className, value, onChange, min = 0, max = 100, step = 1, disabled = false, ...props }, ref) => {
   const handleValueChange = (values: number[]) => {
     onChange(values[0]);
   };
@@ -32,6 +33,7 @@ export const SliderRange: React.FC<SliderRangeProps> = React.forwardRef<
       min={min}
       max={max}
       step={step}
+      disabled={disabled} // Pass disabled to the Slider
       {...props}
     >
       <SliderPrimitive.Track className="relative h-2 w-full grow overflow-hidden rounded-full bg-gray-100">
