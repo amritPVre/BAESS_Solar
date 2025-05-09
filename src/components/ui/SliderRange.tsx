@@ -3,15 +3,19 @@ import React from 'react';
 import * as SliderPrimitive from '@radix-ui/react-slider';
 import { cn } from '@/lib/utils';
 
-interface SliderRangeProps extends React.ComponentPropsWithoutRef<typeof SliderPrimitive.Root> {
+interface SliderRangeProps {
   value: number;
   onChange: (value: number) => void;
+  min?: number;
+  max?: number;
+  step?: number;
+  className?: string;
 }
 
 export const SliderRange: React.FC<SliderRangeProps> = React.forwardRef<
   React.ElementRef<typeof SliderPrimitive.Root>,
   SliderRangeProps
->(({ className, value, onChange, ...props }, ref) => {
+>(({ className, value, onChange, min = 0, max = 100, step = 1, ...props }, ref) => {
   const handleValueChange = (values: number[]) => {
     onChange(values[0]);
   };
@@ -25,6 +29,9 @@ export const SliderRange: React.FC<SliderRangeProps> = React.forwardRef<
       )}
       value={[value]}
       onValueChange={handleValueChange}
+      min={min}
+      max={max}
+      step={step}
       {...props}
     >
       <SliderPrimitive.Track className="relative h-2 w-full grow overflow-hidden rounded-full bg-gray-100">

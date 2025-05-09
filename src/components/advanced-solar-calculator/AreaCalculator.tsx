@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { GoogleMap, LoadScript } from '@react-google-maps/api';
-import type { SolarPanel } from '../types/components';
+import type { SolarPanel } from '@/types/components';
 import { Layers, Map } from 'lucide-react'; // Replaced LayersThree with Layers
 
 const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
@@ -47,11 +48,11 @@ const AreaCalculator: React.FC<AreaCalculatorProps> = ({ selectedPanel, onCapaci
           const structureType = 'fixed_tilt';
 
           const polygonAreaM2 = polygonArea;
-          const modulesPerArea = polygonAreaM2 / (selectedPanel.length! * selectedPanel.width!);
+          const modulesPerArea = polygonAreaM2 / ((selectedPanel.length || 0) * (selectedPanel.width || 0));
           const moduleCountForPolygon = Math.floor(modulesPerArea);
           moduleCount += moduleCountForPolygon;
 
-          const capacityForPolygon = (moduleCountForPolygon * selectedPanel.power) / 1000;
+          const capacityForPolygon = (moduleCountForPolygon * (selectedPanel.power_rating || selectedPanel.power)) / 1000;
           capacity += capacityForPolygon;
 
           configs.push({
@@ -119,11 +120,11 @@ const AreaCalculator: React.FC<AreaCalculatorProps> = ({ selectedPanel, onCapaci
               const structureType = 'fixed_tilt';
 
               const polygonAreaM2 = polygonArea;
-              const modulesPerArea = polygonAreaM2 / (selectedPanel.length! * selectedPanel.width!);
+              const modulesPerArea = polygonAreaM2 / ((selectedPanel.length || 0) * (selectedPanel.width || 0));
               const moduleCountForPolygon = Math.floor(modulesPerArea);
               moduleCount += moduleCountForPolygon;
 
-              const capacityForPolygon = (moduleCountForPolygon * selectedPanel.power) / 1000;
+              const capacityForPolygon = (moduleCountForPolygon * (selectedPanel.power_rating || selectedPanel.power)) / 1000;
               capacity += capacityForPolygon;
 
               configs.push({
@@ -221,23 +222,53 @@ const AreaCalculator: React.FC<AreaCalculatorProps> = ({ selectedPanel, onCapaci
             onLoad={onLoad}
             onClick={handleMapClick}
           >
+            {/* Current drawing path */}
             {currentPath.length > 0 && drawingMode && (
-              <google.maps.Polyline
-                path={currentPath}
-                strokeColor="#FF0000"
-                strokeOpacity={0.8}
-                strokeWeight={2}
-              />
+              <React.Fragment>
+                {/* We can't use google.maps.Polyline as a JSX component */}
+                {/* Instead, we'll create it imperatively in a useEffect */}
+                {(() => {
+                  // IIFE to create the polyline imperatively
+                  if (map && currentPath.length > 1) {
+                    const polyline = new google.maps.Polyline({
+                      path: currentPath,
+                      strokeColor: "#FF0000",
+                      strokeOpacity: 0.8,
+                      strokeWeight: 2,
+                      map: map
+                    });
+                    
+                    // Clean up function
+                    return () => polyline.setMap(null);
+                  }
+                  return null;
+                })()}
+              </React.Fragment>
             )}
-            {polygons.map((polygon, index) => (
-              <React.Fragment key={index}>
-                {polygon.getPath().getArray().map((latLng, i) => (
-                  <google.maps.Marker
-                    key={`${index}-${i}`}
-                    position={latLng}
-                    label={`${i + 1}`}
-                  />
-                ))}
+            
+            {/* Polygon markers */}
+            {polygons.map((polygon, polygonIndex) => (
+              <React.Fragment key={`polygon-${polygonIndex}`}>
+                {/* Use an IIFE to create markers imperatively */}
+                {(() => {
+                  if (map) {
+                    const path = polygon.getPath();
+                    const markers: google.maps.Marker[] = [];
+                    
+                    for (let i = 0; i < path.getLength(); i++) {
+                      const marker = new google.maps.Marker({
+                        position: path.getAt(i),
+                        label: `${i + 1}`,
+                        map: map
+                      });
+                      markers.push(marker);
+                    }
+                    
+                    // Clean up function
+                    return () => markers.forEach(marker => marker.setMap(null));
+                  }
+                  return null;
+                })()}
               </React.Fragment>
             ))}
           </GoogleMap>

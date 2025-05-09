@@ -1,179 +1,166 @@
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { SliderRange, SliderOutput } from '../ui/SliderRange';
-import { InverterParams } from '@/types/solarCalculations';
+import React from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { InverterParams } from '@/utils/solarEnergyCalculation';
+import { SliderRange, SliderOutput } from '@/components/ui/SliderRange';
 
 interface SystemSizingCalculatorProps {
   selectedPanel: any;
   selectedInverter: any;
-  systemSize: number; // Changed from capacity to systemSize
-  onSystemSizeChange: (systemSize: number) => void; // Changed from onCapacityChange
-  onInverterParamsChange: (params: InverterParams | null) => void;
+  capacity: number;
+  onCapacityChange: (capacity: number) => void;
+  onInverterParamsChange: (params: InverterParams) => void;
   areaBasedLayout: any;
 }
 
 const SystemSizingCalculator: React.FC<SystemSizingCalculatorProps> = ({
   selectedPanel,
   selectedInverter,
-  systemSize, // Changed from capacity
-  onSystemSizeChange, // Changed from onCapacityChange
+  capacity,
+  onCapacityChange,
   onInverterParamsChange,
   areaBasedLayout
 }) => {
-  // State for panel count and inverter count
-  const [panelCount, setPanelCount] = useState(0);
-  const [inverterCount, setInverterCount] = useState(1);
-  const [dcAcRatio, setDcAcRatio] = useState(1.2);
-
-  // Update panel count and inverter count when system size changes
-  useEffect(() => {
-    if (selectedPanel && selectedPanel.power_rating) {
-      const estimatedPanels = Math.ceil((systemSize * 1000) / selectedPanel.power_rating);
-      setPanelCount(estimatedPanels);
-    }
-
-    if (selectedInverter && selectedInverter.power) {
-      const estimatedInverters = Math.ceil(systemSize / selectedInverter.power);
-      setInverterCount(estimatedInverters);
-      
-      // Update DC/AC ratio
-      if (selectedPanel && selectedPanel.power_rating) {
-        const panelCapacity = (panelCount * selectedPanel.power_rating) / 1000;
-        const inverterCapacity = inverterCount * selectedInverter.power;
-        
-        if (inverterCapacity > 0) {
-          setDcAcRatio(panelCapacity / inverterCapacity);
-        }
-      }
-    }
-  }, [systemSize, selectedPanel, selectedInverter, panelCount, inverterCount]);
+  const [dcAcRatio, setDcAcRatio] = React.useState(1.2); // Default 1.2 (120%)
+  const [inverterCount, setInverterCount] = React.useState(1);
   
-  // Update inverter parameters
-  useEffect(() => {
-    if (selectedInverter && inverterCount > 0) {
-      const inverterParams: InverterParams = {
-        inverter_model: `${selectedInverter.manufacturer} ${selectedInverter.model}`,
+  // Calculate number of panels based on capacity
+  const calculatePanels = () => {
+    if (!selectedPanel) return 0;
+    const panelPowerKw = (selectedPanel.power_rating || selectedPanel.power) / 1000;
+    return Math.ceil(capacity / panelPowerKw);
+  };
+  
+  // Calculate system details
+  React.useEffect(() => {
+    if (selectedInverter) {
+      const inverterPower = selectedInverter.power || selectedInverter.power_rating || 0;
+      const totalInverterPower = inverterPower * inverterCount / 1000; // kW
+      
+      // Update inverter params
+      onInverterParamsChange({
+        inverter_model: selectedInverter.model,
         quantity: inverterCount,
         dc_ac_ratio: dcAcRatio,
-        power: selectedInverter.power,
-        efficiency: selectedInverter.efficiency || 0.97
-      };
-      
-      onInverterParamsChange(inverterParams);
-    } else {
-      onInverterParamsChange(null);
+        power: inverterPower,
+        efficiency: selectedInverter.efficiency
+      });
     }
   }, [selectedInverter, inverterCount, dcAcRatio, onInverterParamsChange]);
-
-  // Handle change in panel count
-  const handlePanelCountChange = (newPanelCount: number) => {
-    setPanelCount(newPanelCount);
-    
-    if (selectedPanel && selectedPanel.power_rating) {
-      const newSystemSize = (newPanelCount * selectedPanel.power_rating) / 1000;
-      onSystemSizeChange(newSystemSize);
-    }
-  };
   
-  // Handle change in inverter count
-  const handleInverterCountChange = (newInverterCount: number) => {
-    setInverterCount(newInverterCount);
-  };
-
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>System Sizing Calculator</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {selectedPanel && (
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="panelCount">Number of Panels</Label>
-              <div className="flex items-center space-x-4">
-                <Input
-                  id="panelCount"
-                  type="number"
-                  min={1}
-                  value={panelCount}
-                  onChange={(e) => handlePanelCountChange(parseInt(e.target.value) || 0)}
-                  className="w-24"
-                />
-                <SliderRange
-                  min={1}
-                  max={1000}
-                  step={1}
-                  value={panelCount}
-                  onChange={handlePanelCountChange}
-                />
-                <SliderOutput value={panelCount} />
+      <CardContent className="pt-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h3 className="text-lg font-semibold mb-4">System Size</h3>
+            
+            <div className="space-y-6">
+              <div>
+                <label className="block mb-2">System Capacity (kW)</label>
+                <div className="flex items-center gap-4">
+                  <input
+                    type="number"
+                    value={capacity}
+                    onChange={(e) => onCapacityChange(parseFloat(e.target.value) || 0)}
+                    min="0.1"
+                    step="0.1" 
+                    className="w-24 p-2 border rounded"
+                  />
+                  <div className="flex-grow">
+                    <SliderRange 
+                      value={capacity}
+                      onChange={onCapacityChange}
+                      min={0.5}
+                      max={100}
+                      step={0.5}
+                    />
+                  </div>
+                </div>
+                
+                {areaBasedLayout && (
+                  <p className="text-sm text-green-600 mt-1">
+                    Based on area calculation: {areaBasedLayout.moduleCount} modules, {areaBasedLayout.capacityKw.toFixed(2)} kW
+                  </p>
+                )}
               </div>
-              {selectedPanel && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  {selectedPanel.manufacturer} {selectedPanel.model} ({selectedPanel.power_rating || 0}W)
+              
+              <div>
+                <label className="block mb-2">Module Count</label>
+                <div className="p-2 border rounded bg-gray-50">
+                  <p className="font-semibold">{calculatePanels()} modules</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div>
+            <h3 className="text-lg font-semibold mb-4">Inverter Configuration</h3>
+            
+            <div className="space-y-6">
+              <div>
+                <label className="block mb-2">Number of Inverters</label>
+                <div className="flex items-center gap-4">
+                  <input
+                    type="number"
+                    value={inverterCount}
+                    onChange={(e) => setInverterCount(parseInt(e.target.value) || 1)}
+                    min="1"
+                    className="w-24 p-2 border rounded"
+                  />
+                  <div className="flex-grow">
+                    <SliderRange
+                      value={inverterCount}
+                      onChange={setInverterCount}
+                      min={1}
+                      max={20}
+                      step={1}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block mb-2">DC/AC Ratio</label>
+                <div className="flex items-center gap-4">
+                  <input
+                    type="number"
+                    value={dcAcRatio.toFixed(2)}
+                    onChange={(e) => setDcAcRatio(parseFloat(e.target.value) || 1.2)}
+                    min="0.8"
+                    max="1.5"
+                    step="0.01"
+                    className="w-24 p-2 border rounded"
+                  />
+                  <div className="flex-grow">
+                    <SliderRange
+                      value={dcAcRatio * 100}
+                      onChange={(value) => setDcAcRatio(value / 100)}
+                      min={80}
+                      max={150}
+                      step={1}
+                    />
+                  </div>
+                  <div className="w-12 text-center font-medium">{(dcAcRatio * 100).toFixed(0)}%</div>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Recommended range: 110-130% (1.1-1.3)
                 </p>
+              </div>
+              
+              {selectedInverter && (
+                <div>
+                  <label className="block mb-2">Inverter AC Capacity</label>
+                  <div className="p-2 border rounded bg-gray-50">
+                    <p className="font-semibold">
+                      {((selectedInverter.power || selectedInverter.power_rating || 0) * inverterCount / 1000).toFixed(2)} kW
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
-            
-            {selectedInverter && (
-              <div>
-                <Label htmlFor="inverterCount">Number of Inverters</Label>
-                <div className="flex items-center space-x-4">
-                  <Input
-                    id="inverterCount"
-                    type="number"
-                    min={1}
-                    value={inverterCount}
-                    onChange={(e) => handleInverterCountChange(parseInt(e.target.value) || 1)}
-                    className="w-24"
-                  />
-                  <SliderRange
-                    min={1}
-                    max={50}
-                    step={1}
-                    value={inverterCount}
-                    onChange={handleInverterCountChange}
-                  />
-                  <SliderOutput value={inverterCount} />
-                </div>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {selectedInverter.manufacturer} {selectedInverter.model} ({selectedInverter.power || 0}kW)
-                </p>
-              </div>
-            )}
-            
-            <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-              <h3 className="text-lg font-medium mb-2">System Configuration</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-600">System Size</p>
-                  <p className="text-xl font-bold">{systemSize.toFixed(2)} kW</p>
-                </div>
-                {selectedInverter && (
-                  <div>
-                    <p className="text-sm text-gray-600">DC/AC Ratio</p>
-                    <p className="text-xl font-bold">{dcAcRatio.toFixed(2)}</p>
-                  </div>
-                )}
-                {areaBasedLayout && (
-                  <div>
-                    <p className="text-sm text-gray-600">Area Coverage</p>
-                    <p className="text-xl font-bold">{areaBasedLayout.areaM2.toFixed(1)} m²</p>
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
-        )}
-        {!selectedPanel && (
-          <div className="p-8 text-center">
-            <p className="text-gray-400">Please select a panel first</p>
-          </div>
-        )}
+        </div>
       </CardContent>
     </Card>
   );

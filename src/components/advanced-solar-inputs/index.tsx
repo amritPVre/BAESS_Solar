@@ -71,7 +71,7 @@ const AdvancedSolarInputs: React.FC<AdvancedSolarInputsProps> = ({
   
   // Calculation state
   const [calculating, setCalculating] = useState(false);
-  const [results, setResults] = useState<SolarCalculationResult | null>(null);
+  const [results, setResult] = useState<SolarCalculationResult | null>(null);
 
   const handleCalculate = () => {
     setCalculating(true);
@@ -119,7 +119,17 @@ const AdvancedSolarInputs: React.FC<AdvancedSolarInputsProps> = ({
   const handleCalculationComplete = (results: SolarCalculationResult) => {
     if (results) {
       // Store the results
-      setResults(results);
+      setResult({
+        ...results,
+        location: {
+          latitude: results.location?.lat || latitude,
+          longitude: results.location?.lng || longitude
+        },
+        // Add these optional properties to avoid errors
+        timezone: results.timezone || timezone,
+        country: results.country || "United States",
+        city: results.city || "New York"
+      });
       
       // Pass the results to the parent component
       onCalculationComplete({

@@ -491,7 +491,7 @@ const AdvancedSolarCalculator: React.FC = () => {
                 arrayType,
                 latitude,
                 longitude,
-                timezone
+                timezone: solarTimezone
               }}
               selectedPanel={selectedPanel}
               selectedInverter={selectedInverter}

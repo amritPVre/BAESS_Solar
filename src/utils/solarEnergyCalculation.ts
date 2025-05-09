@@ -1,5 +1,4 @@
 
-import * as pvwatts from 'pvwatts';
 import { SolarCalculationResult, SolarParams } from "@/types/solarCalculations";
 import { calculateSystemDetails } from './systemDetailsCalculation';
 import { calculateIrradiation } from './irradiationCalculation';
@@ -96,7 +95,12 @@ export function calculateSolarEnergy(params: SolarParams): SolarCalculationResul
     },
     location: {
       latitude,
-      longitude
-    }
+      longitude,
+      lat: latitude,  // Add both formats for compatibility
+      lng: longitude
+    },
+    timezone,  // Add timezone to the result
+    country: "United States",  // Default values for compatibility
+    city: "New York"
   };
 }
