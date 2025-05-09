@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SliderRange, SliderOutput } from "@/components/ui/SliderRange";
@@ -92,7 +93,7 @@ const SystemSizingCalculator: React.FC<SystemSizingCalculatorProps> = ({
     <div className="space-y-6">
       <h2 className="text-xl font-semibold">System Sizing Calculator</h2>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
@@ -100,33 +101,42 @@ const SystemSizingCalculator: React.FC<SystemSizingCalculatorProps> = ({
               Solar Module Configuration
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-2">
             <div>
               <div className="mb-4">
                 <div className="flex justify-between mb-2">
                   <span className="font-medium">Number of Panels</span>
-                  <SliderOutput value={moduleCount} />
+                  <span className="font-bold text-right">{moduleCount}</span>
                 </div>
-                <SliderRange 
-                  value={moduleCount}
-                  onChange={(value) => !areaBasedLayout && setModuleCount(value)}
-                  min={1}
-                  max={200}
-                  step={1}
-                  disabled={!!areaBasedLayout}
-                  className={areaBasedLayout ? "opacity-50" : ""}
-                />
-                {areaBasedLayout && (
-                  <p className="text-xs text-amber-600 mt-1">
-                    Module count determined by area calculation
-                  </p>
+                {areaBasedLayout ? (
+                  <>
+                    <div className="h-2 w-full bg-gray-100 rounded-full">
+                      <div className="bg-blue-500 h-full rounded-full" style={{ width: '100%' }}></div>
+                    </div>
+                    <p className="text-xs text-orange-500 mt-1">
+                      Module count determined by area calculation
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <SliderRange 
+                      value={moduleCount}
+                      onChange={setModuleCount}
+                      min={1}
+                      max={200}
+                      step={1}
+                      disabled={!!areaBasedLayout}
+                    />
+                  </>
                 )}
               </div>
               
-              <div className="space-y-1 border-t pt-3">
+              <div className="space-y-2 border-t pt-3">
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-500">Panel Model</span>
-                  <span className="text-sm font-medium">{selectedPanel?.manufacturer} {selectedPanel?.model}</span>
+                  <span className="text-sm font-medium">
+                    {selectedPanel ? `${selectedPanel.manufacturer} ${selectedPanel.model}` : 'Not selected'}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-500">Panel Power</span>
@@ -148,12 +158,12 @@ const SystemSizingCalculator: React.FC<SystemSizingCalculatorProps> = ({
               Inverter Configuration
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-2">
             <div>
               <div className="mb-4">
                 <div className="flex justify-between mb-2">
                   <span className="font-medium">Number of Inverters</span>
-                  <SliderOutput value={inverterCount} />
+                  <span className="font-bold text-right">{inverterCount}</span>
                 </div>
                 <SliderRange 
                   value={inverterCount}
@@ -167,7 +177,7 @@ const SystemSizingCalculator: React.FC<SystemSizingCalculatorProps> = ({
               <div className="mb-4">
                 <div className="flex justify-between mb-2">
                   <span className="font-medium">DC/AC Ratio (%)</span>
-                  <SliderOutput value={dcAcRatio} />
+                  <span className="font-bold text-right">{dcAcRatio}</span>
                 </div>
                 <SliderRange 
                   value={dcAcRatio}
@@ -181,10 +191,12 @@ const SystemSizingCalculator: React.FC<SystemSizingCalculatorProps> = ({
                 </p>
               </div>
               
-              <div className="space-y-1 border-t pt-3">
+              <div className="space-y-2 border-t pt-3">
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-500">Inverter Model</span>
-                  <span className="text-sm font-medium">{selectedInverter?.manufacturer} {selectedInverter?.model}</span>
+                  <span className="text-sm font-medium">
+                    {selectedInverter ? `${selectedInverter.manufacturer} ${selectedInverter.model}` : 'Not selected'}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-500">Inverter Power</span>
@@ -208,6 +220,31 @@ const SystemSizingCalculator: React.FC<SystemSizingCalculatorProps> = ({
           </CardContent>
         </Card>
       </div>
+      
+      <Card className="mt-8">
+        <CardContent className="pt-6">
+          <h3 className="text-lg font-semibold mb-4">Design Summary</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <p className="text-sm text-gray-500">Panel</p>
+              <p className="font-medium">{selectedPanel?.manufacturer} {selectedPanel?.model}</p>
+              <p className="text-sm">{panelPowerW} W, {selectedPanel?.efficiency}% efficiency</p>
+            </div>
+            
+            <div>
+              <p className="text-sm text-gray-500">Inverter</p>
+              <p className="font-medium">{selectedInverter?.manufacturer} {selectedInverter?.model}</p>
+              <p className="text-sm">{inverterPowerKw} kW, {selectedInverter?.efficiency}% efficiency</p>
+            </div>
+            
+            <div>
+              <p className="text-sm text-gray-500">System Size</p>
+              <p className="font-medium">{capacity.toFixed(2)} kWp</p>
+              <p className="text-sm">{moduleCount} modules{areaBasedLayout ? ` in ${areaBasedLayout.areaM2.toFixed(1)} m²` : ''}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

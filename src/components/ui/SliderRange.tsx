@@ -26,6 +26,7 @@ export const SliderRange: React.FC<SliderRangeProps> = React.forwardRef<
       ref={ref}
       className={cn(
         "relative flex w-full touch-none select-none items-center",
+        disabled ? "opacity-60 cursor-not-allowed" : "",
         className
       )}
       value={[value]}
