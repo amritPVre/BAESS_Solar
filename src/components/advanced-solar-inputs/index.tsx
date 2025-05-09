@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -96,7 +97,13 @@ const AdvancedSolarInputs: React.FC<AdvancedSolarInputsProps> = ({
       const calculationResults = calculateSolarEnergy(params);
       
       // Add location and timezone to results for use in other components
-      calculationResults.location = { lat: latitude, lng: longitude };
+      // Fixed: ensure we properly set latitude and longitude properties
+      calculationResults.location = { 
+        latitude: latitude, 
+        longitude: longitude,
+        lat: latitude,  // Add lat/lng for compatibility 
+        lng: longitude  // Add lat/lng for compatibility
+      };
       calculationResults.timezone = timezone;
       calculationResults.country = localCountry;
       calculationResults.city = localCity;
@@ -118,27 +125,28 @@ const AdvancedSolarInputs: React.FC<AdvancedSolarInputsProps> = ({
   
   const handleCalculationComplete = (results: SolarCalculationResult) => {
     if (results) {
-      // Store the results
+      // Store the results with proper location formatting
       setResult({
         ...results,
         location: {
-          latitude: results.location?.lat || latitude,
-          longitude: results.location?.lng || longitude
+          latitude: results.location?.latitude || latitude,
+          longitude: results.location?.longitude || longitude,
+          lat: results.location?.lat || latitude,
+          lng: results.location?.lng || longitude
         },
-        // Add these optional properties to avoid errors
         timezone: results.timezone || timezone,
         country: results.country || "United States",
         city: results.city || "New York"
       });
       
-      // Pass the results to the parent component
+      // Pass the results to the parent component with proper location properties
       onCalculationComplete({
         ...results,
         location: {
-          latitude: results.location.latitude,
-          longitude: results.location.longitude,
-          lat: results.location.latitude, // Add lat/lng for compatibility
-          lng: results.location.longitude
+          latitude: results.location.latitude || latitude,
+          longitude: results.location.longitude || longitude,
+          lat: results.location.latitude || latitude, 
+          lng: results.location.longitude || longitude
         },
         timezone,
         country: "United States", // Default values for now

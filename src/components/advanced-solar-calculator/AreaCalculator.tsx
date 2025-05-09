@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { GoogleMap, LoadScript } from '@react-google-maps/api';
 import type { SolarPanel } from '@/types/components';
-import { Layers, Map } from 'lucide-react'; // Replaced LayersThree with Layers
+import { Layers, Map } from 'lucide-react'; 
 
 const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
@@ -222,51 +222,57 @@ const AreaCalculator: React.FC<AreaCalculatorProps> = ({ selectedPanel, onCapaci
             onLoad={onLoad}
             onClick={handleMapClick}
           >
-            {/* Current drawing path */}
+            {/* Current drawing path - Fixed to avoid returning function as ReactNode */}
             {currentPath.length > 0 && drawingMode && (
               <React.Fragment>
-                {/* We can't use google.maps.Polyline as a JSX component */}
-                {/* Instead, we'll create it imperatively in a useEffect */}
+                {/* Create a simple element to use useEffect for polyline creation */}
                 {(() => {
-                  // IIFE to create the polyline imperatively
-                  if (map && currentPath.length > 1) {
-                    const polyline = new google.maps.Polyline({
-                      path: currentPath,
-                      strokeColor: "#FF0000",
-                      strokeOpacity: 0.8,
-                      strokeWeight: 2,
-                      map: map
-                    });
-                    
-                    // Clean up function
-                    return () => polyline.setMap(null);
-                  }
+                  // Use useEffect inside a component to handle the polyline creation
+                  useEffect(() => {
+                    if (map && currentPath.length > 1) {
+                      const polyline = new google.maps.Polyline({
+                        path: currentPath,
+                        strokeColor: "#FF0000",
+                        strokeOpacity: 0.8,
+                        strokeWeight: 2,
+                        map: map
+                      });
+                      
+                      return () => polyline.setMap(null);
+                    }
+                  }, [currentPath, map]);
+                  
+                  // Return null instead of the function itself
                   return null;
                 })()}
               </React.Fragment>
             )}
             
-            {/* Polygon markers */}
+            {/* Polygon markers - Fixed to avoid returning function as ReactNode */}
             {polygons.map((polygon, polygonIndex) => (
               <React.Fragment key={`polygon-${polygonIndex}`}>
-                {/* Use an IIFE to create markers imperatively */}
                 {(() => {
-                  if (map) {
-                    const path = polygon.getPath();
-                    const markers: google.maps.Marker[] = [];
-                    
-                    for (let i = 0; i < path.getLength(); i++) {
-                      const marker = new google.maps.Marker({
-                        position: path.getAt(i),
-                        label: `${i + 1}`,
-                        map: map
-                      });
-                      markers.push(marker);
+                  // Use useEffect inside a component for markers
+                  useEffect(() => {
+                    if (map) {
+                      const path = polygon.getPath();
+                      const markers: google.maps.Marker[] = [];
+                      
+                      for (let i = 0; i < path.getLength(); i++) {
+                        const marker = new google.maps.Marker({
+                          position: path.getAt(i),
+                          label: `${i + 1}`,
+                          map: map
+                        });
+                        markers.push(marker);
+                      }
+                      
+                      // Return cleanup function
+                      return () => markers.forEach(marker => marker.setMap(null));
                     }
-                    
-                    // Clean up function
-                    return () => markers.forEach(marker => marker.setMap(null));
-                  }
+                  }, [map, polygon]);
+                  
+                  // Return null instead of the function
                   return null;
                 })()}
               </React.Fragment>
