@@ -1,8 +1,7 @@
 
-import React, { useRef, useEffect, useState } from 'react';
-import { toast } from "sonner";
+import React, { useRef } from 'react';
 import { Loader2 } from 'lucide-react';
-import { GoogleMap, LoadScript } from '@react-google-maps/api';
+import { GoogleMap } from '@react-google-maps/api';
 import { useGoogleMapsScript } from './hooks/useGoogleMapsScript';
 
 interface AreaMapContainerProps {
@@ -12,7 +11,7 @@ interface AreaMapContainerProps {
   onMapLoaded: (map: google.maps.Map) => void;
 }
 
-// Libraries needed for Google Maps
+// Define libraries array for Google Maps
 const libraries = ["drawing", "geometry", "marker"] as ("drawing" | "geometry" | "places" | "visualization" | "marker")[];
 
 export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
@@ -45,21 +44,6 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
     onMapLoaded(map);
   };
 
-  // Map options
-  const mapOptions: google.maps.MapOptions = {
-    mapTypeId: "satellite",
-    streetViewControl: false,
-    fullscreenControl: true,
-    mapTypeControl: true,
-    mapTypeControlOptions: {
-      position: google.maps.ControlPosition.TOP_LEFT,
-      style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR
-    },
-    zoomControl: true,
-    gestureHandling: "greedy",
-    mapId: mapId || undefined // Use mapId if available
-  };
-
   // Show error if API key is missing
   if (!apiKey) {
     return (
@@ -87,6 +71,21 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
       </div>
     );
   }
+
+  // Define map options only after Google Maps is loaded
+  const mapOptions = scriptStatus === 'ready' ? {
+    mapTypeId: "satellite",
+    streetViewControl: false,
+    fullscreenControl: true,
+    mapTypeControl: true,
+    mapTypeControlOptions: {
+      position: google.maps.ControlPosition.TOP_LEFT,
+      style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR
+    },
+    zoomControl: true,
+    gestureHandling: "greedy",
+    mapId: mapId || undefined
+  } : {};
 
   // Show map when script is ready
   return (

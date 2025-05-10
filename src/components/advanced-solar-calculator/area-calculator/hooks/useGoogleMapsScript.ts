@@ -15,7 +15,7 @@ export const useGoogleMapsScript = (apiKey: string | null) => {
       return;
     }
 
-    // Check if script already exists
+    // Check if script already exists and Google Maps is loaded
     if (window.google && window.google.maps) {
       setStatus('ready');
       return;
@@ -50,6 +50,7 @@ export const useGoogleMapsScript = (apiKey: string | null) => {
     };
 
     const handleScriptError = () => {
+      console.error("Failed to load Google Maps script");
       script.remove();
       setStatus('error');
     };

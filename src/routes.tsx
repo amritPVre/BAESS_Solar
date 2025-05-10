@@ -8,6 +8,7 @@ import ProjectDetails from "./pages/ProjectDetails";
 import Index from "./pages/Index";
 import AuthGuard from "@/components/AuthGuard";
 import BOQGenerator from "./pages/BOQGenerator";
+import { AdvancedSolarCalculatorPage } from "./pages/AdvancedSolarCalculatorPage";
 
 export const router = createBrowserRouter([
   {
@@ -39,6 +40,14 @@ export const router = createBrowserRouter([
     element: (
       <AuthGuard>
         <BOQGenerator />
+      </AuthGuard>
+    ),
+  },
+  {
+    path: "/advanced-calculator",
+    element: (
+      <AuthGuard>
+        <AdvancedSolarCalculatorPage />
       </AuthGuard>
     ),
   },
