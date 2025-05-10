@@ -1,202 +1,262 @@
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LayoutParameters, StructureType } from './types';
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface StructureParametersProps {
-  structureType: StructureType;
   layoutParams: LayoutParameters;
+  structureType: StructureType;
+  onChange?: (newParams: LayoutParameters) => void;
 }
 
 export const StructureParameters: React.FC<StructureParametersProps> = ({
-  structureType,
   layoutParams,
+  structureType,
+  onChange
 }) => {
-  // Create unique IDs for form elements
-  const [inputIds] = useState({
-    tiltAngle: `tilt-angle-${Math.random().toString(36).substring(2, 9)}`,
-    orientation: `orientation-${Math.random().toString(36).substring(2, 9)}`,
-    rowSpacing: `row-spacing-${Math.random().toString(36).substring(2, 9)}`,
-    moduleGap: `module-gap-${Math.random().toString(36).substring(2, 9)}`,
-    rowsPerTable: `rows-per-table-${Math.random().toString(36).substring(2, 9)}`,
-    modulesPerRow: `modules-per-row-${Math.random().toString(36).substring(2, 9)}`,
-    tableSpacingY: `table-spacing-y-${Math.random().toString(36).substring(2, 9)}`,
-    tableSpacingX: `table-spacing-x-${Math.random().toString(36).substring(2, 9)}`,
-    carportRows: `carport-rows-${Math.random().toString(36).substring(2, 9)}`,
-    carportModulesPerRow: `carport-modules-per-row-${Math.random().toString(36).substring(2, 9)}`,
-    forceRectangle: `force-rectangle-${Math.random().toString(36).substring(2, 9)}`
-  });
+  // Generate unique IDs for form fields
+  const fieldIdPrefix = React.useId();
+  
+  const handleChange = (field: keyof LayoutParameters, value: any) => {
+    if (onChange) {
+      const numValue = Number(value);
+      onChange({
+        ...layoutParams,
+        [field]: !isNaN(numValue) ? numValue : value
+      });
+    }
+  };
+  
+  const handleOrientationChange = (value: string) => {
+    if (onChange) {
+      onChange({
+        ...layoutParams,
+        orientation: value as 'portrait' | 'landscape'
+      });
+    }
+  };
+  
+  // For ground mount table and carport specific configs
+  const handleTableConfigChange = (field: string, value: any) => {
+    if (onChange && layoutParams.tableConfig) {
+      const numValue = Number(value);
+      onChange({
+        ...layoutParams,
+        tableConfig: {
+          ...layoutParams.tableConfig,
+          [field]: !isNaN(numValue) ? numValue : value
+        }
+      });
+    }
+  };
+  
+  const handleCarportConfigChange = (field: string, value: any) => {
+    if (onChange && layoutParams.carportConfig) {
+      const numValue = typeof value === 'string' ? Number(value) : value;
+      onChange({
+        ...layoutParams,
+        carportConfig: {
+          ...layoutParams.carportConfig,
+          [field]: typeof numValue === 'number' && !isNaN(numValue) ? numValue : value
+        }
+      });
+    }
+  };
 
   return (
-    <div className="mt-4 p-4 border rounded-lg bg-gray-50">
-      <h3 className="text-lg font-medium mb-3">Structure Parameters</h3>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1">
-          <label htmlFor={inputIds.tiltAngle} className="block text-sm text-gray-600">
-            Tilt Angle (°)
-          </label>
-          <input
-            id={inputIds.tiltAngle}
-            type="number"
-            value={layoutParams.tiltAngle}
-            readOnly
-            className="w-full p-1 border rounded bg-gray-100"
-          />
-        </div>
-
-        <div className="space-y-1">
-          <label htmlFor={inputIds.orientation} className="block text-sm text-gray-600">
-            Orientation
-          </label>
-          <input
-            id={inputIds.orientation}
-            type="text"
-            value={layoutParams.orientation === 'landscape' ? 'Landscape' : 'Portrait'}
-            readOnly
-            className="w-full p-1 border rounded bg-gray-100"
-          />
-        </div>
-
-        <div className="space-y-1">
-          <label htmlFor={inputIds.rowSpacing} className="block text-sm text-gray-600">
-            Row Spacing (m)
-          </label>
-          <input
-            id={inputIds.rowSpacing}
-            type="number"
-            value={layoutParams.interRowSpacing}
-            readOnly
-            className="w-full p-1 border rounded bg-gray-100"
-          />
-        </div>
-
-        <div className="space-y-1">
-          <label htmlFor={inputIds.moduleGap} className="block text-sm text-gray-600">
-            Module Gap (mm)
-          </label>
-          <input
-            id={inputIds.moduleGap}
-            type="number"
-            value={layoutParams.adjacentGap}
-            readOnly
-            className="w-full p-1 border rounded bg-gray-100"
-          />
-        </div>
-      </div>
-
-      {/* Ground Mount Table specific information */}
-      {structureType.id === 'ground_mount_tables' && layoutParams.tableConfig && (
-        <div className="mt-4 pt-4 border-t">
-          <h4 className="font-medium text-sm mb-2">Table Configuration</h4>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label htmlFor={inputIds.rowsPerTable} className="block text-sm text-gray-600">
-                Rows Per Table
-              </label>
-              <input
-                id={inputIds.rowsPerTable}
-                type="number"
-                value={layoutParams.tableConfig.rowsPerTable}
-                readOnly
-                className="w-full p-1 border rounded bg-gray-100"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label htmlFor={inputIds.modulesPerRow} className="block text-sm text-gray-600">
-                Modules Per Row
-              </label>
-              <input
-                id={inputIds.modulesPerRow}
-                type="number"
-                value={layoutParams.tableConfig.modulesPerRow}
-                readOnly
-                className="w-full p-1 border rounded bg-gray-100"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label htmlFor={inputIds.tableSpacingY} className="block text-sm text-gray-600">
-                Y-Spacing (m)
-              </label>
-              <input
-                id={inputIds.tableSpacingY}
-                type="number"
-                value={layoutParams.tableConfig.interTableSpacingY || 4.0}
-                readOnly
-                className="w-full p-1 border rounded bg-gray-100"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label htmlFor={inputIds.tableSpacingX} className="block text-sm text-gray-600">
-                X-Spacing (m)
-              </label>
-              <input
-                id={inputIds.tableSpacingX}
-                type="number"
-                value={layoutParams.tableConfig.interTableSpacingX || 0.5}
-                readOnly
-                className="w-full p-1 border rounded bg-gray-100"
-              />
-            </div>
+    <Card className="mt-4">
+      <CardHeader className="py-3">
+        <CardTitle className="text-sm font-medium">Module Layout Parameters</CardTitle>
+      </CardHeader>
+      <CardContent className="py-2">
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label htmlFor={`${fieldIdPrefix}-tilt-angle`}>Tilt Angle (°)</Label>
+            <Input
+              id={`${fieldIdPrefix}-tilt-angle`}
+              type="number"
+              value={layoutParams.tiltAngle}
+              onChange={(e) => handleChange('tiltAngle', e.target.value)}
+              min={0}
+              max={45}
+              className="w-full"
+              disabled={!onChange}
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor={`${fieldIdPrefix}-orientation`}>Orientation</Label>
+            <Select 
+              value={layoutParams.orientation} 
+              onValueChange={handleOrientationChange}
+              disabled={!onChange}
+            >
+              <SelectTrigger id={`${fieldIdPrefix}-orientation`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="landscape">Landscape</SelectItem>
+                <SelectItem value="portrait">Portrait</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div>
+            <Label htmlFor={`${fieldIdPrefix}-row-spacing`}>Row Spacing (m)</Label>
+            <Input
+              id={`${fieldIdPrefix}-row-spacing`}
+              type="number"
+              value={layoutParams.interRowSpacing}
+              onChange={(e) => handleChange('interRowSpacing', e.target.value)}
+              min={0.05}
+              max={5}
+              step={0.1}
+              className="w-full"
+              disabled={!onChange}
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor={`${fieldIdPrefix}-adjacent-gap`}>Module Gap (mm)</Label>
+            <Input
+              id={`${fieldIdPrefix}-adjacent-gap`}
+              type="number"
+              value={layoutParams.adjacentGap}
+              onChange={(e) => handleChange('adjacentGap', e.target.value)}
+              min={10}
+              max={100}
+              className="w-full"
+              disabled={!onChange}
+            />
           </div>
         </div>
-      )}
-
-      {/* Carport specific information */}
-      {structureType.id === 'carport' && layoutParams.carportConfig && (
-        <div className="mt-4 pt-4 border-t">
-          <h4 className="font-medium text-sm mb-2">Carport Configuration</h4>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label htmlFor={inputIds.carportRows} className="block text-sm text-gray-600">
-                Rows
-              </label>
-              <input
-                id={inputIds.carportRows}
-                type="number"
-                value={layoutParams.carportConfig.rows}
-                readOnly
-                className="w-full p-1 border rounded bg-gray-100"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label htmlFor={inputIds.carportModulesPerRow} className="block text-sm text-gray-600">
-                Modules Per Row
-              </label>
-              <input
-                id={inputIds.carportModulesPerRow}
-                type="number"
-                value={layoutParams.carportConfig.modulesPerRow}
-                readOnly
-                className="w-full p-1 border rounded bg-gray-100"
-              />
-            </div>
-
-            <div className="col-span-2">
-              <div className="flex items-center space-x-2 mt-2">
-                <input
-                  id={inputIds.forceRectangle}
-                  type="checkbox"
-                  checked={layoutParams.carportConfig.forceRectangle}
-                  readOnly
-                  disabled
-                  className="h-4 w-4 text-blue-600 rounded"
+        
+        {/* Ground Mount Table specific controls */}
+        {structureType.id === 'ground_mount_tables' && layoutParams.tableConfig && (
+          <div className="mt-4 border-t border-gray-200 pt-3">
+            <h4 className="font-medium text-sm mb-2">Ground Mount Table Configuration</h4>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor={`${fieldIdPrefix}-rows-per-table`}>Rows Per Table</Label>
+                <Input
+                  id={`${fieldIdPrefix}-rows-per-table`}
+                  type="number"
+                  value={layoutParams.tableConfig.rowsPerTable || 3}
+                  onChange={(e) => handleTableConfigChange('rowsPerTable', e.target.value)}
+                  min={1}
+                  max={10}
+                  className="w-full"
+                  disabled={!onChange}
                 />
-                <label htmlFor={inputIds.forceRectangle} className="text-sm text-gray-600">
-                  Force Rectangular Shape
-                </label>
+              </div>
+              
+              <div>
+                <Label htmlFor={`${fieldIdPrefix}-modules-per-row`}>Modules Per Row</Label>
+                <Input
+                  id={`${fieldIdPrefix}-modules-per-row`}
+                  type="number"
+                  value={layoutParams.tableConfig.modulesPerRow || 5}
+                  onChange={(e) => handleTableConfigChange('modulesPerRow', e.target.value)}
+                  min={1}
+                  max={20}
+                  className="w-full"
+                  disabled={!onChange}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor={`${fieldIdPrefix}-table-spacing-y`}>Table Spacing Y (m)</Label>
+                <Input
+                  id={`${fieldIdPrefix}-table-spacing-y`}
+                  type="number"
+                  value={layoutParams.tableConfig.interTableSpacingY || 4.0}
+                  onChange={(e) => handleTableConfigChange('interTableSpacingY', e.target.value)}
+                  min={0.5}
+                  max={10}
+                  step={0.1}
+                  className="w-full"
+                  disabled={!onChange}
+                />
+                <p className="text-xs text-gray-500 mt-1">Distance between tables (front-to-front)</p>
+              </div>
+              
+              <div>
+                <Label htmlFor={`${fieldIdPrefix}-table-spacing-x`}>Table Spacing X (m)</Label>
+                <Input
+                  id={`${fieldIdPrefix}-table-spacing-x`}
+                  type="number"
+                  value={layoutParams.tableConfig.interTableSpacingX || 0.5}
+                  onChange={(e) => handleTableConfigChange('interTableSpacingX', e.target.value)}
+                  min={0.1}
+                  max={5}
+                  step={0.1}
+                  className="w-full"
+                  disabled={!onChange}
+                />
+                <p className="text-xs text-gray-500 mt-1">Distance between adjacent tables</p>
               </div>
             </div>
           </div>
+        )}
+        
+        {/* Carport specific controls */}
+        {structureType.id === 'carport' && layoutParams.carportConfig && (
+          <div className="mt-4 border-t border-gray-200 pt-3">
+            <h4 className="font-medium text-sm mb-2">Carport Structure Configuration</h4>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor={`${fieldIdPrefix}-carport-rows`}>Rows</Label>
+                <Input
+                  id={`${fieldIdPrefix}-carport-rows`}
+                  type="number"
+                  value={layoutParams.carportConfig.rows || 6}
+                  onChange={(e) => handleCarportConfigChange('rows', e.target.value)}
+                  min={1}
+                  max={20}
+                  className="w-full"
+                  disabled={!onChange}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor={`${fieldIdPrefix}-carport-modules-per-row`}>Modules Per Row</Label>
+                <Input
+                  id={`${fieldIdPrefix}-carport-modules-per-row`}
+                  type="number"
+                  value={layoutParams.carportConfig.modulesPerRow || 10}
+                  onChange={(e) => handleCarportConfigChange('modulesPerRow', e.target.value)}
+                  min={1}
+                  max={30}
+                  className="w-full"
+                  disabled={!onChange}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+        
+        <div className="mt-3 text-xs text-gray-600 pt-2 border-t">
+          <p>Layout shows modules using {layoutParams.orientation} orientation with {layoutParams.tiltAngle}° tilt.</p>
+          {structureType.id === 'ground_mount_tables' && layoutParams.tableConfig ? (
+            <p>
+              Table config: {layoutParams.tableConfig.rowsPerTable || 3} rows per table, {' '}
+              {layoutParams.tableConfig.modulesPerRow || 5} modules per row
+            </p>
+          ) : structureType.id === 'carport' && layoutParams.carportConfig ? (
+            <p>
+              Carport config: {layoutParams.carportConfig.rows || 6} rows, {' '}
+              {layoutParams.carportConfig.modulesPerRow || 10} modules per row
+            </p>
+          ) : (
+            <p>Row spacing: {layoutParams.interRowSpacing}m, Module gap: {layoutParams.adjacentGap}mm</p>
+          )}
         </div>
-      )}
-
-      <div className="mt-3 text-xs text-gray-500">
-        <p>Based on {structureType.name} configuration and selected parameters.</p>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };

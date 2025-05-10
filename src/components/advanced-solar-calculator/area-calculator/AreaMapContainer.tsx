@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { GoogleMap, LoadScript } from '@react-google-maps/api';
 import { Map, StopCircle } from 'lucide-react';
 import { GOOGLE_MAPS_LIBRARIES } from './constants';
@@ -33,14 +33,21 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
   const mapFullyLoadedRef = useRef(false);
 
   // Use the provided coordinates or fallback to New York
-  const center = { 
-    lat: latitude || 40.7128, 
-    lng: longitude || -74.0060 
+  const defaultCenter = { 
+    lat: 40.7128, 
+    lng: -74.0060 
   };
+  
+  // Memoize center to prevent unnecessary re-renders
+  const center = useRef({ 
+    lat: latitude || defaultCenter.lat, 
+    lng: longitude || defaultCenter.lng 
+  });
   
   const zoom = 18; // Higher zoom level for better detail
   
-  const handleMapLoad = (googleMap: google.maps.Map) => {
+  // Handle map load with useCallback to prevent recreating the function
+  const handleMapLoad = useCallback((googleMap: google.maps.Map) => {
     // Only proceed if this is the first load or if the map reference has changed
     if (mapFullyLoadedRef.current && mapRef.current === googleMap) {
       return;
@@ -50,50 +57,32 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
     mapRef.current = googleMap;
     mapFullyLoadedRef.current = true;
     
-    // Initialize the drawing manager when the map loads
-    if (typeof window.google !== 'undefined' && drawingManagerRef.current === null) {
-      try {
-        const drawingManager = new window.google.maps.drawing.DrawingManager({
-          drawingMode: null,
-          drawingControl: true,
-          drawingControlOptions: {
-            position: window.google.maps.ControlPosition.TOP_CENTER,
-            drawingModes: [
-              window.google.maps.drawing.OverlayType.POLYGON,
-              window.google.maps.drawing.OverlayType.RECTANGLE
-            ]
-          },
-          polygonOptions: {
-            fillColor: "#FF0000",
-            fillOpacity: 0.30,
-            strokeWeight: 1,
-            strokeColor: "#FF0000",
-            clickable: true, 
-            editable: true,
-            draggable: true,
-            zIndex: 1
-          },
-          rectangleOptions: {
-            fillColor: "#FF0000",
-            fillOpacity: 0.30,
-            strokeWeight: 1,
-            strokeColor: "#FF0000",
-            clickable: true, 
-            editable: true,
-            draggable: true,
-            zIndex: 1
-          }
-        });
-        drawingManager.setMap(googleMap);
-        drawingManagerRef.current = drawingManager;
-      } catch (error) {
-        console.error("Failed to initialize drawing manager:", error);
-      }
-    }
-    
-    // Notify parent about map loading
+    // Pass the loaded map to the parent component
     onMapLoaded(googleMap);
-  };
+  }, [onMapLoaded]);
+
+  // Update center ref when props change, but don't trigger re-render
+  useEffect(() => {
+    center.current = { 
+      lat: latitude || defaultCenter.lat, 
+      lng: longitude || defaultCenter.lng 
+    };
+    
+    // If map already exists, update its center
+    if (mapRef.current) {
+      mapRef.current.setCenter(center.current);
+    }
+  }, [latitude, longitude]);
+
+  // Options memoized to prevent re-renders
+  const mapOptions = useRef({
+    streetViewControl: false,
+    mapTypeId: "satellite",
+    gestureHandling: "greedy",
+    mapTypeControl: true,
+    fullscreenControl: true,
+    zoomControl: true
+  });
 
   return (
     <div className="relative h-[500px] border rounded-md overflow-hidden">
@@ -123,17 +112,10 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
       >
         <GoogleMap
           mapContainerStyle={mapContainerStyle}
-          center={center}
+          center={center.current}
           zoom={zoom}
           onLoad={handleMapLoad}
-          options={{
-            streetViewControl: false,
-            mapTypeId: "satellite",
-            gestureHandling: "greedy",
-            mapTypeControl: true,
-            fullscreenControl: true,
-            zoomControl: true
-          }}
+          options={mapOptions.current}
         >
           {/* Drawing handled by the DrawingManager in the hook */}
         </GoogleMap>

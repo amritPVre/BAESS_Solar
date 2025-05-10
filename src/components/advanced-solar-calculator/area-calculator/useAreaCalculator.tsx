@@ -22,15 +22,17 @@ export const useAreaCalculator = ({
   latitude, 
   longitude 
 }: UseAreaCalculatorProps) => {
-  const [map, setMap] = useState<google.maps.Map | null>(null);
+  // Use refs to prevent infinite loops
+  const mapRef = useRef<google.maps.Map | null>(null);
   const [structureType, setStructureType] = useState<StructureType>(STRUCTURE_TYPES[0]);
   const [instructionsVisible, setInstructionsVisible] = useState(true);
   const [layoutParams, setLayoutParams] = useState<LayoutParameters>(DEFAULT_LAYOUT_PARAMS.ballasted);
   const [moduleCount, setModuleCount] = useState(0);
   const [layoutAzimuth, setLayoutAzimuth] = useState<number>(180);
+  const [userMapBounds, setUserMapBounds] = useState<google.maps.LatLngBounds | null>(null);
+  const [mapCenter, setMapCenter] = useState({ lat: latitude || 40.7128, lng: longitude || -74.0060 });
   
-  // Use refs to prevent infinite loops
-  const mapRef = useRef<google.maps.Map | null>(null);
+  // Track initialization state
   const moduleCalculationRef = useRef<{ triggerCalculation: () => void }>({ triggerCalculation: () => {} });
   const structureTypeRef = useRef(structureType);
   const layoutParamsRef = useRef(layoutParams);
@@ -44,6 +46,13 @@ export const useAreaCalculator = ({
   useEffect(() => {
     layoutParamsRef.current = layoutParams;
   }, [layoutParams]);
+
+  // Update center when coordinates change
+  useEffect(() => {
+    if (latitude && longitude) {
+      setMapCenter({ lat: latitude, lng: longitude });
+    }
+  }, [latitude, longitude]);
 
   // Use the polygon manager hook
   const { 
@@ -63,6 +72,16 @@ export const useAreaCalculator = ({
     }
   });
 
+  // The updateMapCenter function that's debounced
+  const updateMapCenter = useCallback(() => {
+    if (mapRef.current) {
+      const center = mapRef.current.getCenter();
+      if (center) {
+        setMapCenter({ lat: center.lat(), lng: center.lng() });
+      }
+    }
+  }, []);
+  
   // Handle midpoint marker clicks (for setting azimuth)
   const handleMidpointClick = useCallback((midpoint: EdgeMidpoint, markerIndex: number) => {
     console.log(`Midpoint clicked: Polygon ${midpoint.polygonIndex}, Edge ${midpoint.edgeIndex}, Heading: ${midpoint.heading.toFixed(1)}`);
@@ -88,7 +107,7 @@ export const useAreaCalculator = ({
 
   // Use the midpoint markers hook with memoized dependencies
   const { midpointMarkersRef } = useMidpointMarkers({
-    map,
+    map: mapRef.current,
     polygons,
     selectedPolygonIndex,
     layoutAzimuth,
@@ -184,7 +203,7 @@ export const useAreaCalculator = ({
     polygonConfigs,
     triggerModuleCalculation
   } = useModulePlacement({
-    map,
+    map: mapRef.current,
     polygons,
     selectedPanel,
     moduleCount,
@@ -194,6 +213,60 @@ export const useAreaCalculator = ({
     onCapacityCalculated
   });
 
+  // The bounds change listener with debouncing
+  useEffect(() => {
+    if (!mapRef.current) return;
+    
+    let isInternalBoundsChange = false;
+    let boundsChangedTimeoutId: number | null = null;
+    
+    const boundsChangedListener = mapRef.current.addListener('bounds_changed', () => {
+      if (
+        mapRef.current && 
+        !mapRef.current.getStreetView().getVisible() && 
+        !isInternalBoundsChange
+      ) {
+        // Debounce bounds updates to prevent rapid state changes
+        if (boundsChangedTimeoutId) {
+          window.clearTimeout(boundsChangedTimeoutId);
+        }
+        
+        boundsChangedTimeoutId = window.setTimeout(() => {
+          setUserMapBounds(mapRef.current!.getBounds() || null);
+          updateMapCenter();
+          boundsChangedTimeoutId = null;
+        }, 300); // Debounce for 300ms
+      }
+    });
+    
+    // Override the fitBounds method to set our flag
+    const originalFitBounds = mapRef.current.fitBounds;
+    mapRef.current.fitBounds = function(...args) {
+      isInternalBoundsChange = true;
+      const result = originalFitBounds.apply(this, args);
+      
+      window.setTimeout(() => {
+        isInternalBoundsChange = false;
+        updateMapCenter();
+      }, 500);
+      
+      return result;
+    };
+    
+    // Clean up the listener
+    return () => {
+      if (boundsChangedListener) {
+        google.maps.event.removeListener(boundsChangedListener);
+      }
+      if (boundsChangedTimeoutId) {
+        window.clearTimeout(boundsChangedTimeoutId);
+      }
+      if (mapRef.current) {
+        mapRef.current.fitBounds = originalFitBounds;
+      }
+    };
+  }, [updateMapCenter]);
+
   // Store reference to trigger calculation function - wrapped in useEffect to prevent loops
   useEffect(() => {
     moduleCalculationRef.current = {
@@ -202,7 +275,7 @@ export const useAreaCalculator = ({
   }, [triggerModuleCalculation]);
 
   // Handle map loading
-  const handleMapLoaded = useCallback((loadedMap: google.maps.Map) => {
+  const onMapLoaded = useCallback((loadedMap: google.maps.Map) => {
     console.log("Map loaded callback");
     
     // Prevent duplicate initializations
@@ -213,16 +286,13 @@ export const useAreaCalculator = ({
     
     mapRef.current = loadedMap;
     mapInitializedRef.current = true;
-    setMap(loadedMap);
     
     // Initialize drawing manager on the loaded map
     initializeDrawingManager(loadedMap);
   }, [initializeDrawingManager]);
 
   return {
-    map,
-    setMap,
-    polygons,
+    polygons, 
     totalArea,
     totalCapacity,
     moduleCount,
@@ -240,6 +310,6 @@ export const useAreaCalculator = ({
     startDrawingPolygon,
     startDrawingRectangle,
     clearAllPolygons,
-    onMapLoaded: handleMapLoaded
+    onMapLoaded
   };
 };

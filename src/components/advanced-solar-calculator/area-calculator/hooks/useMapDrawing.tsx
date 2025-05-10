@@ -1,4 +1,3 @@
-
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { PolygonInfo } from '../types';
@@ -24,6 +23,7 @@ export const useMapDrawing = ({
   const drawListenersRef = useRef<google.maps.MapsEventListener[]>([]);
   const initAttemptCounterRef = useRef(0);
   const mapInitializedRef = useRef(false);
+  const lastPolygonCountRef = useRef(0);
 
   // Helper to calculate area of polygon
   const calculatePolygonArea = useCallback((polygon: google.maps.Polygon): number => {
@@ -45,6 +45,9 @@ export const useMapDrawing = ({
       polygon.setOptions(polygonDrawOptions);
       const path = polygon.getPath();
       
+      // Store listeners to clean them up later
+      const listeners: google.maps.MapsEventListener[] = [];
+      
       const updatePolygon = () => {
         const updatedArea = calculatePolygonArea(polygon);
         polygon.setOptions(polygonDrawOptions);
@@ -62,7 +65,7 @@ export const useMapDrawing = ({
       };
       
       // Add click handler to select this polygon
-      google.maps.event.addListener(polygon, 'click', () => {
+      listeners.push(google.maps.event.addListener(polygon, 'click', () => {
         console.log(`Polygon ${index} selected`);
         setSelectedPolygonIndex(index);
         
@@ -76,13 +79,16 @@ export const useMapDrawing = ({
           }
           poly.polygon.setOptions(options);
         });
-      });
+      }));
       
-      google.maps.event.addListener(polygon, 'mouseup', updatePolygon);
-      google.maps.event.addListener(polygon, 'dragend', updatePolygon);
-      google.maps.event.addListener(path, 'set_at', updatePolygon);
-      google.maps.event.addListener(path, 'insert_at', updatePolygon);
-      google.maps.event.addListener(path, 'remove_at', updatePolygon);
+      listeners.push(google.maps.event.addListener(polygon, 'mouseup', updatePolygon));
+      listeners.push(google.maps.event.addListener(polygon, 'dragend', updatePolygon));
+      listeners.push(google.maps.event.addListener(path, 'set_at', updatePolygon));
+      listeners.push(google.maps.event.addListener(path, 'insert_at', updatePolygon));
+      listeners.push(google.maps.event.addListener(path, 'remove_at', updatePolygon));
+      
+      // Store listeners for potential cleanup
+      polygon.set('listeners', listeners);
     } catch (error) {
       console.error("Error setting up polygon listeners:", error);
     }
@@ -90,7 +96,7 @@ export const useMapDrawing = ({
   
   // Initialize drawing manager
   const initializeDrawingManager = useCallback((map: google.maps.Map) => {
-    if (!map || mapInitializedRef.current) {
+    if (!map || !window.google || mapInitializedRef.current) {
       return;
     }
     
@@ -112,6 +118,14 @@ export const useMapDrawing = ({
         drawingManagerRef.current = null;
       }
       
+      // Clean up old listeners
+      if (drawListenersRef.current.length > 0) {
+        drawListenersRef.current.forEach(listener => {
+          google.maps.event.removeListener(listener);
+        });
+        drawListenersRef.current = [];
+      }
+      
       // Create new drawing manager
       const drawingManager = new google.maps.drawing.DrawingManager({
         drawingMode: null, // Start with no active drawing mode
@@ -129,14 +143,6 @@ export const useMapDrawing = ({
       
       drawingManagerRef.current = drawingManager;
       drawingManager.setMap(map);
-      
-      // Clean up old listeners
-      if (drawListenersRef.current.length > 0) {
-        drawListenersRef.current.forEach(listener => {
-          google.maps.event.removeListener(listener);
-        });
-        drawListenersRef.current = [];
-      }
       
       // Setup event listeners for drawing completion
       const polygonCompleteListener = google.maps.event.addListener(
@@ -245,23 +251,64 @@ export const useMapDrawing = ({
         }
       );
       
+      // Keep drawing mode enabled after completion
+      const overCompleteListener = google.maps.event.addListener(drawingManager, 'overlaycomplete', () => {
+        // Keep the current drawing mode after shape completion
+        drawingManager.setDrawingMode(drawingManager.getDrawingMode());
+      });
+      
       // Store listeners for cleanup
-      drawListenersRef.current = [polygonCompleteListener, rectangleCompleteListener];
+      drawListenersRef.current = [
+        polygonCompleteListener, 
+        rectangleCompleteListener,
+        overCompleteListener
+      ];
       
     } catch (error) {
       console.error("Failed to initialize drawing manager:", error);
       toast.error("Failed to initialize drawing tools");
       mapInitializedRef.current = false;
     }
-  }, [polygonDrawOptions, polygons, setPolygons, setSelectedPolygonIndex, calculatePolygonArea, setupPolygonListeners, triggerModuleCalculation]);
+  }, [
+    polygonDrawOptions,
+    polygons,
+    setPolygons,
+    setSelectedPolygonIndex,
+    calculatePolygonArea,
+    setupPolygonListeners,
+    triggerModuleCalculation
+  ]);
 
   // Reset initialization state when map ref changes
   useEffect(() => {
     return () => {
       mapInitializedRef.current = false;
       initAttemptCounterRef.current = 0;
+      
+      // Clean up listeners
+      if (drawListenersRef.current.length > 0) {
+        drawListenersRef.current.forEach(listener => {
+          google.maps.event.removeListener(listener);
+        });
+        drawListenersRef.current = [];
+      }
+      
+      // Clean up drawing manager
+      if (drawingManagerRef.current) {
+        drawingManagerRef.current.setMap(null);
+        drawingManagerRef.current = null;
+      }
     };
   }, []);
+  
+  // Check for polygon updates
+  useEffect(() => {
+    // Only run if the polygon count has changed
+    if (polygons.length !== lastPolygonCountRef.current) {
+      lastPolygonCountRef.current = polygons.length;
+      console.log(`Polygon count changed to ${polygons.length}`);
+    }
+  }, [polygons.length]);
 
   // Start drawing polygon
   const startDrawingPolygon = useCallback(() => {

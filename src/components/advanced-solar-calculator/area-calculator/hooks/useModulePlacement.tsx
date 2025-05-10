@@ -42,6 +42,7 @@ export const useModulePlacement = ({
   });
   const calculateTimeoutRef = useRef<number | null>(null);
   const skipNextCalculationRef = useRef(false);
+  const moduleCalculationPerformedRef = useRef(true);
   
   // Helper to clear existing module rectangles
   const clearModuleRectangles = useCallback(() => {
@@ -69,6 +70,11 @@ export const useModulePlacement = ({
     });
   }, []);
 
+  // Reset the calculation flag when dependencies change
+  useEffect(() => {
+    moduleCalculationPerformedRef.current = true;
+  }, [polygons, selectedPanel, layoutParams, moduleCount, structureType.id]);
+
   // Memoized calculation trigger that can be called from parent
   const triggerModuleCalculation = useCallback(() => {
     // Skip if we've explicitly marked to skip the next calculation
@@ -86,6 +92,12 @@ export const useModulePlacement = ({
     // Clear any pending calculation
     if (calculateTimeoutRef.current !== null) {
       window.clearTimeout(calculateTimeoutRef.current);
+    }
+    
+    // Skip duplicate calculations if nothing changed
+    if (!moduleCalculationPerformedRef.current) {
+      console.log("--- Skipping duplicate module placement ---");
+      return;
     }
     
     // Use timeout to debounce rapid changes
@@ -171,6 +183,9 @@ export const useModulePlacement = ({
         
         // Notify parent component
         onCapacityCalculated(totalCapacity, totalArea, totalPlacedCount, configs);
+        
+        // Mark the calculation as complete
+        moduleCalculationPerformedRef.current = false;
       } catch (error) {
         console.error("Error during module placement calculation:", error);
         toast.error("Error calculating module placement");
