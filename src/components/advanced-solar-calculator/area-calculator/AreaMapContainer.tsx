@@ -1,5 +1,5 @@
 
-import React, { useRef, useMemo } from 'react';
+import React, { useState, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import { GoogleMap } from '@react-google-maps/api';
 import { useGoogleMapsScript } from './hooks/useGoogleMapsScript';
@@ -23,6 +23,9 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
   // Get API key from environment variable
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string;
   
+  // Track map initialization to prevent duplicate rendering
+  const mapInitializedRef = useRef(false);
+  
   // Load Google Maps script
   const scriptStatus = useGoogleMapsScript(apiKey);
   
@@ -32,16 +35,27 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
     borderRadius: "0.5rem"
   };
 
-  // Make sure to properly memoize the default center based on actual inputs
-  const defaultCenter = useMemo(() => ({
+  // Create default center object - no useMemo to prevent React errors
+  const defaultCenter = {
     lat: latitude || 40.7128,
     lng: longitude || -74.0060
-  }), [latitude, longitude]);
+  };
 
-  // Map load handler
+  // Map load handler with initialization check
   const handleMapLoad = (map: google.maps.Map) => {
+    // Prevent duplicate initializations
+    if (mapInitializedRef.current) {
+      console.log("Map already initialized, skipping duplicate onLoad");
+      return;
+    }
+    
     console.log("Map loaded successfully");
-    onMapLoaded(map);
+    mapInitializedRef.current = true;
+    
+    // Debounce the onMapLoaded callback to prevent rapid consecutive calls
+    setTimeout(() => {
+      onMapLoaded(map);
+    }, 100);
   };
 
   // Show error if API key is missing
@@ -72,18 +86,18 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
     );
   }
 
-  // Define map options for when Google Maps is loaded
+  // Only create map options when Google Maps script is ready
   const mapOptions = {
-    mapTypeId: "satellite",
     streetViewControl: false,
     fullscreenControl: true,
     mapTypeControl: true,
+    mapTypeId: window.google?.maps?.MapTypeId?.SATELLITE || 'satellite',
     mapTypeControlOptions: {
-      position: google.maps.ControlPosition.TOP_LEFT,
-      style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR
+      position: window.google?.maps?.ControlPosition?.TOP_LEFT || 1,
+      style: window.google?.maps?.MapTypeControlStyle?.HORIZONTAL_BAR || 1
     },
     zoomControl: true,
-    gestureHandling: "greedy" as const, // Type assertion to fix typescript error
+    gestureHandling: "greedy" as const, // Type assertion for TypeScript
   };
 
   // Show map when script is ready

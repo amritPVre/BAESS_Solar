@@ -19,25 +19,38 @@ export const useMapState = ({
   const mapInitializedRef = useRef(false);
   const boundsChangeListenerRef = useRef<google.maps.MapsEventListener | null>(null);
   const timeoutIdRef = useRef<number | null>(null);
+  const isInternalBoundsChangeRef = useRef(false);
   
   // Update center when coordinates change
   useEffect(() => {
-    if (initialLatitude && initialLongitude) {
+    if (initialLatitude && initialLongitude && !mapInitializedRef.current) {
       setMapCenter({ lat: initialLatitude, lng: initialLongitude });
     }
   }, [initialLatitude, initialLongitude]);
 
-  // The updateMapCenter function
+  // The updateMapCenter function - with debounce to prevent re-render loops
   const updateMapCenter = useCallback(() => {
-    if (mapRef.current) {
+    if (!mapRef.current) return;
+    
+    try {
       const center = mapRef.current.getCenter();
-      if (center) {
-        setMapCenter({ lat: center.lat(), lng: center.lng() });
+      if (center && !isInternalBoundsChangeRef.current) {
+        // Set state only if values have changed
+        const newCenter = { lat: center.lat(), lng: center.lng() };
+        setMapCenter(prev => {
+          if (Math.abs(prev.lat - newCenter.lat) > 0.0001 || 
+              Math.abs(prev.lng - newCenter.lng) > 0.0001) {
+            return newCenter;
+          }
+          return prev;
+        });
       }
+    } catch (error) {
+      console.error("Error updating map center:", error);
     }
   }, []);
   
-  // Handle map loading
+  // Handle map loading with protection against duplicate initializations
   const onMapLoaded = useCallback((loadedMap: google.maps.Map) => {
     console.log("Map loaded callback");
     
@@ -57,22 +70,41 @@ export const useMapState = ({
       boundsChangeListenerRef.current = null;
     }
     
-    // Safely add bounds change listener
+    // Safely add bounds change listener with proper error handling
     if (window.google && window.google.maps && window.google.maps.event) {
-      // Set up bounds change listener only once
-      boundsChangeListenerRef.current = loadedMap.addListener('bounds_changed', () => {
-        if (timeoutIdRef.current) {
-          window.clearTimeout(timeoutIdRef.current);
-        }
-        
-        timeoutIdRef.current = window.setTimeout(() => {
-          if (mapRef.current && !mapRef.current.getStreetView().getVisible()) {
-            setUserMapBounds(mapRef.current.getBounds() || null);
-            updateMapCenter();
+      try {
+        // Set up bounds change listener only once with strong debounce
+        boundsChangeListenerRef.current = loadedMap.addListener('bounds_changed', () => {
+          // Clear any pending timeout to prevent rapid updates
+          if (timeoutIdRef.current) {
+            window.clearTimeout(timeoutIdRef.current);
+            timeoutIdRef.current = null;
           }
-          timeoutIdRef.current = null;
-        }, 500);
-      });
+          
+          // Debounce bounds updates to once per second
+          timeoutIdRef.current = window.setTimeout(() => {
+            if (!mapRef.current || mapRef.current.getStreetView().getVisible()) {
+              return;
+            }
+            
+            try {
+              const bounds = mapRef.current.getBounds();
+              if (bounds) {
+                setUserMapBounds(bounds);
+                updateMapCenter();
+              }
+            } catch (error) {
+              console.error("Error in bounds_changed handler:", error);
+            }
+            
+            timeoutIdRef.current = null;
+          }, 1000); // 1 second debounce
+        });
+        
+        console.log("Bounds change listener attached successfully");
+      } catch (error) {
+        console.error("Error attaching bounds change listener:", error);
+      }
     }
   }, [updateMapCenter]);
 
@@ -81,11 +113,17 @@ export const useMapState = ({
     return () => {
       if (boundsChangeListenerRef.current && window.google && window.google.maps) {
         google.maps.event.removeListener(boundsChangeListenerRef.current);
+        boundsChangeListenerRef.current = null;
       }
       
       if (timeoutIdRef.current) {
         window.clearTimeout(timeoutIdRef.current);
+        timeoutIdRef.current = null;
       }
+      
+      // Reset initialization flag
+      mapInitializedRef.current = false;
+      mapRef.current = null;
     };
   }, []);
 
