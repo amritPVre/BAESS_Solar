@@ -34,6 +34,7 @@ export const useAreaCalculator = ({
   const moduleCalculationRef = useRef<{ triggerCalculation: () => void }>({ triggerCalculation: () => {} });
   const structureTypeRef = useRef(structureType);
   const layoutParamsRef = useRef(layoutParams);
+  const mapInitializedRef = useRef(false);
 
   // Update refs when state changes
   useEffect(() => {
@@ -200,9 +201,27 @@ export const useAreaCalculator = ({
     };
   }, [triggerModuleCalculation]);
 
+  // Handle map loading
+  const handleMapLoaded = useCallback((loadedMap: google.maps.Map) => {
+    console.log("Map loaded callback");
+    
+    // Prevent duplicate initializations
+    if (mapInitializedRef.current && mapRef.current === loadedMap) {
+      console.log("Map already initialized, skipping");
+      return;
+    }
+    
+    mapRef.current = loadedMap;
+    mapInitializedRef.current = true;
+    setMap(loadedMap);
+    
+    // Initialize drawing manager on the loaded map
+    initializeDrawingManager(loadedMap);
+  }, [initializeDrawingManager]);
+
   return {
     map,
-    setMap: initializeDrawingManager,
+    setMap,
     polygons,
     totalArea,
     totalCapacity,
@@ -221,5 +240,6 @@ export const useAreaCalculator = ({
     startDrawingPolygon,
     startDrawingRectangle,
     clearAllPolygons,
+    onMapLoaded: handleMapLoaded
   };
 };

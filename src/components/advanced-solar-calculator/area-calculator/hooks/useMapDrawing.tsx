@@ -1,5 +1,5 @@
 
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { PolygonInfo } from '../types';
 
@@ -22,6 +22,8 @@ export const useMapDrawing = ({
   const mapRef = useRef<google.maps.Map | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const drawListenersRef = useRef<google.maps.MapsEventListener[]>([]);
+  const initAttemptCounterRef = useRef(0);
+  const mapInitializedRef = useRef(false);
 
   // Helper to calculate area of polygon
   const calculatePolygonArea = useCallback((polygon: google.maps.Polygon): number => {
@@ -88,21 +90,29 @@ export const useMapDrawing = ({
   
   // Initialize drawing manager
   const initializeDrawingManager = useCallback((map: google.maps.Map) => {
-    if (!map) {
-      console.error("Cannot initialize drawing manager: map is null");
+    if (!map || mapInitializedRef.current) {
       return;
     }
     
+    // Limit initialization attempts
+    initAttemptCounterRef.current += 1;
+    if (initAttemptCounterRef.current > 3) {
+      console.warn("Too many initialization attempts, skipping");
+      return;
+    }
+    
+    console.log("Initializing drawing manager");
     mapRef.current = map;
-    
-    // If drawingManager already exists, just make sure it's attached to the map
-    if (drawingManagerRef.current) {
-      drawingManagerRef.current.setMap(map);
-      return;
-    }
+    mapInitializedRef.current = true;
     
     try {
-      console.log("Initializing drawing manager");
+      // Cleanup any existing drawing manager
+      if (drawingManagerRef.current) {
+        drawingManagerRef.current.setMap(null);
+        drawingManagerRef.current = null;
+      }
+      
+      // Create new drawing manager
       const drawingManager = new google.maps.drawing.DrawingManager({
         drawingMode: null, // Start with no active drawing mode
         drawingControl: true,
@@ -119,6 +129,14 @@ export const useMapDrawing = ({
       
       drawingManagerRef.current = drawingManager;
       drawingManager.setMap(map);
+      
+      // Clean up old listeners
+      if (drawListenersRef.current.length > 0) {
+        drawListenersRef.current.forEach(listener => {
+          google.maps.event.removeListener(listener);
+        });
+        drawListenersRef.current = [];
+      }
       
       // Setup event listeners for drawing completion
       const polygonCompleteListener = google.maps.event.addListener(
@@ -152,7 +170,7 @@ export const useMapDrawing = ({
               
               // Trigger module calculation
               triggerModuleCalculation();
-            }, 0);
+            }, 100);
           } catch (error) {
             console.error("Error processing completed polygon:", error);
             toast.error("Error creating polygon");
@@ -219,7 +237,7 @@ export const useMapDrawing = ({
               
               // Trigger module calculation
               triggerModuleCalculation();
-            }, 0);
+            }, 100);
           } catch (error) {
             console.error("Error processing completed rectangle:", error);
             toast.error("Error creating rectangle");
@@ -233,8 +251,17 @@ export const useMapDrawing = ({
     } catch (error) {
       console.error("Failed to initialize drawing manager:", error);
       toast.error("Failed to initialize drawing tools");
+      mapInitializedRef.current = false;
     }
   }, [polygonDrawOptions, polygons, setPolygons, setSelectedPolygonIndex, calculatePolygonArea, setupPolygonListeners, triggerModuleCalculation]);
+
+  // Reset initialization state when map ref changes
+  useEffect(() => {
+    return () => {
+      mapInitializedRef.current = false;
+      initAttemptCounterRef.current = 0;
+    };
+  }, []);
 
   // Start drawing polygon
   const startDrawingPolygon = useCallback(() => {

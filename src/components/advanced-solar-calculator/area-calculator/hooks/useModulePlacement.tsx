@@ -41,6 +41,7 @@ export const useModulePlacement = ({
     layoutParamsHash: ''
   });
   const calculateTimeoutRef = useRef<number | null>(null);
+  const skipNextCalculationRef = useRef(false);
   
   // Helper to clear existing module rectangles
   const clearModuleRectangles = useCallback(() => {
@@ -70,6 +71,13 @@ export const useModulePlacement = ({
 
   // Memoized calculation trigger that can be called from parent
   const triggerModuleCalculation = useCallback(() => {
+    // Skip if we've explicitly marked to skip the next calculation
+    if (skipNextCalculationRef.current) {
+      skipNextCalculationRef.current = false;
+      return;
+    }
+    
+    // If a calculation is already in progress, queue another one
     if (calculationInProgressRef.current) {
       calculationQueuedRef.current = true;
       return;
@@ -114,7 +122,7 @@ export const useModulePlacement = ({
         setPlacedModuleCount(0);
         setPlacedModulesPerPolygon({});
         
-        if (!map || !selectedPanel || polygons.length === 0) {
+        if (!selectedPanel || polygons.length === 0) {
           onCapacityCalculated(0, 0, 0, []);
           calculationInProgressRef.current = false;
           return;
@@ -172,10 +180,20 @@ export const useModulePlacement = ({
         // If another calculation was requested while this one was running, trigger it
         if (calculationQueuedRef.current) {
           calculationQueuedRef.current = false;
-          triggerModuleCalculation();
+          
+          // Set a small delay before the next calculation
+          setTimeout(() => {
+            triggerModuleCalculation();
+          }, 300);
         }
       }
     }, 300); // Debounce for 300ms
+    
+    return () => {
+      if (calculateTimeoutRef.current !== null) {
+        window.clearTimeout(calculateTimeoutRef.current);
+      }
+    };
   }, [
     map, 
     polygons, 
@@ -198,6 +216,13 @@ export const useModulePlacement = ({
       }
     };
   }, [clearModuleRectangles]);
+
+  // Mark to skip the next calculation when polygons change
+  useEffect(() => {
+    if (polygons.length === 0) {
+      skipNextCalculationRef.current = true;
+    }
+  }, [polygons.length]);
 
   return {
     placedModuleCount,

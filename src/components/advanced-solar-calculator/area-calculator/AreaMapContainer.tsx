@@ -11,14 +11,14 @@ const GOOGLE_MAPS_ID = import.meta.env.VITE_GOOGLE_MAPS_ID || '';
 interface AreaMapContainerProps {
   latitude: number;
   longitude: number;
-  map: google.maps.Map | null;
+  onMapLoaded: (map: google.maps.Map) => void;
   drawingManagerRef: React.MutableRefObject<google.maps.drawing.DrawingManager | null>;
 }
 
 export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({ 
   latitude, 
   longitude,
-  map,
+  onMapLoaded,
   drawingManagerRef
 }) => {
   const mapContainerStyle = {
@@ -30,6 +30,7 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
   // Use references to prevent re-renders
   const mapRef = useRef<google.maps.Map | null>(null);
   const loadScriptLoaded = useRef(false);
+  const mapFullyLoadedRef = useRef(false);
 
   // Use the provided coordinates or fallback to New York
   const center = { 
@@ -39,11 +40,15 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
   
   const zoom = 18; // Higher zoom level for better detail
   
-  const onLoad = (googleMap: google.maps.Map) => {
-    console.log("Map loaded successfully");
+  const handleMapLoad = (googleMap: google.maps.Map) => {
+    // Only proceed if this is the first load or if the map reference has changed
+    if (mapFullyLoadedRef.current && mapRef.current === googleMap) {
+      return;
+    }
     
-    // Store map reference to parent props and local ref
+    console.log("Map loaded successfully");
     mapRef.current = googleMap;
+    mapFullyLoadedRef.current = true;
     
     // Initialize the drawing manager when the map loads
     if (typeof window.google !== 'undefined' && drawingManagerRef.current === null) {
@@ -85,15 +90,10 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
         console.error("Failed to initialize drawing manager:", error);
       }
     }
+    
+    // Notify parent about map loading
+    onMapLoaded(googleMap);
   };
-
-  // Pass map reference to parent with useEffect to prevent render loops
-  useEffect(() => {
-    if (mapRef.current) {
-      // This is how we update the parent's map reference without causing re-renders
-      (map as any) = mapRef.current;
-    }
-  }, [mapRef.current]);
 
   return (
     <div className="relative h-[500px] border rounded-md overflow-hidden">
@@ -125,7 +125,7 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
           mapContainerStyle={mapContainerStyle}
           center={center}
           zoom={zoom}
-          onLoad={onLoad}
+          onLoad={handleMapLoad}
           options={{
             streetViewControl: false,
             mapTypeId: "satellite",
