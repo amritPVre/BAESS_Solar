@@ -118,7 +118,9 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
     gestureHandling: "greedy",
     mapTypeControl: true,
     fullscreenControl: true,
-    zoomControl: true
+    zoomControl: true,
+    // Add the map ID back to the options
+    mapId: GOOGLE_MAPS_ID
   });
 
   // Ensure the Google Maps script loads only once
@@ -150,6 +152,17 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
             <h3 className="text-lg font-medium text-gray-900">Google Maps API Key Missing</h3>
             <p className="text-sm text-gray-600 max-w-md">
               Please add your Google Maps API key to the environment variables as VITE_GOOGLE_MAPS_API_KEY.
+            </p>
+          </div>
+        </div>
+      )}
+      {!GOOGLE_MAPS_ID && GOOGLE_MAPS_API_KEY && (
+        <div className="absolute inset-0 bg-gray-100 flex items-center justify-center z-10">
+          <div className="text-center p-4">
+            <StopCircle className="h-12 w-12 text-amber-500 mx-auto mb-2" />
+            <h3 className="text-lg font-medium text-gray-900">Google Maps ID Missing</h3>
+            <p className="text-sm text-gray-600 max-w-md">
+              Please add your Google Maps ID to the environment variables as VITE_GOOGLE_MAPS_ID.
             </p>
           </div>
         </div>
