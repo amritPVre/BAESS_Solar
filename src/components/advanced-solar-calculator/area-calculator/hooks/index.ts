@@ -6,3 +6,4 @@ export * from './useMapDrawing';
 export * from './useMapState';
 export * from './useStructureParameters';
 export * from './useUIState';
+export * from './useGoogleMapsScript';
