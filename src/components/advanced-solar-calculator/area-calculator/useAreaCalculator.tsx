@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { toast } from 'sonner';
 import type { SolarPanel } from '@/types/components';
@@ -395,23 +396,26 @@ export const useAreaCalculator = ({
     
     // Calculate theoretical module counts just for display
     if (calculatedTotalArea > 0 && selectedPanel) {
-      // Extract panel dimensions safely - fixed version
-      let panelLength = 1700; // Default fallback in mm
-      let panelWidth = 1000;  // Default fallback in mm
+      // Get panel dimensions correctly using appropriate type handling
+      // Default values in case dimensions are not available
+      const defaultLength = 1700; // mm
+      const defaultWidth = 1000;  // mm
       
-      // Safely check for panel dimensions using type guards
-      if (selectedPanel) {
-        if (typeof selectedPanel?.length === 'number') {
-          panelLength = selectedPanel.length;
-        } else if (selectedPanel.dimensions && typeof selectedPanel.dimensions?.height === 'number') {
-          panelLength = selectedPanel.dimensions.height;
-        }
-        
-        if (typeof selectedPanel?.width === 'number') {
-          panelWidth = selectedPanel.width;
-        } else if (selectedPanel.dimensions && typeof selectedPanel.dimensions?.width === 'number') {
-          panelWidth = selectedPanel.dimensions.width;
-        }
+      // Safely extract dimensions with proper type checking
+      let panelLength = defaultLength;
+      let panelWidth = defaultWidth;
+      
+      // Check if the panel has length/width as direct properties
+      if ('length' in selectedPanel && typeof selectedPanel.length === 'number') {
+        panelLength = selectedPanel.length;
+      } else if (selectedPanel.dimensions && typeof selectedPanel.dimensions.height === 'number') {
+        panelLength = selectedPanel.dimensions.height;
+      }
+      
+      if ('width' in selectedPanel && typeof selectedPanel.width === 'number') {
+        panelWidth = selectedPanel.width;
+      } else if (selectedPanel.dimensions && typeof selectedPanel.dimensions.width === 'number') {
+        panelWidth = selectedPanel.dimensions.width;
       }
       
       const moduleArea = (panelLength * panelWidth) / 1000000; // m²
