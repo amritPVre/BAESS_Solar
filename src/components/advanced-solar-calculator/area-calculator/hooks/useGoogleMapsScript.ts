@@ -3,118 +3,91 @@ import { useState, useEffect } from 'react';
 
 type ScriptStatus = 'loading' | 'ready' | 'error';
 
-// Define libraries array for Google Maps
-const libraries = ["drawing", "geometry", "marker"] as ("drawing" | "geometry" | "places" | "visualization" | "marker")[];
+// Create a global tracking variable to ensure we don't load the script multiple times
+if (typeof window !== 'undefined' && !window.googleMapsScriptStatus) {
+  window.googleMapsScriptStatus = 'not-loaded';
+}
 
-// Track script loading status globally to prevent multiple loads
-let scriptLoadingStatus: ScriptStatus = 'loading';
-let globalScriptLoadPromise: Promise<void> | null = null;
-let scriptElement: HTMLScriptElement | null = null;
-
+// Export the hook
 export const useGoogleMapsScript = (apiKey: string): ScriptStatus => {
-  const [status, setStatus] = useState<ScriptStatus>(() => {
-    // Check if Google Maps is already loaded
-    if (window.google?.maps) {
-      console.log('[GoogleMaps] Already loaded, returning ready state');
-      return 'ready';
-    }
-    
-    // Check if script tag already exists
-    const existingScript = document.getElementById('google-maps-script');
-    if (existingScript) {
-      console.log('[GoogleMaps] Script tag already exists, returning current status');
-      return scriptLoadingStatus;
-    }
-    
-    // Return initial loading state
-    return 'loading';
-  });
-  
+  const [scriptStatus, setScriptStatus] = useState<ScriptStatus>(
+    // Initial state based on global status
+    typeof window !== 'undefined' && window.googleMapsScriptStatus === 'ready' 
+      ? 'ready' 
+      : typeof window !== 'undefined' && window.googleMapsScriptStatus === 'loading'
+        ? 'loading'
+        : 'loading'
+  );
+
   useEffect(() => {
-    // If Google Maps is already loaded, nothing to do
-    if (window.google?.maps) {
-      console.log('[GoogleMaps] Google Maps already loaded');
-      setStatus('ready');
+    // If window is not defined, we're in SSR, skip
+    if (typeof window === 'undefined') return;
+    
+    // If Google Maps is already loaded, we don't need to do anything
+    if (window.google && window.google.maps) {
+      console.log('Google Maps script already loaded');
+      window.googleMapsScriptStatus = 'ready';
+      setScriptStatus('ready');
       return;
     }
-    
-    // If no API key, set error
-    if (!apiKey) {
-      console.error('[GoogleMaps] No API key provided');
-      setStatus('error');
+
+    // If script is already loading, don't start another load
+    if (window.googleMapsScriptStatus === 'loading') {
+      console.log('Google Maps script is already loading');
       return;
     }
-    
-    // Don't load script if it's already loading
-    if (globalScriptLoadPromise) {
-      console.log('[GoogleMaps] Script already loading, waiting for completion');
-      // Just wait for the existing promise
-      globalScriptLoadPromise
-        .then(() => {
-          console.log('[GoogleMaps] Existing script load completed');
-          setStatus('ready');
-        })
-        .catch(() => {
-          console.error('[GoogleMaps] Existing script load failed');
-          setStatus('error');
-        });
-      return;
-    }
-    
-    // Check if script tag already exists
-    const existingScript = document.getElementById('google-maps-script');
-    if (existingScript) {
-      console.log('[GoogleMaps] Script tag already exists, not creating a new one');
-      return;
-    }
-    
-    console.log('[GoogleMaps] Loading script...');
-    scriptLoadingStatus = 'loading';
-    
-    // Create script element
-    scriptElement = document.createElement('script');
-    scriptElement.id = 'google-maps-script';
-    scriptElement.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=${libraries.join(',')}`;
-    scriptElement.async = true;
-    scriptElement.defer = true;
-    
-    // Create promise to track loading
-    globalScriptLoadPromise = new Promise<void>((resolve, reject) => {
-      if (!scriptElement) return reject('Script element is null');
-      
-      scriptElement.addEventListener('load', () => {
-        console.log('[GoogleMaps] Script loaded successfully');
-        scriptLoadingStatus = 'ready';
-        setStatus('ready');
-        resolve();
-      });
-      
-      scriptElement.addEventListener('error', (error) => {
-        console.error('[GoogleMaps] Error loading script:', error);
-        scriptLoadingStatus = 'error';
-        setStatus('error');
-        reject(error);
-        // Clear global promise to allow retrying
-        globalScriptLoadPromise = null;
+
+    // Begin loading the script
+    const loadScript = () => {
+      if (!apiKey) {
+        console.error('No Google Maps API key provided');
+        setScriptStatus('error');
+        window.googleMapsScriptStatus = 'error';
+        return;
+      }
+
+      try {
+        console.log('Loading Google Maps script...');
+        window.googleMapsScriptStatus = 'loading';
         
-        // Remove the script tag on error to allow retrying
-        if (scriptElement && scriptElement.parentNode) {
-          scriptElement.parentNode.removeChild(scriptElement);
-          scriptElement = null;
-        }
-      });
-    });
-    
-    // Add script to document
-    document.body.appendChild(scriptElement);
-    
-    // Cleanup function
-    return () => {
-      // Don't remove the script on unmount as it needs to be available globally
-      // Just clean up our local reference
-      scriptElement = null;
+        // Create script tag
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,drawing,geometry,marker`;
+        script.async = true;
+        script.defer = true;
+        
+        // Set successful load handler
+        script.onload = () => {
+          console.log('Google Maps script loaded successfully');
+          window.googleMapsScriptStatus = 'ready';
+          setScriptStatus('ready');
+        };
+        
+        // Set error handler
+        script.onerror = () => {
+          console.error('Error loading Google Maps script');
+          window.googleMapsScriptStatus = 'error';
+          setScriptStatus('error');
+        };
+        
+        // Append script to document
+        document.head.appendChild(script);
+      } catch (error) {
+        console.error('Error setting up Google Maps script:', error);
+        window.googleMapsScriptStatus = 'error';
+        setScriptStatus('error');
+      }
     };
+
+    loadScript();
   }, [apiKey]);
-  
-  return status;
+
+  return scriptStatus;
 };
+
+// Extend the Window interface to include our tracking variable
+declare global {
+  interface Window {
+    googleMapsScriptStatus?: 'not-loaded' | 'loading' | 'ready' | 'error';
+  }
+}

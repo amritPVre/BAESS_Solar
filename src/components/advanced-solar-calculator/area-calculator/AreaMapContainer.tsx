@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
 import { GoogleMap } from '@react-google-maps/api';
 import { useGoogleMapsScript } from './hooks/useGoogleMapsScript';
@@ -29,17 +29,36 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
   // Load Google Maps script
   const scriptStatus = useGoogleMapsScript(apiKey);
   
-  const mapContainerStyle = {
+  const mapContainerStyle = useMemo(() => ({
     height: "500px",
     width: "100%",
     borderRadius: "0.5rem"
-  };
+  }), []);
 
-  // Create default center object - no useMemo to prevent React errors
-  const defaultCenter = {
+  // Create default center object
+  const defaultCenter = useMemo(() => ({
     lat: latitude || 40.7128,
     lng: longitude || -74.0060
-  };
+  }), [latitude, longitude]);
+
+  // Map options with mapId properly included
+  const mapOptions = useMemo(() => {
+    if (!window.google) return {};
+    
+    return {
+      streetViewControl: false,
+      fullscreenControl: true,
+      mapTypeControl: true,
+      mapTypeId: window.google?.maps?.MapTypeId?.SATELLITE || 'satellite',
+      mapTypeControlOptions: {
+        position: window.google?.maps?.ControlPosition?.TOP_LEFT || 1,
+        style: window.google?.maps?.MapTypeControlStyle?.HORIZONTAL_BAR || 1
+      },
+      mapId: "142c120910df35ea",  // Restored mapId
+      zoomControl: true,
+      gestureHandling: "greedy" as const
+    };
+  }, []);
 
   // Map load handler with initialization check
   const handleMapLoad = (map: google.maps.Map) => {
@@ -52,7 +71,7 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
     console.log("Map loaded successfully");
     mapInitializedRef.current = true;
     
-    // Debounce the onMapLoaded callback to prevent rapid consecutive calls
+    // Call onMapLoaded after a short delay to ensure map is fully loaded
     setTimeout(() => {
       onMapLoaded(map);
     }, 100);
@@ -86,21 +105,7 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
     );
   }
 
-  // Only create map options when Google Maps script is ready
-  const mapOptions = {
-    streetViewControl: false,
-    fullscreenControl: true,
-    mapTypeControl: true,
-    mapTypeId: window.google?.maps?.MapTypeId?.SATELLITE || 'satellite',
-    mapTypeControlOptions: {
-      position: window.google?.maps?.ControlPosition?.TOP_LEFT || 1,
-      style: window.google?.maps?.MapTypeControlStyle?.HORIZONTAL_BAR || 1
-    },
-    zoomControl: true,
-    gestureHandling: "greedy" as const, // Type assertion for TypeScript
-  };
-
-  // Show map when script is ready
+  // Only render the map when the script is ready
   return (
     <div className="h-[500px] w-full relative">
       {scriptStatus === 'ready' && (

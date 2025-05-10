@@ -35,7 +35,7 @@ export const useMapState = ({
     try {
       const center = mapRef.current.getCenter();
       if (center && !isInternalBoundsChangeRef.current) {
-        // Set state only if values have changed
+        // Set state only if values have changed significantly
         const newCenter = { lat: center.lat(), lng: center.lng() };
         setMapCenter(prev => {
           if (Math.abs(prev.lat - newCenter.lat) > 0.0001 || 
@@ -70,26 +70,27 @@ export const useMapState = ({
       boundsChangeListenerRef.current = null;
     }
     
-    // Safely add bounds change listener with proper error handling
+    // Safely add bounds change listener with proper error handling and significant debounce
     if (window.google && window.google.maps && window.google.maps.event) {
       try {
         // Set up bounds change listener only once with strong debounce
         boundsChangeListenerRef.current = loadedMap.addListener('bounds_changed', () => {
+          // Skip if we don't have a map reference or if street view is visible
+          if (!mapRef.current || mapRef.current.getStreetView().getVisible()) {
+            return;
+          }
+          
           // Clear any pending timeout to prevent rapid updates
           if (timeoutIdRef.current) {
             window.clearTimeout(timeoutIdRef.current);
             timeoutIdRef.current = null;
           }
           
-          // Debounce bounds updates to once per second
+          // Use a significant debounce (1 second) to avoid excessive updates
           timeoutIdRef.current = window.setTimeout(() => {
-            if (!mapRef.current || mapRef.current.getStreetView().getVisible()) {
-              return;
-            }
-            
             try {
-              const bounds = mapRef.current.getBounds();
-              if (bounds) {
+              const bounds = mapRef.current?.getBounds();
+              if (bounds && !isInternalBoundsChangeRef.current) {
                 setUserMapBounds(bounds);
                 updateMapCenter();
               }
@@ -112,7 +113,11 @@ export const useMapState = ({
   useEffect(() => {
     return () => {
       if (boundsChangeListenerRef.current && window.google && window.google.maps) {
-        google.maps.event.removeListener(boundsChangeListenerRef.current);
+        try {
+          google.maps.event.removeListener(boundsChangeListenerRef.current);
+        } catch (e) {
+          console.warn("Error removing bounds change listener:", e);
+        }
         boundsChangeListenerRef.current = null;
       }
       
