@@ -196,7 +196,7 @@ export const useAreaCalculator = ({
   // Store reference to trigger calculation function - wrapped in useEffect to prevent loops
   useEffect(() => {
     moduleCalculationRef.current = {
-      triggerCalculation
+      triggerCalculation: triggerModuleCalculation
     };
   }, [triggerModuleCalculation]);
 
