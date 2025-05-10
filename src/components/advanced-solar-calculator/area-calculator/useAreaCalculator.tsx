@@ -86,7 +86,7 @@ export const useAreaCalculator = ({
     // Set up listeners for polygon changes
     setupPolygonListeners(
       polygon, 
-      prev => prev.length, 
+      () => polygons.length, // Fix: Changed this to a function that returns the length instead of direct property access
       calculatePolygonArea,
       polygonDrawOptions,
       polygons,
