@@ -2,7 +2,6 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { GoogleMap, LoadScript } from '@react-google-maps/api';
 import { Map, StopCircle } from 'lucide-react';
-import { GOOGLE_MAPS_LIBRARIES } from './constants';
 
 // Get the Google Maps API key and Map ID from environment variables
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
@@ -41,7 +40,7 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
   
   // Use references to prevent re-renders
   const mapRef = useRef<google.maps.Map | null>(null);
-  const loadScriptLoaded = useRef(false);
+  const mapInitializationAttempts = useRef(0);
   const mapFullyLoadedRef = useRef(false);
 
   // Use the provided coordinates or fallback to New York
@@ -68,10 +67,36 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
     console.log("Map loaded successfully");
     mapRef.current = googleMap;
     mapFullyLoadedRef.current = true;
+    mapInitializationAttempts.current = 0;
     
-    // Pass the loaded map to the parent component
-    onMapLoaded(googleMap);
+    // Add a slight delay to ensure all map components are loaded
+    setTimeout(() => {
+      // Pass the loaded map to the parent component
+      onMapLoaded(googleMap);
+    }, 200);
   }, [onMapLoaded]);
+
+  // Handle load error
+  const handleLoadError = useCallback((error: Error) => {
+    console.error("Error loading Google Maps:", error);
+    
+    if (mapInitializationAttempts.current < 3) {
+      mapInitializationAttempts.current++;
+      console.log(`Retrying map initialization (attempt ${mapInitializationAttempts.current})`);
+      
+      // Clear the initialization flag to allow another attempt
+      window._mapInitialized = false;
+      
+      // Force a re-render after a delay
+      setTimeout(() => {
+        // This will trigger a re-render of the component
+        const mapContainer = document.getElementById('area-map-container');
+        if (mapContainer) {
+          mapContainer.innerHTML = '';
+        }
+      }, 1000);
+    }
+  }, []);
 
   // Update center ref when props change, but don't trigger re-render
   useEffect(() => {
@@ -117,7 +142,7 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
   }, []);
 
   return (
-    <div className="relative h-[500px] border rounded-md overflow-hidden">
+    <div className="relative h-[500px] border rounded-md overflow-hidden" id="area-map-container">
       {!GOOGLE_MAPS_API_KEY && (
         <div className="absolute inset-0 bg-gray-100 flex items-center justify-center z-10">
           <div className="text-center p-4">
@@ -132,6 +157,7 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
       <LoadScript 
         googleMapsApiKey={GOOGLE_MAPS_API_KEY} 
         libraries={libraries}
+        onError={handleLoadError}
         loadingElement={
           <div className="h-full w-full flex items-center justify-center bg-gray-100">
             <div className="text-center">
@@ -140,7 +166,6 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
             </div>
           </div>
         }
-        onLoad={() => { loadScriptLoaded.current = true; }}
       >
         <GoogleMap
           mapContainerStyle={mapContainerStyle}

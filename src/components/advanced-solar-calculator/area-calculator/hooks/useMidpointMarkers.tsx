@@ -31,6 +31,30 @@ export const useMidpointMarkers = ({
     onMidpointClick(midpoint, markerIndex);
   }, [onMidpointClick]);
 
+  // Helper function to safely remove markers
+  const clearMarkers = useCallback(() => {
+    if (midpointMarkersRef.current.length > 0) {
+      console.log(`Clearing ${midpointMarkersRef.current.length} midpoint markers`);
+      
+      midpointMarkersRef.current.forEach(marker => {
+        if (marker) {
+          try {
+            // First check if the marker is valid
+            if (marker instanceof Object && 'map' in marker) {
+              // Use null assignment for cleanup
+              marker.map = null;
+            }
+          } catch (err) {
+            console.warn("Error clearing midpoint marker:", err);
+          }
+        }
+      });
+      
+      // Reset the markers array
+      midpointMarkersRef.current = [];
+    }
+  }, []);
+
   useEffect(() => {
     // Skip if map is not available or window.google is not defined
     if (!map || !window.google || !window.google.maps.geometry || !window.google.maps.geometry.spherical || !window.google.maps.marker) {
@@ -60,83 +84,101 @@ export const useMidpointMarkers = ({
     lastSelectedPolygonRef.current = selectedPolygonIndex;
     lastLayoutAzimuthRef.current = layoutAzimuth;
     
-    // Clear existing midpoint markers
-    midpointMarkersRef.current.forEach(marker => {
-      marker.map = null; 
-    });
-    midpointMarkersRef.current = [];
+    // Clear existing midpoint markers safely
+    clearMarkers();
+    
+    // Skip creation if there are no polygons
+    if (polygons.length === 0 || !map) {
+      return;
+    }
     
     const { spherical } = window.google.maps.geometry;
     const { PinElement } = window.google.maps.marker;
     const newMidpointMarkers: google.maps.marker.AdvancedMarkerElement[] = [];
     
-    // Process each polygon to create edge midpoint markers
-    polygons.forEach((polyInfo, polygonIndex) => {
-      const path = polyInfo.polygon.getPath();
-      const pathLength = path.getLength();
-      
-      if (pathLength >= 2) {
-        for (let i = 0; i < pathLength; i++) {
-          const startPoint = path.getAt(i)!;
-          const endPoint = path.getAt((i + 1) % pathLength)!;
-          
-          const midpointLatLng = new google.maps.LatLng(
-            (startPoint.lat() + endPoint.lat()) / 2,
-            (startPoint.lng() + endPoint.lng()) / 2
-          );
-          
-          const heading = spherical.computeHeading(startPoint, endPoint);
-          const normalizedHeading = (heading < 0) ? heading + 360 : heading;
-          const solarAzimuth = (normalizedHeading + 90) % 360;
-          const markerTooltip = `Set Azimuth (${solarAzimuth.toFixed(1)}°)`;
-          
-          const midpointData: EdgeMidpoint = {
-            polygonIndex,
-            edgeIndex: i,
-            position: { lat: midpointLatLng.lat(), lng: midpointLatLng.lng() },
-            heading: solarAzimuth
-          };
+    try {
+      // Process each polygon to create edge midpoint markers
+      polygons.forEach((polyInfo, polygonIndex) => {
+        const path = polyInfo.polygon.getPath();
+        const pathLength = path.getLength();
+        
+        if (pathLength >= 2) {
+          for (let i = 0; i < pathLength; i++) {
+            const startPoint = path.getAt(i)!;
+            const endPoint = path.getAt((i + 1) % pathLength)!;
+            
+            const midpointLatLng = new google.maps.LatLng(
+              (startPoint.lat() + endPoint.lat()) / 2,
+              (startPoint.lng() + endPoint.lng()) / 2
+            );
+            
+            const heading = spherical.computeHeading(startPoint, endPoint);
+            const normalizedHeading = (heading < 0) ? heading + 360 : heading;
+            const solarAzimuth = (normalizedHeading + 90) % 360;
+            const markerTooltip = `Set Azimuth (${solarAzimuth.toFixed(1)}°)`;
+            
+            const midpointData: EdgeMidpoint = {
+              polygonIndex,
+              edgeIndex: i,
+              position: { lat: midpointLatLng.lat(), lng: midpointLatLng.lng() },
+              heading: solarAzimuth
+            };
 
-          // Determine if this marker should be highlighted
-          const polygonAzimuth = polyInfo.azimuth || 180;
-          const isSelected = (polygonIndex === selectedPolygonIndex) && 
-                            (Math.abs(solarAzimuth - polygonAzimuth) < 1);
-          
-          const pin = new PinElement({
-            scale: isSelected ? 1.2 : 0.7,
-            background: isSelected ? '#FFCC00' : '#FFFF00',
-            borderColor: isSelected ? '#FF0000' : '#000000',
-            glyphColor: '#000000'
-          });
-
-          const marker = new google.maps.marker.AdvancedMarkerElement({
-            position: midpointData.position,
-            map: map,
-            content: pin.element,
-            title: markerTooltip,
-            zIndex: 3
-          });
-
-          const currentMarkerIndex = newMidpointMarkers.length;
-          
-          // Use a closure to capture the current values for the event handler
-          ((mData, mIndex) => {
-            marker.addListener('click', () => {
-              handleMidpointClick(mData, mIndex);
+            // Determine if this marker should be highlighted
+            const polygonAzimuth = polyInfo.azimuth || 180;
+            const isSelected = (polygonIndex === selectedPolygonIndex) && 
+                              (Math.abs(solarAzimuth - polygonAzimuth) < 1);
+            
+            const pin = new PinElement({
+              scale: isSelected ? 1.2 : 0.7,
+              background: isSelected ? '#FFCC00' : '#FFFF00',
+              borderColor: isSelected ? '#FF0000' : '#000000',
+              glyphColor: '#000000'
             });
-          })(midpointData, currentMarkerIndex);
-          
-          newMidpointMarkers.push(marker);
-          
-          if (isSelected) {
-            setSelectedMidpointIdx(currentMarkerIndex);
+
+            try {
+              const marker = new google.maps.marker.AdvancedMarkerElement({
+                position: midpointData.position,
+                map: map,
+                content: pin.element,
+                title: markerTooltip,
+                zIndex: 3
+              });
+
+              const currentMarkerIndex = newMidpointMarkers.length;
+              
+              // Use a closure to capture the current values for the event handler
+              ((mData, mIndex) => {
+                marker.addListener('click', () => {
+                  handleMidpointClick(mData, mIndex);
+                });
+              })(midpointData, currentMarkerIndex);
+              
+              newMidpointMarkers.push(marker);
+              
+              if (isSelected) {
+                setSelectedMidpointIdx(currentMarkerIndex);
+              }
+            } catch (err) {
+              console.warn("Error creating marker:", err);
+            }
           }
         }
-      }
-    });
+      });
     
-    midpointMarkersRef.current = newMidpointMarkers;
-  }, [map, polygons, selectedPolygonIndex, layoutAzimuth, handleMidpointClick]);
+      midpointMarkersRef.current = newMidpointMarkers;
+    } catch (err) {
+      console.error("Error processing polygons for markers:", err);
+    }
+    
+  }, [map, polygons, selectedPolygonIndex, layoutAzimuth, handleMidpointClick, clearMarkers]);
+
+  // Clean up markers when component unmounts
+  useEffect(() => {
+    return () => {
+      clearMarkers();
+    };
+  }, [clearMarkers]);
 
   return {
     midpointMarkersRef,
