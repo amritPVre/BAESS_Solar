@@ -254,21 +254,21 @@ export const useModulePlacement = ({
       }
 
       // Create polygon configuration
-      const placedModules = modulesPerPolygon[polyIndex] || 0;
-      const capacity = (placedModules * (selectedPanel.power_rating || 400)) / 1000; // kW
+      const placedModulesCount = modulesPerPolygon[polyIndex] || 0;
+      const capacity = (placedModulesCount * (selectedPanel.power_rating || 400)) / 1000; // kW
       
       updatedPolygonConfigs.push({
         id: polyIndex,
         area: polyInfo.area,
         azimuth: polygonAzimuth,
         capacityKw: capacity,
-        moduleCount: placedModules,
+        moduleCount: placedModulesCount,
         structureType: structureType.id,
         tiltAngle: layoutParams.tiltAngle
       });
 
       // Update total placed count
-      currentPlacedCount += placedModules;
+      currentPlacedCount += placedModulesCount;
     }
 
     // Draw all modules
@@ -294,6 +294,8 @@ export const useModulePlacement = ({
     setIsCalculating(false);
   }, [map, polygons, selectedPanel, moduleCount, structureType, layoutParams, totalArea, onCapacityCalculated, clearModuleRectangles, isCalculating]);
 
+  // Define the placement functions before they are used
+  
   // Ballasted module placement strategy (rows with consistent orientation)
   function placeBallasted(
     polygon: google.maps.Polygon,

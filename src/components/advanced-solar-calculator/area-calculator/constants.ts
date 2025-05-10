@@ -10,6 +10,18 @@ export const STRUCTURE_TYPES: StructureType[] = [
   { id: 'carport', name: 'Carport Structure', groundCoverageRatio: 0.7 },
 ];
 
+// Define polygon drawing options
+export const DEFAULT_POLYGON_OPTIONS: google.maps.PolygonOptions = {
+  fillColor: "#FF0000",
+  fillOpacity: 0.30,
+  strokeWeight: 1,
+  strokeColor: "#FF0000",
+  clickable: true, 
+  editable: true,
+  draggable: true,
+  zIndex: 1
+};
+
 // Define default layout parameters for each structure type
 export const DEFAULT_LAYOUT_PARAMS: Record<string, LayoutParameters> = {
   ballasted: {
