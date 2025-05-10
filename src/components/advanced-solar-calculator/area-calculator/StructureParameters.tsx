@@ -57,6 +57,48 @@ export const StructureParameters: React.FC<StructureParametersProps> = ({
     };
   };
 
+  // Helper function to update table config with all required properties
+  const updateTableConfig = (updates: Partial<{
+    rowsPerTable: number;
+    modulesPerRow: number;
+    interTableSpacingY: number;
+    interTableSpacingX: number;
+  }>) => {
+    // Start with existing config or default values
+    const currentConfig = params.tableConfig || getDefaultTableConfig();
+    
+    // Create new config with all required properties
+    const newConfig = {
+      rowsPerTable: updates.rowsPerTable !== undefined ? updates.rowsPerTable : currentConfig.rowsPerTable,
+      modulesPerRow: updates.modulesPerRow !== undefined ? updates.modulesPerRow : currentConfig.modulesPerRow,
+      interTableSpacingY: updates.interTableSpacingY !== undefined ? updates.interTableSpacingY : currentConfig.interTableSpacingY,
+      interTableSpacingX: updates.interTableSpacingX !== undefined ? updates.interTableSpacingX : currentConfig.interTableSpacingX
+    };
+    
+    // Update params with new config
+    updateParams({ tableConfig: newConfig });
+  };
+
+  // Helper function to update carport config with all required properties
+  const updateCarportConfig = (updates: Partial<{
+    rows: number;
+    modulesPerRow: number;
+    forceRectangle: boolean;
+  }>) => {
+    // Start with existing config or default values
+    const currentConfig = params.carportConfig || getDefaultCarportConfig();
+    
+    // Create new config with all required properties
+    const newConfig = {
+      rows: updates.rows !== undefined ? updates.rows : currentConfig.rows,
+      modulesPerRow: updates.modulesPerRow !== undefined ? updates.modulesPerRow : currentConfig.modulesPerRow,
+      forceRectangle: updates.forceRectangle !== undefined ? updates.forceRectangle : currentConfig.forceRectangle
+    };
+    
+    // Update params with new config
+    updateParams({ carportConfig: newConfig });
+  };
+
   // Handle specific structure type parameters
   const renderStructureSpecificParams = () => {
     switch (structureType.id) {
@@ -76,14 +118,7 @@ export const StructureParameters: React.FC<StructureParametersProps> = ({
                   value={(params.tableConfig?.rowsPerTable || DEFAULT_LAYOUT_PARAMS.ground_mount_tables.tableConfig?.rowsPerTable || 3).toString()}
                   onChange={(e) => {
                     const value = Math.max(1, parseInt(e.target.value || '3', 10));
-                    // Ensure all required fields are included when updating
-                    const currentConfig = params.tableConfig || getDefaultTableConfig();
-                    updateParams({
-                      tableConfig: {
-                        ...currentConfig,
-                        rowsPerTable: value
-                      }
-                    });
+                    updateTableConfig({ rowsPerTable: value });
                   }}
                   className="h-8 text-xs"
                 />
@@ -99,14 +134,7 @@ export const StructureParameters: React.FC<StructureParametersProps> = ({
                   value={(params.tableConfig?.modulesPerRow || DEFAULT_LAYOUT_PARAMS.ground_mount_tables.tableConfig?.modulesPerRow || 5).toString()}
                   onChange={(e) => {
                     const value = Math.max(1, parseInt(e.target.value || '5', 10));
-                    // Ensure all required fields are included when updating
-                    const currentConfig = params.tableConfig || getDefaultTableConfig();
-                    updateParams({
-                      tableConfig: {
-                        ...currentConfig,
-                        modulesPerRow: value
-                      }
-                    });
+                    updateTableConfig({ modulesPerRow: value });
                   }}
                   className="h-8 text-xs"
                 />
@@ -123,14 +151,7 @@ export const StructureParameters: React.FC<StructureParametersProps> = ({
                   value={(params.tableConfig?.interTableSpacingY || DEFAULT_LAYOUT_PARAMS.ground_mount_tables.tableConfig?.interTableSpacingY || 4).toString()}
                   onChange={(e) => {
                     const value = Math.max(0.5, parseFloat(e.target.value || '4'));
-                    // Ensure all required fields are included when updating
-                    const currentConfig = params.tableConfig || getDefaultTableConfig();
-                    updateParams({
-                      tableConfig: {
-                        ...currentConfig,
-                        interTableSpacingY: value
-                      }
-                    });
+                    updateTableConfig({ interTableSpacingY: value });
                   }}
                   className="h-8 text-xs"
                 />
@@ -147,14 +168,7 @@ export const StructureParameters: React.FC<StructureParametersProps> = ({
                   value={(params.tableConfig?.interTableSpacingX || DEFAULT_LAYOUT_PARAMS.ground_mount_tables.tableConfig?.interTableSpacingX || 0.5).toString()}
                   onChange={(e) => {
                     const value = Math.max(0.1, parseFloat(e.target.value || '0.5'));
-                    // Ensure all required fields are included when updating
-                    const currentConfig = params.tableConfig || getDefaultTableConfig();
-                    updateParams({
-                      tableConfig: {
-                        ...currentConfig,
-                        interTableSpacingX: value
-                      }
-                    });
+                    updateTableConfig({ interTableSpacingX: value });
                   }}
                   className="h-8 text-xs"
                 />
@@ -179,14 +193,7 @@ export const StructureParameters: React.FC<StructureParametersProps> = ({
                   value={(params.carportConfig?.rows || DEFAULT_LAYOUT_PARAMS.carport.carportConfig?.rows || 6).toString()}
                   onChange={(e) => {
                     const value = Math.max(1, parseInt(e.target.value || '6', 10));
-                    // Ensure all required fields are included when updating
-                    const currentConfig = params.carportConfig || getDefaultCarportConfig();
-                    updateParams({
-                      carportConfig: {
-                        ...currentConfig,
-                        rows: value
-                      }
-                    });
+                    updateCarportConfig({ rows: value });
                   }}
                   className="h-8 text-xs"
                 />
@@ -202,14 +209,7 @@ export const StructureParameters: React.FC<StructureParametersProps> = ({
                   value={(params.carportConfig?.modulesPerRow || DEFAULT_LAYOUT_PARAMS.carport.carportConfig?.modulesPerRow || 10).toString()}
                   onChange={(e) => {
                     const value = Math.max(1, parseInt(e.target.value || '10', 10));
-                    // Ensure all required fields are included when updating
-                    const currentConfig = params.carportConfig || getDefaultCarportConfig();
-                    updateParams({
-                      carportConfig: {
-                        ...currentConfig,
-                        modulesPerRow: value
-                      }
-                    });
+                    updateCarportConfig({ modulesPerRow: value });
                   }}
                   className="h-8 text-xs"
                 />
@@ -220,14 +220,7 @@ export const StructureParameters: React.FC<StructureParametersProps> = ({
                   id="forceRectangle"
                   checked={params.carportConfig?.forceRectangle ?? DEFAULT_LAYOUT_PARAMS.carport.carportConfig?.forceRectangle ?? true}
                   onCheckedChange={(checked) => {
-                    // Ensure all required fields are included when updating
-                    const currentConfig = params.carportConfig || getDefaultCarportConfig();
-                    updateParams({
-                      carportConfig: {
-                        ...currentConfig,
-                        forceRectangle: checked
-                      }
-                    });
+                    updateCarportConfig({ forceRectangle: checked });
                   }}
                 />
                 <Label htmlFor="forceRectangle" className="text-xs cursor-pointer">
