@@ -26,7 +26,6 @@ const AreaCalculator: React.FC<AreaCalculatorProps> = ({
   longitude 
 }) => {
   const {
-    map,
     polygons, 
     totalArea,
     totalCapacity,
@@ -43,7 +42,8 @@ const AreaCalculator: React.FC<AreaCalculatorProps> = ({
     structureTypes,
     startDrawingPolygon,
     startDrawingRectangle,
-    clearAllPolygons
+    clearAllPolygons,
+    onMapLoaded
   } = useAreaCalculator({ selectedPanel, onCapacityCalculated, latitude, longitude });
 
   return (
@@ -120,10 +120,10 @@ const AreaCalculator: React.FC<AreaCalculatorProps> = ({
           </div>
           
           <AreaMapContainer
-            map={map}
             drawingManagerRef={drawingManagerRef}
             latitude={latitude}
             longitude={longitude}
+            onMapLoaded={onMapLoaded}
           />
         </div>
         

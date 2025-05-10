@@ -4,13 +4,13 @@ import type { SolarPanel } from '@/types/components';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Layers, Trash2, Square, Hexagon } from 'lucide-react';
-import { AreaMapContainer } from './area-calculator/AreaMapContainer';
-import { StructureSelector } from './area-calculator/StructureSelector';
-import { AreaCalculationResults } from './area-calculator/AreaCalculationResults';
-import { StructureParameters } from './area-calculator/StructureParameters';
-import { DrawingInstructions } from './area-calculator/DrawingInstructions';
-import { useAreaCalculator } from './area-calculator/useAreaCalculator';
-import { PolygonConfig } from './area-calculator/types';
+import { AreaMapContainer } from './AreaMapContainer';
+import { StructureSelector } from './StructureSelector';
+import { AreaCalculationResults } from './AreaCalculationResults';
+import { StructureParameters } from './StructureParameters';
+import { DrawingInstructions } from './DrawingInstructions';
+import { useAreaCalculator } from './useAreaCalculator';
+import { PolygonConfig } from './types';
 
 interface AreaCalculatorProps {
   selectedPanel: SolarPanel;
