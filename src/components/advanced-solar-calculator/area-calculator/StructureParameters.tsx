@@ -38,6 +38,25 @@ export const StructureParameters: React.FC<StructureParametersProps> = ({
     }
   };
 
+  // Get default values for table config to ensure required properties are present
+  const getDefaultTableConfig = () => {
+    return {
+      rowsPerTable: DEFAULT_LAYOUT_PARAMS.ground_mount_tables.tableConfig?.rowsPerTable ?? 3,
+      modulesPerRow: DEFAULT_LAYOUT_PARAMS.ground_mount_tables.tableConfig?.modulesPerRow ?? 5,
+      interTableSpacingY: DEFAULT_LAYOUT_PARAMS.ground_mount_tables.tableConfig?.interTableSpacingY ?? 4.0,
+      interTableSpacingX: DEFAULT_LAYOUT_PARAMS.ground_mount_tables.tableConfig?.interTableSpacingX ?? 0.5
+    };
+  };
+
+  // Get default values for carport config to ensure required properties are present
+  const getDefaultCarportConfig = () => {
+    return {
+      rows: DEFAULT_LAYOUT_PARAMS.carport.carportConfig?.rows ?? 6,
+      modulesPerRow: DEFAULT_LAYOUT_PARAMS.carport.carportConfig?.modulesPerRow ?? 10,
+      forceRectangle: DEFAULT_LAYOUT_PARAMS.carport.carportConfig?.forceRectangle ?? true
+    };
+  };
+
   // Handle specific structure type parameters
   const renderStructureSpecificParams = () => {
     switch (structureType.id) {
@@ -57,9 +76,11 @@ export const StructureParameters: React.FC<StructureParametersProps> = ({
                   value={(params.tableConfig?.rowsPerTable || DEFAULT_LAYOUT_PARAMS.ground_mount_tables.tableConfig?.rowsPerTable || 3).toString()}
                   onChange={(e) => {
                     const value = Math.max(1, parseInt(e.target.value || '3', 10));
+                    // Ensure all required fields are included when updating
+                    const currentConfig = params.tableConfig || getDefaultTableConfig();
                     updateParams({
                       tableConfig: {
-                        ...(params.tableConfig || {}),
+                        ...currentConfig,
                         rowsPerTable: value
                       }
                     });
@@ -78,9 +99,11 @@ export const StructureParameters: React.FC<StructureParametersProps> = ({
                   value={(params.tableConfig?.modulesPerRow || DEFAULT_LAYOUT_PARAMS.ground_mount_tables.tableConfig?.modulesPerRow || 5).toString()}
                   onChange={(e) => {
                     const value = Math.max(1, parseInt(e.target.value || '5', 10));
+                    // Ensure all required fields are included when updating
+                    const currentConfig = params.tableConfig || getDefaultTableConfig();
                     updateParams({
                       tableConfig: {
-                        ...(params.tableConfig || {}),
+                        ...currentConfig,
                         modulesPerRow: value
                       }
                     });
@@ -100,9 +123,11 @@ export const StructureParameters: React.FC<StructureParametersProps> = ({
                   value={(params.tableConfig?.interTableSpacingY || DEFAULT_LAYOUT_PARAMS.ground_mount_tables.tableConfig?.interTableSpacingY || 4).toString()}
                   onChange={(e) => {
                     const value = Math.max(0.5, parseFloat(e.target.value || '4'));
+                    // Ensure all required fields are included when updating
+                    const currentConfig = params.tableConfig || getDefaultTableConfig();
                     updateParams({
                       tableConfig: {
-                        ...(params.tableConfig || {}),
+                        ...currentConfig,
                         interTableSpacingY: value
                       }
                     });
@@ -122,9 +147,11 @@ export const StructureParameters: React.FC<StructureParametersProps> = ({
                   value={(params.tableConfig?.interTableSpacingX || DEFAULT_LAYOUT_PARAMS.ground_mount_tables.tableConfig?.interTableSpacingX || 0.5).toString()}
                   onChange={(e) => {
                     const value = Math.max(0.1, parseFloat(e.target.value || '0.5'));
+                    // Ensure all required fields are included when updating
+                    const currentConfig = params.tableConfig || getDefaultTableConfig();
                     updateParams({
                       tableConfig: {
-                        ...(params.tableConfig || {}),
+                        ...currentConfig,
                         interTableSpacingX: value
                       }
                     });
@@ -152,9 +179,11 @@ export const StructureParameters: React.FC<StructureParametersProps> = ({
                   value={(params.carportConfig?.rows || DEFAULT_LAYOUT_PARAMS.carport.carportConfig?.rows || 6).toString()}
                   onChange={(e) => {
                     const value = Math.max(1, parseInt(e.target.value || '6', 10));
+                    // Ensure all required fields are included when updating
+                    const currentConfig = params.carportConfig || getDefaultCarportConfig();
                     updateParams({
                       carportConfig: {
-                        ...(params.carportConfig || {}),
+                        ...currentConfig,
                         rows: value
                       }
                     });
@@ -173,9 +202,11 @@ export const StructureParameters: React.FC<StructureParametersProps> = ({
                   value={(params.carportConfig?.modulesPerRow || DEFAULT_LAYOUT_PARAMS.carport.carportConfig?.modulesPerRow || 10).toString()}
                   onChange={(e) => {
                     const value = Math.max(1, parseInt(e.target.value || '10', 10));
+                    // Ensure all required fields are included when updating
+                    const currentConfig = params.carportConfig || getDefaultCarportConfig();
                     updateParams({
                       carportConfig: {
-                        ...(params.carportConfig || {}),
+                        ...currentConfig,
                         modulesPerRow: value
                       }
                     });
@@ -189,9 +220,11 @@ export const StructureParameters: React.FC<StructureParametersProps> = ({
                   id="forceRectangle"
                   checked={params.carportConfig?.forceRectangle ?? DEFAULT_LAYOUT_PARAMS.carport.carportConfig?.forceRectangle ?? true}
                   onCheckedChange={(checked) => {
+                    // Ensure all required fields are included when updating
+                    const currentConfig = params.carportConfig || getDefaultCarportConfig();
                     updateParams({
                       carportConfig: {
-                        ...(params.carportConfig || {}),
+                        ...currentConfig,
                         forceRectangle: checked
                       }
                     });
