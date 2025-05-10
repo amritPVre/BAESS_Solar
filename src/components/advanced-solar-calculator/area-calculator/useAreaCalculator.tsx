@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { toast } from 'sonner';
 import type { SolarPanel } from '@/types/components';
@@ -396,15 +395,26 @@ export const useAreaCalculator = ({
     
     // Calculate theoretical module counts just for display
     if (calculatedTotalArea > 0 && selectedPanel) {
-      // Fix: Check if panel dimensions are available and provide defaults if not
-      // This is the fix for the TypeScript error
-      const panelLength = typeof selectedPanel.length === 'number' 
-        ? selectedPanel.length 
-        : (selectedPanel.dimensions?.height || 1700);
-        
-      const panelWidth = typeof selectedPanel.width === 'number' 
-        ? selectedPanel.width 
-        : (selectedPanel.dimensions?.width || 1000);
+      // Fix the TypeScript error by safely accessing panel dimensions
+      let panelLength: number;
+      let panelWidth: number;
+      
+      // Handle all possible cases for accessing panel dimensions
+      if (typeof selectedPanel.length === 'number') {
+        panelLength = selectedPanel.length;
+      } else if (selectedPanel.dimensions && typeof selectedPanel.dimensions.height === 'number') {
+        panelLength = selectedPanel.dimensions.height;
+      } else {
+        panelLength = 1700; // Default fallback
+      }
+      
+      if (typeof selectedPanel.width === 'number') {
+        panelWidth = selectedPanel.width;
+      } else if (selectedPanel.dimensions && typeof selectedPanel.dimensions.width === 'number') {
+        panelWidth = selectedPanel.dimensions.width;
+      } else {
+        panelWidth = 1000; // Default fallback
+      }
       
       const moduleArea = (panelLength * panelWidth) / 1000000; // m²
       const gcr = structureType.groundCoverageRatio;
