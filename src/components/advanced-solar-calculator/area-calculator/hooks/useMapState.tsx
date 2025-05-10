@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 interface UseMapStateProps {
   initialLatitude: number;
@@ -27,7 +27,7 @@ export const useMapState = ({
     }
   }, [initialLatitude, initialLongitude]);
 
-  // The updateMapCenter function that's debounced
+  // The updateMapCenter function
   const updateMapCenter = useCallback(() => {
     if (mapRef.current) {
       const center = mapRef.current.getCenter();
@@ -47,6 +47,7 @@ export const useMapState = ({
       return;
     }
     
+    // Store map reference
     mapRef.current = loadedMap;
     mapInitializedRef.current = true;
     
@@ -56,21 +57,23 @@ export const useMapState = ({
       boundsChangeListenerRef.current = null;
     }
     
-    // Set up bounds change listener only once
-    boundsChangeListenerRef.current = loadedMap.addListener('bounds_changed', () => {
-      if (timeoutIdRef.current) {
-        window.clearTimeout(timeoutIdRef.current);
-      }
-      
-      timeoutIdRef.current = window.setTimeout(() => {
-        if (mapRef.current && !mapRef.current.getStreetView().getVisible()) {
-          setUserMapBounds(mapRef.current.getBounds() || null);
-          updateMapCenter();
+    // Safely add bounds change listener
+    if (window.google && window.google.maps && window.google.maps.event) {
+      // Set up bounds change listener only once
+      boundsChangeListenerRef.current = loadedMap.addListener('bounds_changed', () => {
+        if (timeoutIdRef.current) {
+          window.clearTimeout(timeoutIdRef.current);
         }
-        timeoutIdRef.current = null;
-      }, 500);
-    });
-    
+        
+        timeoutIdRef.current = window.setTimeout(() => {
+          if (mapRef.current && !mapRef.current.getStreetView().getVisible()) {
+            setUserMapBounds(mapRef.current.getBounds() || null);
+            updateMapCenter();
+          }
+          timeoutIdRef.current = null;
+        }, 500);
+      });
+    }
   }, [updateMapCenter]);
 
   // Clean up on unmount

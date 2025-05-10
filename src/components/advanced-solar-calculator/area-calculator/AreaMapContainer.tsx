@@ -22,7 +22,6 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
 }) => {
   // Get API key from environment variable
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string;
-  const mapId = import.meta.env.VITE_GOOGLE_MAPS_ID as string;
   
   // Load Google Maps script
   const scriptStatus = useGoogleMapsScript(apiKey);
@@ -33,6 +32,7 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
     borderRadius: "0.5rem"
   };
 
+  // Make sure to properly memoize the default center based on actual inputs
   const defaultCenter = useMemo(() => ({
     lat: latitude || 40.7128,
     lng: longitude || -74.0060
@@ -72,24 +72,19 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
     );
   }
 
-  // Define map options only after Google Maps is loaded and memoize them to prevent re-renders
-  const mapOptions = useMemo(() => {
-    if (scriptStatus !== 'ready') return {};
-    
-    return {
-      mapTypeId: "satellite",
-      streetViewControl: false,
-      fullscreenControl: true,
-      mapTypeControl: true,
-      mapTypeControlOptions: {
-        position: google.maps.ControlPosition.TOP_LEFT,
-        style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR
-      },
-      zoomControl: true,
-      gestureHandling: "greedy" as const, // Type assertion to fix typescript error
-      // Remove mapId if it's causing conflicts with custom styles
-    };
-  }, [scriptStatus]);
+  // Define map options for when Google Maps is loaded
+  const mapOptions = {
+    mapTypeId: "satellite",
+    streetViewControl: false,
+    fullscreenControl: true,
+    mapTypeControl: true,
+    mapTypeControlOptions: {
+      position: google.maps.ControlPosition.TOP_LEFT,
+      style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR
+    },
+    zoomControl: true,
+    gestureHandling: "greedy" as const, // Type assertion to fix typescript error
+  };
 
   // Show map when script is ready
   return (

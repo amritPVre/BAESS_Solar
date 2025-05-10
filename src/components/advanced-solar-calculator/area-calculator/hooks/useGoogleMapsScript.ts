@@ -1,73 +1,83 @@
 
 import { useState, useEffect } from 'react';
 
-// Script status states
 type ScriptStatus = 'loading' | 'ready' | 'error';
 
-// Hook to load Google Maps script
-export const useGoogleMapsScript = (apiKey: string | null) => {
-  const [status, setStatus] = useState<ScriptStatus>('loading');
+// Define libraries array for Google Maps
+const libraries = ["drawing", "geometry", "marker"] as ("drawing" | "geometry" | "places" | "visualization" | "marker")[];
 
+// Track script loading status globally to prevent multiple loads
+let scriptLoadingStatus: ScriptStatus = 'loading';
+let globalScriptLoadPromise: Promise<void> | null = null;
+
+export const useGoogleMapsScript = (apiKey: string): ScriptStatus => {
+  const [status, setStatus] = useState<ScriptStatus>(() => {
+    // Check if Google Maps is already loaded
+    if (window.google?.maps) {
+      return 'ready';
+    }
+    
+    // Return global status if script loading has already started
+    return scriptLoadingStatus;
+  });
+  
   useEffect(() => {
-    // If no API key, mark as error
+    // If Google Maps is already loaded or no API key, don't do anything
+    if (window.google?.maps) {
+      setStatus('ready');
+      return;
+    }
+    
     if (!apiKey) {
       setStatus('error');
       return;
     }
-
-    // Check if script already exists and Google Maps is loaded
-    if (window.google && window.google.maps) {
-      setStatus('ready');
+    
+    // Don't load script if it's already loading
+    if (globalScriptLoadPromise) {
+      // Just wait for the existing promise
+      globalScriptLoadPromise
+        .then(() => setStatus('ready'))
+        .catch(() => setStatus('error'));
       return;
     }
-
-    // Create a unique ID for the script
-    const scriptId = 'google-maps-script';
     
-    // Check if script is already being loaded
-    let script = document.getElementById(scriptId) as HTMLScriptElement;
+    console.log('[GoogleMaps] Loading script...');
     
-    if (script) {
-      // Script exists, check its status
-      if (script.getAttribute('data-loaded') === 'true') {
-        setStatus('ready');
-      }
-      return;
-    }
-
-    // Create and load script
-    script = document.createElement('script');
-    script.id = scriptId;
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,drawing,geometry,marker`;
+    // Create script element
+    const script = document.createElement('script');
+    script.id = 'google-maps-script';
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=${libraries.join(',')}`;
     script.async = true;
     script.defer = true;
-    script.setAttribute('data-loaded', 'false');
-
-    // Event handlers
-    const handleScriptLoad = () => {
-      script.setAttribute('data-loaded', 'true');
-      setStatus('ready');
-    };
-
-    const handleScriptError = () => {
-      console.error("Failed to load Google Maps script");
-      script.remove();
-      setStatus('error');
-    };
-
-    script.addEventListener('load', handleScriptLoad);
-    script.addEventListener('error', handleScriptError);
-
+    
+    // Create promise to track loading
+    globalScriptLoadPromise = new Promise<void>((resolve, reject) => {
+      script.addEventListener('load', () => {
+        console.log('[GoogleMaps] Script loaded successfully');
+        scriptLoadingStatus = 'ready';
+        setStatus('ready');
+        resolve();
+      });
+      
+      script.addEventListener('error', (error) => {
+        console.error('[GoogleMaps] Error loading script:', error);
+        scriptLoadingStatus = 'error';
+        setStatus('error');
+        reject(error);
+        // Allow retrying on error
+        globalScriptLoadPromise = null;
+      });
+    });
+    
     // Add script to document
-    document.head.appendChild(script);
-
+    document.body.appendChild(script);
+    
     // Cleanup
     return () => {
-      script.removeEventListener('load', handleScriptLoad);
-      script.removeEventListener('error', handleScriptError);
-      // We don't remove the script element to prevent multiple loads
+      // Don't remove the script on unmount as it needs to be available globally
     };
   }, [apiKey]);
-
+  
   return status;
 };
