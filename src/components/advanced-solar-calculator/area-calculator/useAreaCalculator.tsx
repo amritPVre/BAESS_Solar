@@ -395,25 +395,23 @@ export const useAreaCalculator = ({
     
     // Calculate theoretical module counts just for display
     if (calculatedTotalArea > 0 && selectedPanel) {
-      // Fix the TypeScript error by safely accessing panel dimensions
-      let panelLength: number;
-      let panelWidth: number;
+      // Extract panel dimensions safely - fixed version
+      let panelLength = 1700; // Default fallback in mm
+      let panelWidth = 1000;  // Default fallback in mm
       
-      // Handle all possible cases for accessing panel dimensions
-      if (typeof selectedPanel.length === 'number') {
-        panelLength = selectedPanel.length;
-      } else if (selectedPanel.dimensions && typeof selectedPanel.dimensions.height === 'number') {
-        panelLength = selectedPanel.dimensions.height;
-      } else {
-        panelLength = 1700; // Default fallback
-      }
-      
-      if (typeof selectedPanel.width === 'number') {
-        panelWidth = selectedPanel.width;
-      } else if (selectedPanel.dimensions && typeof selectedPanel.dimensions.width === 'number') {
-        panelWidth = selectedPanel.dimensions.width;
-      } else {
-        panelWidth = 1000; // Default fallback
+      // Safely check for panel dimensions using type guards
+      if (selectedPanel) {
+        if (typeof selectedPanel?.length === 'number') {
+          panelLength = selectedPanel.length;
+        } else if (selectedPanel.dimensions && typeof selectedPanel.dimensions?.height === 'number') {
+          panelLength = selectedPanel.dimensions.height;
+        }
+        
+        if (typeof selectedPanel?.width === 'number') {
+          panelWidth = selectedPanel.width;
+        } else if (selectedPanel.dimensions && typeof selectedPanel.dimensions?.width === 'number') {
+          panelWidth = selectedPanel.dimensions.width;
+        }
       }
       
       const moduleArea = (panelLength * panelWidth) / 1000000; // m²
