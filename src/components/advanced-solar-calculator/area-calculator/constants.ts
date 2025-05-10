@@ -2,7 +2,7 @@
 // Constants for the area calculator
 
 // Libraries for Google Maps API
-export const GOOGLE_MAPS_LIBRARIES = ["drawing", "geometry", "places"] as const;
+export const GOOGLE_MAPS_LIBRARIES = ["drawing", "geometry", "places"] as ["drawing", "geometry", "places"];
 
 // Default options for polygons
 export const DEFAULT_POLYGON_OPTIONS: google.maps.PolygonOptions = { 
