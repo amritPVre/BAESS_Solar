@@ -1,11 +1,9 @@
 
-// Constants for the area calculator
+// GOOGLE_MAPS_LIBRARIES is used for loading specific Google Maps libraries
+export const GOOGLE_MAPS_LIBRARIES = ["drawing", "geometry", "places", "marker"] as const;
 
-// Libraries for Google Maps API
-export const GOOGLE_MAPS_LIBRARIES = ["drawing", "geometry", "places"] as ["drawing", "geometry", "places"];
-
-// Default options for polygons
-export const DEFAULT_POLYGON_OPTIONS: google.maps.PolygonOptions = { 
+// Default polygon styling options
+export const DEFAULT_POLYGON_OPTIONS: google.maps.PolygonOptions = {
   fillColor: "#FF0000",
   fillOpacity: 0.30,
   strokeWeight: 1,
@@ -16,7 +14,7 @@ export const DEFAULT_POLYGON_OPTIONS: google.maps.PolygonOptions = {
   zIndex: 1
 };
 
-// Structure types
+// Structure types with their properties
 export const STRUCTURE_TYPES = [
   { id: 'ballasted', name: 'Ballasted Flat Roof', groundCoverageRatio: 0.5 },
   { id: 'fixed_tilt', name: 'Fixed Tilt Ground Mount', groundCoverageRatio: 0.4 },
@@ -26,7 +24,7 @@ export const STRUCTURE_TYPES = [
 ];
 
 // Default layout parameters for different structure types
-export const DEFAULT_LAYOUT_PARAMS: Record<string, any> = {
+export const DEFAULT_LAYOUT_PARAMS = {
   ballasted: {
     tiltAngle: 10,
     orientation: 'landscape',

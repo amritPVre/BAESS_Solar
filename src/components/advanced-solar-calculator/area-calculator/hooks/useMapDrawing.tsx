@@ -1,6 +1,6 @@
-import { useRef, useState, useCallback, useEffect } from 'react';
-import { toast } from 'sonner';
+import { useCallback, useRef } from 'react';
 import { PolygonInfo } from '../types';
+import { toast } from 'sonner';
 
 interface UseMapDrawingProps {
   polygonDrawOptions: google.maps.PolygonOptions;
@@ -18,20 +18,16 @@ export const useMapDrawing = ({
   triggerModuleCalculation
 }: UseMapDrawingProps) => {
   const drawingManagerRef = useRef<google.maps.drawing.DrawingManager | null>(null);
-  const mapRef = useRef<google.maps.Map | null>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const drawListenersRef = useRef<google.maps.MapsEventListener[]>([]);
-  const initAttemptCounterRef = useRef(0);
-  const mapInitializedRef = useRef(false);
-  const lastPolygonCountRef = useRef(0);
-
-  // Helper to calculate area of polygon
+  
+  // Calculate polygon area safely
   const calculatePolygonArea = useCallback((polygon: google.maps.Polygon): number => {
     try {
       const path = polygon.getPath();
+      // Ensure geometry library is loaded
       if (window.google && window.google.maps.geometry && window.google.maps.geometry.spherical) {
         return window.google.maps.geometry.spherical.computeArea(path);
       }
+      console.warn("Google Maps geometry library not loaded for area calculation");
       return 0;
     } catch (error) {
       console.error("Error calculating area:", error);
@@ -39,33 +35,28 @@ export const useMapDrawing = ({
     }
   }, []);
 
-  // Add event listeners to a polygon
   const setupPolygonListeners = useCallback((polygon: google.maps.Polygon, index: number) => {
     try {
       polygon.setOptions(polygonDrawOptions);
       const path = polygon.getPath();
       
-      // Store listeners to clean them up later
-      const listeners: google.maps.MapsEventListener[] = [];
-      
       const updatePolygon = () => {
         const updatedArea = calculatePolygonArea(polygon);
         polygon.setOptions(polygonDrawOptions);
         
+        // Update the specific polygon's area and trigger re-render
         setPolygons(prevPolygons => 
           prevPolygons.map(poly => 
             poly.polygon === polygon ? { ...poly, area: updatedArea } : poly
           )
         );
         
-        // Trigger module calculation with a slight delay
-        setTimeout(() => {
-          triggerModuleCalculation();
-        }, 100);
+        // Trigger module calculation after polygon update
+        setTimeout(triggerModuleCalculation, 100);
       };
       
       // Add click handler to select this polygon
-      listeners.push(google.maps.event.addListener(polygon, 'click', () => {
+      google.maps.event.addListener(polygon, 'click', () => {
         console.log(`Polygon ${index} selected`);
         setSelectedPolygonIndex(index);
         
@@ -79,266 +70,154 @@ export const useMapDrawing = ({
           }
           poly.polygon.setOptions(options);
         });
-      }));
+      });
       
-      listeners.push(google.maps.event.addListener(polygon, 'mouseup', updatePolygon));
-      listeners.push(google.maps.event.addListener(polygon, 'dragend', updatePolygon));
-      listeners.push(google.maps.event.addListener(path, 'set_at', updatePolygon));
-      listeners.push(google.maps.event.addListener(path, 'insert_at', updatePolygon));
-      listeners.push(google.maps.event.addListener(path, 'remove_at', updatePolygon));
-      
-      // Store listeners for potential cleanup
-      polygon.set('listeners', listeners);
+      google.maps.event.addListener(polygon, 'mouseup', updatePolygon);
+      google.maps.event.addListener(polygon, 'dragend', updatePolygon);
+      google.maps.event.addListener(path, 'set_at', updatePolygon);
+      google.maps.event.addListener(path, 'insert_at', updatePolygon);
+      google.maps.event.addListener(path, 'remove_at', updatePolygon);
     } catch (error) {
       console.error("Error setting up polygon listeners:", error);
     }
   }, [calculatePolygonArea, polygonDrawOptions, polygons, setPolygons, setSelectedPolygonIndex, triggerModuleCalculation]);
-  
-  // Initialize drawing manager
+
+  // Initialize drawing manager with the loaded map
   const initializeDrawingManager = useCallback((map: google.maps.Map) => {
-    if (!map || !window.google || mapInitializedRef.current) {
+    if (!map || !window.google) {
+      console.warn("Map or Google Maps API not available for drawing manager initialization");
       return;
     }
-    
-    // Limit initialization attempts
-    initAttemptCounterRef.current += 1;
-    if (initAttemptCounterRef.current > 3) {
-      console.warn("Too many initialization attempts, skipping");
-      return;
-    }
-    
-    console.log("Initializing drawing manager");
-    mapRef.current = map;
-    mapInitializedRef.current = true;
     
     try {
-      // Cleanup any existing drawing manager
+      console.log("Initializing drawing manager");
+      
+      // Clean up existing drawing manager if it exists
       if (drawingManagerRef.current) {
         drawingManagerRef.current.setMap(null);
         drawingManagerRef.current = null;
       }
       
-      // Clean up old listeners
-      if (drawListenersRef.current.length > 0) {
-        drawListenersRef.current.forEach(listener => {
-          google.maps.event.removeListener(listener);
-        });
-        drawListenersRef.current = [];
-      }
-      
-      // Create new drawing manager
-      const drawingManager = new google.maps.drawing.DrawingManager({
-        drawingMode: null, // Start with no active drawing mode
+      const drawingManager = new window.google.maps.drawing.DrawingManager({
+        drawingMode: window.google.maps.drawing.OverlayType.POLYGON,
         drawingControl: true,
         drawingControlOptions: {
-          position: google.maps.ControlPosition.TOP_CENTER,
+          position: window.google.maps.ControlPosition.TOP_CENTER,
           drawingModes: [
-            google.maps.drawing.OverlayType.POLYGON,
-            google.maps.drawing.OverlayType.RECTANGLE
-          ]
+            window.google.maps.drawing.OverlayType.POLYGON,
+            window.google.maps.drawing.OverlayType.RECTANGLE
+          ],
         },
         polygonOptions: polygonDrawOptions,
         rectangleOptions: { ...polygonDrawOptions }
       });
       
-      drawingManagerRef.current = drawingManager;
       drawingManager.setMap(map);
+      drawingManagerRef.current = drawingManager;
       
-      // Setup event listeners for drawing completion
-      const polygonCompleteListener = google.maps.event.addListener(
-        drawingManager, 
-        'polygoncomplete', 
-        (polygon: google.maps.Polygon) => {
-          setIsDrawing(false);
-          console.log("Polygon complete!");
-          
-          try {
-            const area = calculatePolygonArea(polygon);
-            if (area < 1) {
-              // Too small, probably a misclick
-              polygon.setMap(null);
-              toast.error("Drawn area too small, please try again");
-              return;
-            }
-            
-            const newIndex = polygons.length;
-            setupPolygonListeners(polygon, newIndex);
-            
-            setTimeout(() => {
-              setPolygons(prev => [...prev, { polygon, area, azimuth: 180 }]);
-              setSelectedPolygonIndex(newIndex);
-              toast.success(`Polygon area drawn: ${area.toFixed(0)} m²`);
-              
-              // Reset drawing mode to null after completion
-              if (drawingManagerRef.current) {
-                drawingManagerRef.current.setDrawingMode(null);
-              }
-              
-              // Trigger module calculation
-              triggerModuleCalculation();
-            }, 100);
-          } catch (error) {
-            console.error("Error processing completed polygon:", error);
-            toast.error("Error creating polygon");
+      // Handle rectangle drawing completion
+      window.google.maps.event.addListener(drawingManager, 'rectanglecomplete', (rectangle: google.maps.Rectangle) => {
+        console.log("Rectangle drawing completed!");
+        try {
+          const bounds = rectangle.getBounds();
+          if (!bounds) {
+            console.error("Rectangle bounds are undefined");
+            return;
           }
-        }
-      );
-      
-      const rectangleCompleteListener = google.maps.event.addListener(
-        drawingManager, 
-        'rectanglecomplete', 
-        (rectangle: google.maps.Rectangle) => {
-          setIsDrawing(false);
-          console.log("Rectangle complete!");
           
-          try {
-            const bounds = rectangle.getBounds();
-            if (!bounds) {
-              console.error("Rectangle bounds are undefined");
-              return;
-            }
-            
-            // Create a polygon from the rectangle bounds
-            const ne = bounds.getNorthEast();
-            const sw = bounds.getSouthWest();
-            const nw = new google.maps.LatLng(ne.lat(), sw.lng());
-            const se = new google.maps.LatLng(sw.lat(), ne.lng());
-            
-            // Create polygon path in clockwise order
-            const path = [ne, se, sw, nw];
-            
-            // Create a polygon instead of using the rectangle directly
-            const polygon = new google.maps.Polygon({
-              paths: path,
-              ...polygonDrawOptions
-            });
-            
-            // Remove the original rectangle from the map
-            rectangle.setMap(null);
-            
-            // Add the polygon to the map
-            polygon.setMap(mapRef.current);
-            
-            // Calculate area and set up the polygon
-            const area = calculatePolygonArea(polygon);
-            if (area < 1) {
-              // Too small, probably a misclick
-              polygon.setMap(null);
-              toast.error("Drawn area too small, please try again");
-              return;
-            }
-            
-            const newIndex = polygons.length;
-            setupPolygonListeners(polygon, newIndex);
-            
-            setTimeout(() => {
-              setPolygons(prev => [...prev, { polygon, area, azimuth: 180 }]);
-              setSelectedPolygonIndex(newIndex);
-              toast.success(`Rectangle area drawn: ${area.toFixed(0)} m²`);
-              
-              // Reset drawing mode to null after completion
-              if (drawingManagerRef.current) {
-                drawingManagerRef.current.setDrawingMode(null);
-              }
-              
-              // Trigger module calculation
-              triggerModuleCalculation();
-            }, 100);
-          } catch (error) {
-            console.error("Error processing completed rectangle:", error);
-            toast.error("Error creating rectangle");
-          }
+          // Create a polygon from the rectangle bounds
+          const ne = bounds.getNorthEast();
+          const sw = bounds.getSouthWest();
+          const nw = new google.maps.LatLng(ne.lat(), sw.lng());
+          const se = new google.maps.LatLng(sw.lat(), ne.lng());
+          
+          // Create polygon path in clockwise order
+          const path = [ne, se, sw, nw];
+          
+          // Create a polygon instead of using the rectangle
+          const polygon = new window.google.maps.Polygon({
+            paths: path,
+            ...polygonDrawOptions
+          });
+          
+          // Remove original rectangle
+          rectangle.setMap(null);
+          
+          // Add the polygon to the map
+          polygon.setMap(map);
+          
+          // Calculate area and set up the polygon
+          const area = calculatePolygonArea(polygon);
+          const newIndex = polygons.length;
+          
+          // Setup listeners before updating state
+          setupPolygonListeners(polygon, newIndex);
+          
+          // Add the polygon to state
+          setPolygons(prevPolygons => [...prevPolygons, { polygon, area, azimuth: 180 }]);
+          setSelectedPolygonIndex(newIndex);
+          
+          toast.success(`Rectangle area drawn: ${area.toFixed(1)} m²`);
+          
+          // Trigger module calculation after polygon creation
+          setTimeout(triggerModuleCalculation, 100);
+          
+        } catch (error) {
+          console.error("Error processing rectangle completion:", error);
+          toast.error("Error creating rectangle area");
         }
-      );
+      });
       
-      // Keep drawing mode enabled after completion
-      const overCompleteListener = google.maps.event.addListener(drawingManager, 'overlaycomplete', () => {
+      // Handle polygon drawing completion
+      window.google.maps.event.addListener(drawingManager, 'polygoncomplete', (polygon: google.maps.Polygon) => {
+        console.log("Polygon completed!");
+        try {
+          const area = calculatePolygonArea(polygon);
+          const newIndex = polygons.length;
+          
+          // Setup listeners before updating state
+          setupPolygonListeners(polygon, newIndex);
+          
+          // Add the polygon to state
+          setPolygons(prevPolygons => [...prevPolygons, { polygon, area, azimuth: 180 }]);
+          setSelectedPolygonIndex(newIndex);
+          
+          toast.success(`Polygon area drawn: ${area.toFixed(1)} m²`);
+          
+          // Trigger module calculation after polygon creation
+          setTimeout(triggerModuleCalculation, 100);
+          
+        } catch (error) {
+          console.error("Error processing polygon completion:", error);
+          toast.error("Error creating polygon area");
+        }
+      });
+      
+      // Keep drawing mode enabled after completing a shape
+      google.maps.event.addListener(drawingManager, 'overlaycomplete', () => {
         // Keep the current drawing mode after shape completion
         drawingManager.setDrawingMode(drawingManager.getDrawingMode());
       });
       
-      // Store listeners for cleanup
-      drawListenersRef.current = [
-        polygonCompleteListener, 
-        rectangleCompleteListener,
-        overCompleteListener
-      ];
-      
     } catch (error) {
-      console.error("Failed to initialize drawing manager:", error);
-      toast.error("Failed to initialize drawing tools");
-      mapInitializedRef.current = false;
+      console.error("Error initializing drawing manager:", error);
+      toast.error("Error initializing drawing tools");
     }
-  }, [
-    polygonDrawOptions,
-    polygons,
-    setPolygons,
-    setSelectedPolygonIndex,
-    calculatePolygonArea,
-    setupPolygonListeners,
-    triggerModuleCalculation
-  ]);
+  }, [calculatePolygonArea, polygonDrawOptions, polygons.length, setPolygons, setSelectedPolygonIndex, setupPolygonListeners, triggerModuleCalculation]);
 
-  // Reset initialization state when map ref changes
-  useEffect(() => {
-    return () => {
-      mapInitializedRef.current = false;
-      initAttemptCounterRef.current = 0;
-      
-      // Clean up listeners
-      if (drawListenersRef.current.length > 0) {
-        drawListenersRef.current.forEach(listener => {
-          google.maps.event.removeListener(listener);
-        });
-        drawListenersRef.current = [];
-      }
-      
-      // Clean up drawing manager
-      if (drawingManagerRef.current) {
-        drawingManagerRef.current.setMap(null);
-        drawingManagerRef.current = null;
-      }
-    };
-  }, []);
-  
-  // Check for polygon updates
-  useEffect(() => {
-    // Only run if the polygon count has changed
-    if (polygons.length !== lastPolygonCountRef.current) {
-      lastPolygonCountRef.current = polygons.length;
-      console.log(`Polygon count changed to ${polygons.length}`);
-    }
-  }, [polygons.length]);
-
-  // Start drawing polygon
+  // Function to start drawing a polygon
   const startDrawingPolygon = useCallback(() => {
-    if (drawingManagerRef.current && mapRef.current) {
-      try {
-        drawingManagerRef.current.setDrawingMode(google.maps.drawing.OverlayType.POLYGON);
-        setIsDrawing(true);
-        toast.info("Now drawing: Polygon. Click on the map to place points.");
-      } catch (error) {
-        console.error("Error starting polygon drawing:", error);
-        toast.error("Failed to start drawing");
-      }
-    } else {
-      toast.error("Drawing tools not initialized");
+    if (drawingManagerRef.current && window.google) {
+      drawingManagerRef.current.setDrawingMode(window.google.maps.drawing.OverlayType.POLYGON);
+      toast.info("Polygon drawing mode activated");
     }
   }, []);
 
-  // Start drawing rectangle
+  // Function to start drawing a rectangle
   const startDrawingRectangle = useCallback(() => {
-    if (drawingManagerRef.current && mapRef.current) {
-      try {
-        drawingManagerRef.current.setDrawingMode(google.maps.drawing.OverlayType.RECTANGLE);
-        setIsDrawing(true);
-        toast.info("Now drawing: Rectangle. Click and drag on the map.");
-      } catch (error) {
-        console.error("Error starting rectangle drawing:", error);
-        toast.error("Failed to start drawing");
-      }
-    } else {
-      toast.error("Drawing tools not initialized");
+    if (drawingManagerRef.current && window.google) {
+      drawingManagerRef.current.setDrawingMode(window.google.maps.drawing.OverlayType.RECTANGLE);
+      toast.info("Rectangle drawing mode activated");
     }
   }, []);
 
@@ -346,7 +225,6 @@ export const useMapDrawing = ({
     drawingManagerRef,
     initializeDrawingManager,
     startDrawingPolygon,
-    startDrawingRectangle,
-    isDrawing
+    startDrawingRectangle
   };
 };

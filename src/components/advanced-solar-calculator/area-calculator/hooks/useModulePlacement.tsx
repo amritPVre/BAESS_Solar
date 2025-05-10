@@ -75,6 +75,31 @@ export const useModulePlacement = ({
     moduleCalculationPerformedRef.current = true;
   }, [polygons, selectedPanel, layoutParams, moduleCount, structureType.id]);
 
+  // Helper function to calculate polygon centroid safely
+  const calculatePolygonCentroid = useCallback((polygon: google.maps.Polygon): google.maps.LatLng => {
+    try {
+      const path = polygon.getPath();
+      let centerLat = 0;
+      let centerLng = 0;
+      const vertexCount = path.getLength();
+      
+      for (let i = 0; i < vertexCount; i++) {
+        const vertex = path.getAt(i)!;
+        centerLat += vertex.lat();
+        centerLng += vertex.lng();
+      }
+      
+      centerLat /= vertexCount;
+      centerLng /= vertexCount;
+      
+      return new google.maps.LatLng(centerLat, centerLng);
+    } catch (e) {
+      console.error("Error calculating centroid:", e);
+      // Fallback to the first vertex if calculation fails
+      return polygon.getPath().getAt(0)!;
+    }
+  }, []);
+
   // Memoized calculation trigger that can be called from parent
   const triggerModuleCalculation = useCallback(() => {
     // Skip if we've explicitly marked to skip the next calculation
@@ -134,43 +159,173 @@ export const useModulePlacement = ({
         setPlacedModuleCount(0);
         setPlacedModulesPerPolygon({});
         
-        if (!selectedPanel || polygons.length === 0) {
+        if (!selectedPanel || polygons.length === 0 || !map) {
           onCapacityCalculated(0, 0, 0, []);
           calculationInProgressRef.current = false;
           return;
         }
         
-        // Perform actual module placement calculation here
-        // This would be a complex calculation based on polygon shapes, azimuths, etc.
-        // For now, we'll use a simplified calculation
+        console.log("--- Starting Module Placement ---");
         
+        // Check if Google Maps geometry library is available
+        if (!window.google || !window.google.maps.geometry || 
+            !window.google.maps.geometry.spherical || 
+            !window.google.maps.geometry.poly) {
+          console.error("Google Maps geometry library not loaded");
+          toast.error("Map geometry library not loaded. Please refresh the page.");
+          calculationInProgressRef.current = false;
+          return;
+        }
+        
+        // Module dimensions (meters)
+        const panelLengthM = (selectedPanel.length || 1700) / 1000;
+        const panelWidthM = (selectedPanel.width || 1000) / 1000;
+        const adjacentGapM = layoutParams.adjacentGap / 1000;
+        const moduleDim = layoutParams.orientation === 'landscape'
+          ? { width: panelLengthM, height: panelWidthM }
+          : { width: panelWidthM, height: panelLengthM };
+        
+        console.log("Module Dimensions:", moduleDim);
+        
+        // Process each polygon and place modules
         const modulesPerPolygon: Record<number, number> = {};
         let totalPlacedCount = 0;
+        const configs: PolygonConfig[] = [];
         
-        // Create polygon configs
-        const configs: PolygonConfig[] = polygons.map((poly, index) => {
-          // Simple calculation of modules that could fit in this polygon
-          const panelLength = (selectedPanel?.length || 1700) / 1000; // m
-          const panelWidth = (selectedPanel?.width || 1000) / 1000; // m
-          const moduleArea = panelLength * panelWidth; // m²
-          const gcr = structureType.groundCoverageRatio;
-          const calculatedModuleCount = Math.floor((poly.area * gcr) / moduleArea);
+        for (const [polyIndex, polyInfo] of polygons.entries()) {
+          modulesPerPolygon[polyIndex] = 0;
           
-          modulesPerPolygon[index] = calculatedModuleCount;
-          totalPlacedCount += calculatedModuleCount;
-          
-          const capacityKw = (calculatedModuleCount * (selectedPanel?.power_rating || 400)) / 1000;
-          
-          return {
-            id: index,
-            area: poly.area,
-            azimuth: poly.azimuth || 180,
-            capacityKw,
-            moduleCount: calculatedModuleCount,
-            structureType: structureType.id,
-            tiltAngle: layoutParams.tiltAngle
-          };
-        });
+          try {
+            const polygon = polyInfo.polygon;
+            const path = polygon.getPath();
+            
+            if (path.getLength() < 3) {
+              console.log(`Polygon ${polyIndex} has less than 3 points, skipping`);
+              continue;
+            }
+            
+            // Calculate area (m²)
+            const area = polyInfo.area;
+            const azimuth = polyInfo.azimuth || 180;
+            
+            // Calculate module count based on area and GCR
+            const moduleArea = panelLengthM * panelWidthM; // m²
+            const gcr = structureType.groundCoverageRatio;
+            const maxModulesForArea = Math.floor((area * gcr) / moduleArea);
+            
+            // Limit modules to place for this polygon
+            const modulesToPlace = Math.min(maxModulesForArea, moduleCount - totalPlacedCount);
+            
+            if (modulesToPlace <= 0) {
+              continue;
+            }
+            
+            console.log(`Polygon ${polyIndex}: Area=${area.toFixed(1)}m², Max modules=${maxModulesForArea}, To place=${modulesToPlace}`);
+            
+            // Get bounds for visualization
+            const bounds = new google.maps.LatLngBounds();
+            for (let i = 0; i < path.getLength(); i++) {
+              bounds.extend(path.getAt(i));
+            }
+            
+            const centroid = calculatePolygonCentroid(polygon);
+            console.log(`Polygon ${polyIndex} centroid: ${centroid.toUrlValue()}`);
+            
+            // Check if centroid is inside polygon for validation
+            const polyUtil = window.google.maps.geometry.poly;
+            const centroidInside = polyUtil.containsLocation(centroid, polygon);
+            console.log(`Centroid inside polygon: ${centroidInside}`);
+            
+            // Even with a simplified approach, verify the logic works
+            // Just place a single module at the centroid for testing
+            if (centroidInside) {
+              const moduleWidth = moduleDim.width;
+              const moduleHeight = moduleDim.height;
+              
+              // Calculate module corners, accounting for azimuth
+              const spherical = window.google.maps.geometry.spherical;
+              
+              // Place module at centroid
+              const halfWidth = moduleWidth / 2;
+              const halfHeight = moduleHeight / 2;
+              
+              // Calculate the distance from center to corner
+              const centerToCornerDist = Math.sqrt(halfWidth**2 + halfHeight**2);
+              
+              // Calculate angle offset from center to corner
+              const angleOffset = Math.atan2(halfWidth, halfHeight) * (180 / Math.PI);
+              
+              // Normalize angles for calculations (0-360 degrees)
+              const normalizeAngle = (angle: number): number => ((angle % 360) + 360) % 360;
+              
+              // Calculate corner headings based on azimuth
+              const northEastHeading = normalizeAngle(azimuth - angleOffset);
+              const southEastHeading = normalizeAngle(azimuth + angleOffset);
+              const southWestHeading = normalizeAngle(azimuth + angleOffset + 180);
+              const northWestHeading = normalizeAngle(azimuth - angleOffset + 180);
+              
+              // Calculate corners with proper angles
+              const moduleNE = spherical.computeOffset(centroid, centerToCornerDist, northEastHeading);
+              const moduleSE = spherical.computeOffset(centroid, centerToCornerDist, southEastHeading);
+              const moduleSW = spherical.computeOffset(centroid, centerToCornerDist, southWestHeading);
+              const moduleNW = spherical.computeOffset(centroid, centerToCornerDist, northWestHeading);
+              
+              // Check if all corners are inside the polygon
+              const allCornersInside = 
+                polyUtil.containsLocation(moduleNE, polygon) &&
+                polyUtil.containsLocation(moduleSE, polygon) &&
+                polyUtil.containsLocation(moduleSW, polygon) &&
+                polyUtil.containsLocation(moduleNW, polygon);
+              
+              console.log(`All corners inside polygon: ${allCornersInside}`);
+              
+              // If all corners are inside, place the module
+              if (allCornersInside) {
+                // Create a LatLngBounds for the rectangle
+                const moduleBounds = new google.maps.LatLngBounds();
+                moduleBounds.extend(moduleNE);
+                moduleBounds.extend(moduleSE);
+                moduleBounds.extend(moduleSW);
+                moduleBounds.extend(moduleNW);
+                
+                // Create a rectangle representing the module
+                const rectangle = new google.maps.Rectangle({
+                  strokeColor: '#003366',
+                  strokeOpacity: 0.8,
+                  strokeWeight: 1,
+                  fillColor: '#3399FF',
+                  fillOpacity: 0.6,
+                  map: map,
+                  bounds: moduleBounds,
+                  zIndex: 2
+                });
+                
+                moduleRectanglesRef.current.push(rectangle);
+                
+                // Update counters
+                modulesPerPolygon[polyIndex]++;
+                totalPlacedCount++;
+              }
+            }
+            
+            // Add this polygon's data to configs
+            const placedModuleCount = modulesPerPolygon[polyIndex];
+            const capacityKw = (placedModuleCount * selectedPanel.power_rating) / 1000;
+            
+            configs.push({
+              id: polyIndex,
+              area,
+              azimuth,
+              capacityKw,
+              moduleCount: placedModuleCount,
+              structureType: structureType.id,
+              tiltAngle: layoutParams.tiltAngle
+            });
+            
+          } catch (error) {
+            console.error(`Error processing polygon ${polyIndex}:`, error);
+          }
+        }
         
         // Update state with calculation results
         setPlacedModuleCount(totalPlacedCount);
@@ -184,8 +339,11 @@ export const useModulePlacement = ({
         // Notify parent component
         onCapacityCalculated(totalCapacity, totalArea, totalPlacedCount, configs);
         
+        toast.success(`Placed ${totalPlacedCount} modules with ${totalCapacity.toFixed(2)} kWp capacity`);
+        
         // Mark the calculation as complete
         moduleCalculationPerformedRef.current = false;
+        console.log("--- Module Placement Complete ---");
       } catch (error) {
         console.error("Error during module placement calculation:", error);
         toast.error("Error calculating module placement");
@@ -203,12 +361,6 @@ export const useModulePlacement = ({
         }
       }
     }, 300); // Debounce for 300ms
-    
-    return () => {
-      if (calculateTimeoutRef.current !== null) {
-        window.clearTimeout(calculateTimeoutRef.current);
-      }
-    };
   }, [
     map, 
     polygons, 
@@ -219,7 +371,8 @@ export const useModulePlacement = ({
     totalArea, 
     clearModuleRectangles, 
     getLayoutParamsHash, 
-    onCapacityCalculated
+    onCapacityCalculated,
+    calculatePolygonCentroid
   ]);
 
   // Clean up on unmount

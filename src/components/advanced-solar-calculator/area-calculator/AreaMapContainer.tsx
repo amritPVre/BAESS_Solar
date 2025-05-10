@@ -84,6 +84,26 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
     zoomControl: true
   });
 
+  // Ensure the Google Maps script loads only once
+  useEffect(() => {
+    // Mark the component as initialized to prevent double initialization
+    if (window._mapInitialized) {
+      return;
+    }
+    window._mapInitialized = true;
+    
+    // Ensure Google Maps API is loaded
+    if (!window.google && GOOGLE_MAPS_API_KEY) {
+      console.log("Setting up Google Maps API loader");
+      
+      // Add global error handler for Google Maps
+      window.gm_authFailure = () => {
+        console.error("Google Maps authentication failed");
+        // You can show an error message to the user here
+      };
+    }
+  }, []);
+
   return (
     <div className="relative h-[500px] border rounded-md overflow-hidden">
       {!GOOGLE_MAPS_API_KEY && (
