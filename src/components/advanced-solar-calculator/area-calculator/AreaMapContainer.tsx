@@ -1,5 +1,5 @@
 
-import React, { useRef } from 'react';
+import React, { useRef, useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
 import { GoogleMap } from '@react-google-maps/api';
 import { useGoogleMapsScript } from './hooks/useGoogleMapsScript';
@@ -33,10 +33,10 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
     borderRadius: "0.5rem"
   };
 
-  const defaultCenter = {
+  const defaultCenter = useMemo(() => ({
     lat: latitude || 40.7128,
     lng: longitude || -74.0060
-  };
+  }), [latitude, longitude]);
 
   // Map load handler
   const handleMapLoad = (map: google.maps.Map) => {
@@ -72,20 +72,24 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
     );
   }
 
-  // Define map options only after Google Maps is loaded
-  const mapOptions = scriptStatus === 'ready' ? {
-    mapTypeId: "satellite",
-    streetViewControl: false,
-    fullscreenControl: true,
-    mapTypeControl: true,
-    mapTypeControlOptions: {
-      position: google.maps.ControlPosition.TOP_LEFT,
-      style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR
-    },
-    zoomControl: true,
-    gestureHandling: "greedy",
-    mapId: mapId || undefined
-  } : {};
+  // Define map options only after Google Maps is loaded and memoize them to prevent re-renders
+  const mapOptions = useMemo(() => {
+    if (scriptStatus !== 'ready') return {};
+    
+    return {
+      mapTypeId: "satellite",
+      streetViewControl: false,
+      fullscreenControl: true,
+      mapTypeControl: true,
+      mapTypeControlOptions: {
+        position: google.maps.ControlPosition.TOP_LEFT,
+        style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR
+      },
+      zoomControl: true,
+      gestureHandling: "greedy" as const, // Type assertion to fix typescript error
+      // Remove mapId if it's causing conflicts with custom styles
+    };
+  }, [scriptStatus]);
 
   // Show map when script is ready
   return (

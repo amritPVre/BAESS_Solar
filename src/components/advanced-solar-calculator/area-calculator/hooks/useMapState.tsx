@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 
 interface UseMapStateProps {
   initialLatitude: number;
@@ -17,6 +17,8 @@ export const useMapState = ({
     lng: initialLongitude || -74.0060 
   });
   const mapInitializedRef = useRef(false);
+  const boundsChangeListenerRef = useRef<google.maps.MapsEventListener | null>(null);
+  const timeoutIdRef = useRef<number | null>(null);
   
   // Update center when coordinates change
   useEffect(() => {
@@ -47,61 +49,42 @@ export const useMapState = ({
     
     mapRef.current = loadedMap;
     mapInitializedRef.current = true;
-  }, []);
-
-  // The bounds change listener with debouncing
-  useEffect(() => {
-    if (!mapRef.current) return;
     
-    let isInternalBoundsChange = false;
-    let boundsChangedTimeoutId: number | null = null;
+    // Clean up previous listeners to avoid duplicates
+    if (boundsChangeListenerRef.current) {
+      google.maps.event.removeListener(boundsChangeListenerRef.current);
+      boundsChangeListenerRef.current = null;
+    }
     
-    const boundsChangedListener = mapRef.current.addListener('bounds_changed', () => {
-      if (
-        mapRef.current && 
-        !mapRef.current.getStreetView().getVisible() && 
-        !isInternalBoundsChange
-      ) {
-        // Debounce bounds updates to prevent rapid state changes
-        if (boundsChangedTimeoutId) {
-          window.clearTimeout(boundsChangedTimeoutId);
-        }
-        
-        boundsChangedTimeoutId = window.setTimeout(() => {
-          setUserMapBounds(mapRef.current!.getBounds() || null);
-          updateMapCenter();
-          boundsChangedTimeoutId = null;
-        }, 300); // Debounce for 300ms
+    // Set up bounds change listener only once
+    boundsChangeListenerRef.current = loadedMap.addListener('bounds_changed', () => {
+      if (timeoutIdRef.current) {
+        window.clearTimeout(timeoutIdRef.current);
       }
+      
+      timeoutIdRef.current = window.setTimeout(() => {
+        if (mapRef.current && !mapRef.current.getStreetView().getVisible()) {
+          setUserMapBounds(mapRef.current.getBounds() || null);
+          updateMapCenter();
+        }
+        timeoutIdRef.current = null;
+      }, 500);
     });
     
-    // Override the fitBounds method to set our flag
-    const originalFitBounds = mapRef.current.fitBounds;
-    mapRef.current.fitBounds = function(...args) {
-      isInternalBoundsChange = true;
-      const result = originalFitBounds.apply(this, args);
-      
-      window.setTimeout(() => {
-        isInternalBoundsChange = false;
-        updateMapCenter();
-      }, 500);
-      
-      return result;
-    };
-    
-    // Clean up the listener
-    return () => {
-      if (boundsChangedListener) {
-        google.maps.event.removeListener(boundsChangedListener);
-      }
-      if (boundsChangedTimeoutId) {
-        window.clearTimeout(boundsChangedTimeoutId);
-      }
-      if (mapRef.current) {
-        mapRef.current.fitBounds = originalFitBounds;
-      }
-    };
   }, [updateMapCenter]);
+
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      if (boundsChangeListenerRef.current && window.google && window.google.maps) {
+        google.maps.event.removeListener(boundsChangeListenerRef.current);
+      }
+      
+      if (timeoutIdRef.current) {
+        window.clearTimeout(timeoutIdRef.current);
+      }
+    };
+  }, []);
 
   return {
     mapRef,
