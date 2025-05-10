@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useCallback } from 'react';
 import { Loader2 } from 'lucide-react';
 import { GoogleMap } from '@react-google-maps/api';
 import { useGoogleMapsScript } from './hooks/useGoogleMapsScript';
@@ -22,6 +22,8 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
 }) => {
   // Get API key from environment variable
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string;
+  // Get Map ID from environment variable or use hardcoded value
+  const mapId = import.meta.env.VITE_GOOGLE_MAPS_ID || "142c120910df35ea";
   
   // Track map initialization to prevent duplicate rendering
   const mapInitializedRef = useRef(false);
@@ -42,40 +44,36 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
   }), [latitude, longitude]);
 
   // Map options with mapId properly included
-  const mapOptions = useMemo(() => {
-    if (!window.google) return {};
-    
-    return {
-      streetViewControl: false,
-      fullscreenControl: true,
-      mapTypeControl: true,
-      mapTypeId: window.google?.maps?.MapTypeId?.SATELLITE || 'satellite',
-      mapTypeControlOptions: {
-        position: window.google?.maps?.ControlPosition?.TOP_LEFT || 1,
-        style: window.google?.maps?.MapTypeControlStyle?.HORIZONTAL_BAR || 1
-      },
-      mapId: "142c120910df35ea",  // Restored mapId
-      zoomControl: true,
-      gestureHandling: "greedy" as const
-    };
-  }, []);
+  const mapOptions = useMemo(() => ({
+    streetViewControl: false,
+    fullscreenControl: true,
+    mapTypeControl: true,
+    mapTypeId: "satellite",
+    mapTypeControlOptions: {
+      position: window.google?.maps?.ControlPosition?.TOP_LEFT || 1,
+      style: window.google?.maps?.MapTypeControlStyle?.HORIZONTAL_BAR || 1
+    },
+    mapId: mapId, // Ensure mapId is always included
+    zoomControl: true,
+    gestureHandling: "greedy" as const
+  }), [mapId]);
 
   // Map load handler with initialization check
-  const handleMapLoad = (map: google.maps.Map) => {
+  const handleMapLoad = useCallback((map: google.maps.Map) => {
     // Prevent duplicate initializations
     if (mapInitializedRef.current) {
       console.log("Map already initialized, skipping duplicate onLoad");
       return;
     }
     
-    console.log("Map loaded successfully");
+    console.log(`Map loaded successfully with Map ID: ${mapId}`);
     mapInitializedRef.current = true;
     
     // Call onMapLoaded after a short delay to ensure map is fully loaded
     setTimeout(() => {
       onMapLoaded(map);
     }, 100);
-  };
+  }, [onMapLoaded, mapId]);
 
   // Show error if API key is missing
   if (!apiKey) {

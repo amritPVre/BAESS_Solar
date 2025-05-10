@@ -47,12 +47,13 @@ export const useGoogleMapsScript = (apiKey: string): ScriptStatus => {
       }
 
       try {
-        console.log('Loading Google Maps script...');
+        console.log('Loading Google Maps script with libraries and Map ID...');
         window.googleMapsScriptStatus = 'loading';
         
         // Create script tag
         const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,drawing,geometry,marker`;
+        // Include v=beta to ensure advanced markers are supported
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,drawing,geometry,marker&v=beta`;
         script.async = true;
         script.defer = true;
         
@@ -80,6 +81,11 @@ export const useGoogleMapsScript = (apiKey: string): ScriptStatus => {
     };
 
     loadScript();
+
+    // Clean up function - won't remove the Google Maps script as it could be used elsewhere
+    return () => {
+      // Just clean up local state if needed
+    };
   }, [apiKey]);
 
   return scriptStatus;
