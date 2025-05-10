@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import type { SolarPanel } from '@/types/components';
 import { DEFAULT_LAYOUT_PARAMS, STRUCTURE_TYPES } from './constants';

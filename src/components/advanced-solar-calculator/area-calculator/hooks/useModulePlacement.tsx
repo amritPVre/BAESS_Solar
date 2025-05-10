@@ -1,88 +1,115 @@
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { toast } from 'sonner';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SolarPanel } from '@/types/components';
-import { PolygonInfo, StructureType, LayoutParameters, PolygonConfig } from '../types';
+import { PolygonInfo, PolygonConfig, LayoutParameters, StructureType } from '../types';
+import { calculatePolygonArea } from '../utils/geometryUtils';
 
 interface UseModulePlacementProps {
-  map: google.maps.Map | null;
   polygons: PolygonInfo[];
-  selectedPanel: SolarPanel | null;
+  selectedPanel: SolarPanel;
+  map: google.maps.Map | null;
   moduleCount: number;
   structureType: StructureType;
   layoutParams: LayoutParameters;
-  totalArea: number;
   onCapacityCalculated: (capacityKw: number, areaM2: number, moduleCount: number, configs?: PolygonConfig[]) => void;
+  totalArea: number;
+}
+
+interface PlacedModule {
+  rectangle: google.maps.Rectangle;
+  polygon: google.maps.Polygon;
+  center: google.maps.LatLng;
+  polygonIndex: number;
 }
 
 export const useModulePlacement = ({
-  map,
   polygons,
   selectedPanel,
+  map,
   moduleCount,
   structureType,
   layoutParams,
-  totalArea,
-  onCapacityCalculated
+  onCapacityCalculated,
+  totalArea
 }: UseModulePlacementProps) => {
   const [placedModuleCount, setPlacedModuleCount] = useState(0);
   const [placedModulesPerPolygon, setPlacedModulesPerPolygon] = useState<Record<number, number>>({});
   const [totalCapacity, setTotalCapacity] = useState(0);
   const [polygonConfigs, setPolygonConfigs] = useState<PolygonConfig[]>([]);
-  
-  // Use refs to track calculation state and prevent infinite loops
-  const calculationInProgressRef = useRef(false);
-  const calculationQueuedRef = useRef(false);
   const moduleRectanglesRef = useRef<google.maps.Rectangle[]>([]);
-  const prevPropsRef = useRef({
-    polygonsLength: 0,
-    moduleCount: 0,
-    structureTypeId: '',
-    layoutParamsHash: ''
-  });
-  const calculateTimeoutRef = useRef<number | null>(null);
-  const skipNextCalculationRef = useRef(false);
   const moduleCalculationPerformedRef = useRef(true);
-  
-  // Helper to clear existing module rectangles
+  const [isCalculating, setIsCalculating] = useState(false);
+
+  // Clear existing module rectangles
   const clearModuleRectangles = useCallback(() => {
-    if (moduleRectanglesRef.current.length === 0) return;
-    
-    console.log(`Clearing ${moduleRectanglesRef.current.length} module rectangles`);
-    
     moduleRectanglesRef.current.forEach(rect => {
-      if (rect) {
-        try {
-          rect.setMap(null);
-        } catch (e) {
-          console.error("Error clearing rectangle:", e);
-        }
-      }
+      if (rect) rect.setMap(null);
     });
     moduleRectanglesRef.current = [];
   }, []);
 
-  // Function to calculate layout parameters hash for comparison
-  const getLayoutParamsHash = useCallback((params: LayoutParameters): string => {
-    return JSON.stringify({
-      tiltAngle: params.tiltAngle,
-      orientation: params.orientation,
-      interRowSpacing: params.interRowSpacing, 
-      adjacentGap: params.adjacentGap,
-      tableConfig: params.tableConfig,
-      carportConfig: params.carportConfig
-    });
-  }, []);
+  // Calculate module placement
+  const calculateModulePlacement = useCallback(() => {
+    if (!map || polygons.length === 0 || !selectedPanel || moduleCount === 0 || isCalculating) {
+      return;
+    }
 
-  // Reset the calculation flag when dependencies change
-  useEffect(() => {
-    moduleCalculationPerformedRef.current = true;
-  }, [polygons, selectedPanel, layoutParams, moduleCount, structureType.id]);
+    setIsCalculating(true);
+    clearModuleRectangles();
 
-  // Helper function to calculate polygon centroid safely
-  const calculatePolygonCentroid = useCallback((polygon: google.maps.Polygon): google.maps.LatLng => {
-    try {
+    // Initialize counters and storage
+    let currentPlacedCount = 0;
+    const modulesPerPolygon: Record<number, number> = {};
+    const placedModules: PlacedModule[] = [];
+    const updatedPolygonConfigs: PolygonConfig[] = [];
+
+    // Get panel dimensions
+    const defaultLength = 1700; // mm
+    const defaultWidth = 1000; // mm
+    
+    // Safely extract dimensions with proper type checking
+    let panelLength = defaultLength;
+    let panelWidth = defaultWidth;
+    
+    if ('length' in selectedPanel && typeof selectedPanel.length === 'number') {
+      panelLength = selectedPanel.length;
+    } else if (selectedPanel.dimensions?.height) {
+      panelLength = selectedPanel.dimensions.height;
+    }
+    
+    if ('width' in selectedPanel && typeof selectedPanel.width === 'number') {
+      panelWidth = selectedPanel.width;
+    } else if (selectedPanel.dimensions?.width) {
+      panelWidth = selectedPanel.dimensions.width;
+    }
+
+    // Module dimensions (meters)
+    const panelLengthM = panelLength / 1000;
+    const panelWidthM = panelWidth / 1000;
+    const adjacentGapM = layoutParams.adjacentGap / 1000;
+
+    // Set module dimensions based on orientation
+    const moduleDim = layoutParams.orientation === 'landscape'
+      ? { width: panelLengthM, height: panelWidthM }
+      : { width: panelWidthM, height: panelLengthM };
+    
+    const moduleWidthWithGap = moduleDim.width + adjacentGapM;
+
+    // Process each polygon
+    for (const [polyIndex, polyInfo] of polygons.entries()) {
+      if (currentPlacedCount >= moduleCount) break;
+      
+      // Initialize counter for this polygon
+      modulesPerPolygon[polyIndex] = 0;
+      
+      const polygon = polyInfo.polygon;
+      const polygonAzimuth = polyInfo.azimuth || 180; // Default to south if not set
+      
+      // Calculate polygon centroid
       const path = polygon.getPath();
+      if (!path || path.getLength() < 3) continue;
+      
+      // Calculate the polygon centroid
       let centerLat = 0;
       let centerLng = 0;
       const vertexCount = path.getLength();
@@ -95,990 +122,721 @@ export const useModulePlacement = ({
       
       centerLat /= vertexCount;
       centerLng /= vertexCount;
-      
-      return new google.maps.LatLng(centerLat, centerLng);
-    } catch (e) {
-      console.error("Error calculating centroid:", e);
-      // Fallback to the first vertex if calculation fails
-      return polygon.getPath().getAt(0)!;
-    }
-  }, []);
+      const centroid = new google.maps.LatLng(centerLat, centerLng);
 
-  // Calculate module corners based on center point, dimensions and rotation
-  const calculateModuleCorners = useCallback((
-    center: google.maps.LatLng,
-    width: number,
-    height: number,
-    azimuth: number,
-    spherical: typeof google.maps.geometry.spherical
-  ): google.maps.LatLng[] => {
-    // Helper to normalize angle to 0-360 range
-    const normalizeAngle = (angle: number): number => ((angle % 360) + 360) % 360;
-    
-    // Calculate distance from center to corner
-    const halfWidth = width / 2;
-    const halfHeight = height / 2;
-    const centerToCornerDist = Math.sqrt(halfWidth**2 + halfHeight**2);
-    const angleOffset = Math.atan2(halfWidth, halfHeight) * (180 / Math.PI);
-    
-    // Calculate corner headings based on azimuth
-    const neHeading = normalizeAngle(azimuth - angleOffset);
-    const seHeading = normalizeAngle(azimuth + angleOffset);
-    const nwHeading = normalizeAngle(azimuth - angleOffset + 180);
-    const swHeading = normalizeAngle(azimuth + angleOffset + 180);
-    
-    // Calculate corners using spherical geometry
-    const moduleNE = spherical.computeOffset(center, centerToCornerDist, neHeading);
-    const moduleSE = spherical.computeOffset(center, centerToCornerDist, seHeading);
-    const moduleNW = spherical.computeOffset(center, centerToCornerDist, nwHeading);
-    const moduleSW = spherical.computeOffset(center, centerToCornerDist, swHeading);
-    
-    return [moduleNE, moduleSE, moduleSW, moduleNW]; // Return corners in clockwise order
-  }, []);
-
-  // Memoized calculation trigger that can be called from parent
-  const triggerModuleCalculation = useCallback(() => {
-    // Skip if we've explicitly marked to skip the next calculation
-    if (skipNextCalculationRef.current) {
-      skipNextCalculationRef.current = false;
-      return;
-    }
-    
-    // If a calculation is already in progress, queue another one
-    if (calculationInProgressRef.current) {
-      calculationQueuedRef.current = true;
-      return;
-    }
-    
-    // Clear any pending calculation
-    if (calculateTimeoutRef.current !== null) {
-      window.clearTimeout(calculateTimeoutRef.current);
-    }
-    
-    // Skip duplicate calculations if nothing changed
-    if (!moduleCalculationPerformedRef.current) {
-      console.log("--- Skipping duplicate module placement ---");
-      return;
-    }
-    
-    // Use timeout to debounce rapid changes
-    calculateTimeoutRef.current = window.setTimeout(() => {
-      console.log("Triggering module calculation");
-      calculationInProgressRef.current = true;
-      
-      const currentProps = {
-        polygonsLength: polygons.length,
-        moduleCount,
-        structureTypeId: structureType.id,
-        layoutParamsHash: getLayoutParamsHash(layoutParams)
-      };
-      
-      // Skip calculation if nothing relevant has changed
-      const propsChanged = 
-        currentProps.polygonsLength !== prevPropsRef.current.polygonsLength ||
-        currentProps.moduleCount !== prevPropsRef.current.moduleCount ||
-        currentProps.structureTypeId !== prevPropsRef.current.structureTypeId ||
-        currentProps.layoutParamsHash !== prevPropsRef.current.layoutParamsHash;
-        
-      if (!propsChanged && moduleRectanglesRef.current.length > 0) {
-        console.log("Skipping module calculation - no changes");
-        calculationInProgressRef.current = false;
-        return;
+      // Check if the centroid is inside the polygon
+      let startPoint = centroid;
+      if (!google.maps.geometry.poly.containsLocation(centroid, polygon)) {
+        // Fallback to the first vertex if centroid is outside
+        const firstVertex = path.getAt(0)!;
+        startPoint = firstVertex;
       }
-      
-      prevPropsRef.current = currentProps;
-      
-      try {
-        clearModuleRectangles();
-        
-        // Reset state
-        setPlacedModuleCount(0);
-        setPlacedModulesPerPolygon({});
-        
-        if (!selectedPanel || polygons.length === 0 || !map) {
-          onCapacityCalculated(0, 0, 0, []);
-          calculationInProgressRef.current = false;
-          return;
-        }
-        
-        console.log("--- Starting Module Placement ---");
-        
-        // Check if Google Maps geometry library is available
-        if (!window.google || !window.google.maps.geometry || 
-            !window.google.maps.geometry.spherical || 
-            !window.google.maps.geometry.poly) {
-          console.error("Google Maps geometry library not loaded");
-          toast.error("Map geometry library not loaded. Please refresh the page.");
-          calculationInProgressRef.current = false;
-          return;
-        }
-        
-        // Module dimensions (meters)
-        const panelLengthM = (selectedPanel.length || 1700) / 1000;
-        const panelWidthM = (selectedPanel.width || 1000) / 1000;
-        const adjacentGapM = layoutParams.adjacentGap / 1000;
-        const moduleDim = layoutParams.orientation === 'landscape'
-          ? { width: panelLengthM, height: panelWidthM }
-          : { width: panelWidthM, height: panelLengthM };
-        
-        console.log("Module Dimensions:", moduleDim);
-        
-        // Process each polygon and place modules
-        const modulesPerPolygon: Record<number, number> = {};
-        let totalPlacedCount = 0;
-        const configs: PolygonConfig[] = [];
-        const spherical = window.google.maps.geometry.spherical;
-        const polyUtil = window.google.maps.geometry.poly;
-        
-        for (const [polyIndex, polyInfo] of polygons.entries()) {
-          modulesPerPolygon[polyIndex] = 0;
-          
-          try {
-            const polygon = polyInfo.polygon;
-            const path = polygon.getPath();
-            
-            if (path.getLength() < 3) {
-              console.log(`Polygon ${polyIndex} has less than 3 points, skipping`);
-              continue;
-            }
-            
-            // Calculate area (m²)
-            const area = polyInfo.area;
-            const azimuth = polyInfo.azimuth || 180;
-            
-            // Calculate theoretical module count based on area and GCR
-            const moduleArea = moduleDim.width * moduleDim.height; // m²
-            const gcr = structureType.groundCoverageRatio;
-            const maxModulesForArea = Math.floor((area * gcr) / moduleArea);
-            
-            // Limit modules to place for this polygon
-            const modulesToPlace = Math.min(maxModulesForArea, moduleCount - totalPlacedCount);
-            
-            if (modulesToPlace <= 0) {
-              continue;
-            }
-            
-            console.log(`Polygon ${polyIndex}: Area=${area.toFixed(1)}m², Max modules=${maxModulesForArea}, To place=${modulesToPlace}`);
-            
-            // Get centroid for starting point
-            const centroid = calculatePolygonCentroid(polygon);
-            console.log(`Polygon ${polyIndex} centroid: ${centroid.toUrlValue()}`);
-            
-            // Check if centroid is inside polygon for validation
-            const centroidInside = polyUtil.containsLocation(centroid, polygon);
-            
-            // Find a valid starting point if centroid is not inside
-            let startPoint = centroid;
-            if (!centroidInside) {
-              console.log(`Centroid not inside polygon ${polyIndex}, looking for valid starting point...`);
-              
-              // Try to find a point inside by interpolating 
-              for (let i = 0; i < path.getLength(); i++) {
-                const p1 = path.getAt(i);
-                const p2 = path.getAt((i + 1) % path.getLength());
-                // Try 10%, 20%, etc. along each edge
-                for (let t = 0.1; t < 0.9; t += 0.1) {
-                  const testPoint = new google.maps.LatLng(
-                    p1.lat() + t * (p2.lat() - p1.lat()),
-                    p1.lng() + t * (p2.lng() - p1.lng())
-                  );
-                  if (polyUtil.containsLocation(testPoint, polygon)) {
-                    startPoint = testPoint;
-                    console.log(`Found valid start point at ${startPoint.toUrlValue()}`);
-                    break;
-                  }
-                }
-                if (startPoint !== centroid) break;
-              }
-              
-              // If still no valid point, use first vertex with small offset
-              if (startPoint === centroid) {
-                const firstVertex = path.getAt(0);
-                const secondVertex = path.getAt(1);
-                startPoint = spherical.interpolate(firstVertex, secondVertex, 0.1);
-                console.log(`Using fallback start point at ${startPoint.toUrlValue()}`);
-              }
-            }
-            
-            // Place modules based on structure type
-            let placedCount = 0;
-            const isGroundMountTable = structureType.id === 'ground_mount_tables';
-            const isCarport = structureType.id === 'carport';
-            
-            if (isGroundMountTable && layoutParams.tableConfig) {
-              // Place ground mount tables
-              placedCount = placeGroundMountTables({
-                startPoint,
-                polygon,
-                modulesToPlace,
-                moduleDim,
-                layoutParams,
-                tableConfig: layoutParams.tableConfig,
-                azimuth,
-                polyIndex,
-                map,
-                polyUtil,
-                spherical
-              });
-            } else if (isCarport && layoutParams.carportConfig) {
-              // Place carport structures
-              placedCount = placeCarportStructures({
-                startPoint,
-                polygon,
-                modulesToPlace,
-                moduleDim,
-                layoutParams,
-                carportConfig: layoutParams.carportConfig,
-                azimuth,
-                polyIndex,
-                map,
-                polyUtil,
-                spherical
-              });
-            } else {
-              // Place individual modules (for ballasted, fixed tilt, etc.)
-              placedCount = placeIndividualModules({
-                startPoint,
-                polygon,
-                modulesToPlace,
-                moduleDim,
-                layoutParams,
-                azimuth,
-                polyIndex,
-                map,
-                polyUtil,
-                spherical
-              });
-            }
-            
-            // Update module counts
-            modulesPerPolygon[polyIndex] = placedCount;
-            totalPlacedCount += placedCount;
-            console.log(`Placed ${placedCount} modules in polygon ${polyIndex}`);
-            
-            // Add this polygon's data to configs
-            const capacityKw = (placedCount * selectedPanel.power_rating) / 1000;
-            configs.push({
-              id: polyIndex,
-              area,
-              azimuth,
-              capacityKw,
-              moduleCount: placedCount,
-              structureType: structureType.id,
-              tiltAngle: layoutParams.tiltAngle
-            });
-          } catch (error) {
-            console.error(`Error processing polygon ${polyIndex}:`, error);
+
+      // Different placement strategies based on structure type
+      switch (structureType.id) {
+        case 'ballasted': 
+          placeBallasted(
+            polygon, 
+            polyIndex, 
+            startPoint, 
+            moduleDim, 
+            moduleWidthWithGap, 
+            layoutParams.interRowSpacing,
+            polygonAzimuth,
+            modulesPerPolygon,
+            placedModules,
+            currentPlacedCount,
+            moduleCount
+          );
+          break;
+
+        case 'fixed_tilt':
+          placeFixedTilt(
+            polygon, 
+            polyIndex, 
+            startPoint, 
+            moduleDim, 
+            moduleWidthWithGap, 
+            layoutParams.interRowSpacing,
+            polygonAzimuth,
+            modulesPerPolygon,
+            placedModules,
+            currentPlacedCount,
+            moduleCount
+          );
+          break;
+
+        case 'ground_mount_tables':
+          // Use ground mount tables specific layout if table config is available
+          if (layoutParams.tableConfig) {
+            placeGroundMountTables(
+              polygon,
+              polyIndex,
+              startPoint,
+              moduleDim,
+              moduleWidthWithGap,
+              layoutParams.interRowSpacing,
+              layoutParams.tableConfig,
+              polygonAzimuth,
+              modulesPerPolygon,
+              placedModules,
+              currentPlacedCount,
+              moduleCount
+            );
+          } else {
+            // Fallback to fixed tilt if no table config
+            placeFixedTilt(
+              polygon, 
+              polyIndex, 
+              startPoint, 
+              moduleDim, 
+              moduleWidthWithGap, 
+              layoutParams.interRowSpacing,
+              polygonAzimuth,
+              modulesPerPolygon,
+              placedModules,
+              currentPlacedCount,
+              moduleCount
+            );
           }
-        }
-        
-        // Update state with calculation results
-        setPlacedModuleCount(totalPlacedCount);
-        setPlacedModulesPerPolygon(modulesPerPolygon);
-        setPolygonConfigs(configs);
-        
-        // Calculate total capacity
-        const totalCapacity = configs.reduce((sum, config) => sum + config.capacityKw, 0);
-        setTotalCapacity(totalCapacity);
-        
-        // Notify parent component
-        onCapacityCalculated(totalCapacity, totalArea, totalPlacedCount, configs);
-        
-        if (totalPlacedCount > 0) {
-          toast.success(`Placed ${totalPlacedCount} modules with ${totalCapacity.toFixed(2)} kWp capacity`);
-        } else if (polygons.length > 0) {
-          toast.warning("No modules could be placed in the drawn areas");
-        }
-        
-        // Mark the calculation as complete
-        moduleCalculationPerformedRef.current = false;
-        console.log("--- Module Placement Complete ---");
-      } catch (error) {
-        console.error("Error during module placement calculation:", error);
-        toast.error("Error calculating module placement");
-      } finally {
-        calculationInProgressRef.current = false;
-        
-        // If another calculation was requested while this one was running, trigger it
-        if (calculationQueuedRef.current) {
-          calculationQueuedRef.current = false;
-          
-          // Set a small delay before the next calculation
-          setTimeout(() => {
-            triggerModuleCalculation();
-          }, 300);
-        }
-      }
-    }, 300); // Debounce for 300ms
-  }, [
-    map, 
-    polygons, 
-    selectedPanel, 
-    moduleCount, 
-    structureType, 
-    layoutParams, 
-    totalArea, 
-    clearModuleRectangles, 
-    getLayoutParamsHash, 
-    onCapacityCalculated,
-    calculatePolygonCentroid,
-    calculateModuleCorners
-  ]);
+          break;
 
-  // Function to place individual modules (for regular structures)
-  const placeIndividualModules = useCallback(({
-    startPoint,
-    polygon,
-    modulesToPlace,
-    moduleDim,
-    layoutParams,
-    azimuth,
-    polyIndex,
-    map,
-    polyUtil,
-    spherical
-  }: {
-    startPoint: google.maps.LatLng;
-    polygon: google.maps.Polygon;
-    modulesToPlace: number;
-    moduleDim: { width: number; height: number };
-    layoutParams: LayoutParameters;
-    azimuth: number;
-    polyIndex: number;
-    map: google.maps.Map;
-    polyUtil: typeof google.maps.geometry.poly;
-    spherical: typeof google.maps.geometry.spherical;
-  }): number => {
-    let placedCount = 0;
-    const moduleWidth = moduleDim.width;
-    const moduleHeight = moduleDim.height;
-    const moduleWidthWithGap = moduleWidth + (layoutParams.adjacentGap / 1000);
-    const rowSpacing = moduleHeight + layoutParams.interRowSpacing;
-    
-    // Set up spiral grid search around startPoint
-    const rowHeading = azimuth; 
-    const colHeading = (azimuth + 90) % 360;
-    const rowDirections = [rowHeading, (rowHeading + 180) % 360];
-    const colDirections = [colHeading, (colHeading + 180) % 360];
-    const maxDistance = 300; // Max distance to search in meters
-    const placedPoints: google.maps.LatLng[] = []; // Track placed modules to avoid overlaps
-    
-    console.log(`Individual modules: width=${moduleWidth}m, height=${moduleHeight}m, row spacing=${rowSpacing}m`);
-    console.log(`Azimuth: ${azimuth}°, Row heading: ${rowHeading}°, Col heading: ${colHeading}°`);
-    
-    // For each quadrant of the spiral
-    for (const rowDirection of rowDirections) {
-      if (placedCount >= modulesToPlace) break;
+        case 'carport':
+          // Use carport specific layout if carport config is available
+          if (layoutParams.carportConfig) {
+            placeCarport(
+              polygon,
+              polyIndex,
+              startPoint,
+              moduleDim,
+              moduleWidthWithGap,
+              layoutParams.interRowSpacing,
+              layoutParams.carportConfig,
+              polygonAzimuth,
+              modulesPerPolygon,
+              placedModules,
+              currentPlacedCount,
+              moduleCount
+            );
+          } else {
+            // Fallback to standard layout if no carport config
+            placeBallasted(
+              polygon, 
+              polyIndex, 
+              startPoint, 
+              moduleDim, 
+              moduleWidthWithGap, 
+              layoutParams.interRowSpacing,
+              polygonAzimuth,
+              modulesPerPolygon,
+              placedModules,
+              currentPlacedCount,
+              moduleCount
+            );
+          }
+          break;
+
+        default:
+          // Default to ballasted for unknown types
+          placeBallasted(
+            polygon, 
+            polyIndex, 
+            startPoint, 
+            moduleDim, 
+            moduleWidthWithGap, 
+            layoutParams.interRowSpacing,
+            polygonAzimuth,
+            modulesPerPolygon,
+            placedModules,
+            currentPlacedCount,
+            moduleCount
+          );
+      }
+
+      // Create polygon configuration
+      const placedModules = modulesPerPolygon[polyIndex] || 0;
+      const capacity = (placedModules * (selectedPanel.power_rating || 400)) / 1000; // kW
       
+      updatedPolygonConfigs.push({
+        id: polyIndex,
+        area: polyInfo.area,
+        azimuth: polygonAzimuth,
+        capacityKw: capacity,
+        moduleCount: placedModules,
+        structureType: structureType.id,
+        tiltAngle: layoutParams.tiltAngle
+      });
+
+      // Update total placed count
+      currentPlacedCount += placedModules;
+    }
+
+    // Draw all modules
+    placedModules.forEach(module => {
+      if (map) module.rectangle.setMap(map);
+      moduleRectanglesRef.current.push(module.rectangle);
+    });
+
+    // Calculate total capacity
+    const totalCapacity = updatedPolygonConfigs.reduce((sum, config) => sum + config.capacityKw, 0);
+
+    // Update state
+    setPlacedModuleCount(currentPlacedCount);
+    setPlacedModulesPerPolygon(modulesPerPolygon);
+    setTotalCapacity(totalCapacity);
+    setPolygonConfigs(updatedPolygonConfigs);
+
+    // Notify parent component
+    if (onCapacityCalculated) {
+      onCapacityCalculated(totalCapacity, totalArea, currentPlacedCount, updatedPolygonConfigs);
+    }
+
+    setIsCalculating(false);
+  }, [map, polygons, selectedPanel, moduleCount, structureType, layoutParams, totalArea, onCapacityCalculated, clearModuleRectangles, isCalculating]);
+
+  // Ballasted module placement strategy (rows with consistent orientation)
+  function placeBallasted(
+    polygon: google.maps.Polygon,
+    polyIndex: number,
+    startPoint: google.maps.LatLng,
+    moduleDim: { width: number; height: number },
+    moduleWidthWithGap: number,
+    interRowSpacing: number,
+    azimuth: number,
+    modulesPerPolygon: Record<number, number>,
+    placedModules: PlacedModule[],
+    currentPlacedCount: number,
+    moduleCount: number
+  ) {
+    if (!google.maps.geometry || !google.maps.geometry.spherical) return;
+    
+    const { spherical } = google.maps.geometry;
+    const { poly } = google.maps.geometry;
+    
+    // Row spacing includes the module height
+    const effectiveRowSpacing = moduleDim.height + interRowSpacing;
+    
+    // Calculate headings for grid layout
+    const rowHeading = azimuth;
+    const colHeading = (azimuth + 90) % 360;
+    
+    // Grid search parameters
+    const maxSearchDistance = 500; // meters
+    const rowDirections = [rowHeading, (rowHeading + 180) % 360]; // North/South
+    const colDirections = [colHeading, (colHeading + 180) % 360]; // East/West
+    
+    // Track placed module centers to avoid overlap
+    const placedModuleCenters: google.maps.LatLng[] = [];
+    
+    // Search in a grid pattern from the start point
+    for (const rowDirection of rowDirections) {
       let rowStart = startPoint;
       let rowDistance = 0;
-      let rowNum = 0;
       
-      // Spiral out row by row
-      while (rowDistance < maxDistance && placedCount < modulesToPlace) {
+      // Expand rows outward
+      while (currentPlacedCount + modulesPerPolygon[polyIndex] < moduleCount && rowDistance < maxSearchDistance) {
         for (const colDirection of colDirections) {
-          if (placedCount >= modulesToPlace) break;
-          
-          let currentPoint = rowStart;
+          let colCenter = rowStart;
           let colDistance = 0;
-          let colNum = 0;
           
-          // Move along column in current direction
-          while (colDistance < maxDistance && placedCount < modulesToPlace) {
-            // Check if point is not too close to already placed modules
-            let isTooClose = placedPoints.some(point => 
-              spherical.computeDistanceBetween(point, currentPoint) < Math.min(moduleWidth, moduleHeight) * 0.9
-            );
-            
-            if (!isTooClose && polyUtil.containsLocation(currentPoint, polygon)) {
+          // Place modules along row
+          while (currentPlacedCount + modulesPerPolygon[polyIndex] < moduleCount && colDistance < maxSearchDistance) {
+            // Check if center is inside polygon
+            if (poly.containsLocation(colCenter, polygon)) {
               // Calculate module corners
-              const corners = calculateModuleCorners(currentPoint, moduleWidth, moduleHeight, azimuth, spherical);
+              const corners = calculateModuleCorners(colCenter, moduleDim.width, moduleDim.height, azimuth);
               
               // Check if all corners are inside the polygon
-              const allCornersInside = corners.every(corner => polyUtil.containsLocation(corner, polygon));
+              const allCornersInside = corners.every(corner => poly.containsLocation(corner, polygon));
               
               if (allCornersInside) {
-                // Create bounds for the rectangle
-                const bounds = new google.maps.LatLngBounds();
-                corners.forEach(corner => bounds.extend(corner));
+                // Create module rectangle with correct rotation
+                const rectangle = createModuleRectangle(corners, '#3399FF');
                 
-                // Draw rectangle for this module
-                const rectangle = new google.maps.Rectangle({
-                  bounds: bounds,
-                  strokeColor: '#003366',
-                  strokeOpacity: 0.8,
-                  strokeWeight: 1,
-                  fillColor: '#3399FF',
-                  fillOpacity: 0.6,
-                  map,
-                  zIndex: 2
+                // Create the module
+                placedModules.push({
+                  rectangle,
+                  polygon: new google.maps.Polygon({
+                    paths: corners,
+                    strokeColor: '#003366',
+                    strokeOpacity: 0.8,
+                    strokeWeight: 1,
+                    fillColor: '#3399FF',
+                    fillOpacity: 0.6,
+                  }),
+                  center: colCenter,
+                  polygonIndex: polyIndex
                 });
                 
-                moduleRectanglesRef.current.push(rectangle);
-                placedPoints.push(currentPoint);
-                placedCount++;
+                // Track placed module
+                placedModuleCenters.push(colCenter);
                 
-                if ((placedCount % 10) === 0) {
-                  console.log(`Placed ${placedCount} modules...`);
+                // Update module count
+                modulesPerPolygon[polyIndex] = (modulesPerPolygon[polyIndex] || 0) + 1;
+                
+                // Break if we've reached the module count
+                if (currentPlacedCount + modulesPerPolygon[polyIndex] >= moduleCount) {
+                  break;
                 }
               }
             }
             
             // Move to next position in column
-            colNum++;
+            colCenter = spherical.computeOffset(colCenter, moduleWidthWithGap, colDirection);
             colDistance += moduleWidthWithGap;
-            currentPoint = spherical.computeOffset(currentPoint, moduleWidthWithGap, colDirection);
           }
         }
         
         // Move to next row
-        rowNum++;
-        rowDistance += rowSpacing;
-        rowStart = spherical.computeOffset(rowStart, rowSpacing, rowDirection);
+        rowStart = spherical.computeOffset(rowStart, effectiveRowSpacing, rowDirection);
+        rowDistance += effectiveRowSpacing;
       }
     }
-    
-    return placedCount;
-  }, [calculateModuleCorners]);
+  }
 
-  // Function to place ground mount tables
-  const placeGroundMountTables = useCallback(({
-    startPoint,
-    polygon,
-    modulesToPlace,
-    moduleDim,
-    layoutParams,
-    tableConfig,
-    azimuth,
-    polyIndex,
-    map,
-    polyUtil,
-    spherical
-  }: {
-    startPoint: google.maps.LatLng;
-    polygon: google.maps.Polygon;
-    modulesToPlace: number;
-    moduleDim: { width: number; height: number };
-    layoutParams: LayoutParameters;
+  // Fixed tilt module placement strategy (similar to ballasted but with different row spacing)
+  function placeFixedTilt(
+    polygon: google.maps.Polygon,
+    polyIndex: number,
+    startPoint: google.maps.LatLng,
+    moduleDim: { width: number; height: number },
+    moduleWidthWithGap: number,
+    interRowSpacing: number,
+    azimuth: number,
+    modulesPerPolygon: Record<number, number>,
+    placedModules: PlacedModule[],
+    currentPlacedCount: number,
+    moduleCount: number
+  ) {
+    // Fixed tilt uses same algorithm as ballasted but with different row spacing
+    // This could be extended to include tilt-specific optimizations
+    placeBallasted(
+      polygon, 
+      polyIndex, 
+      startPoint, 
+      moduleDim, 
+      moduleWidthWithGap, 
+      interRowSpacing, 
+      azimuth,
+      modulesPerPolygon,
+      placedModules,
+      currentPlacedCount,
+      moduleCount
+    );
+  }
+
+  // Ground mount tables placement strategy (groups of modules in tables)
+  function placeGroundMountTables(
+    polygon: google.maps.Polygon,
+    polyIndex: number,
+    startPoint: google.maps.LatLng,
+    moduleDim: { width: number; height: number },
+    moduleWidthWithGap: number,
+    intraTableRowSpacing: number,
     tableConfig: {
       rowsPerTable: number;
       modulesPerRow: number;
-      interTableSpacingX: number;
       interTableSpacingY: number;
-    };
-    azimuth: number;
-    polyIndex: number;
-    map: google.maps.Map;
-    polyUtil: typeof google.maps.geometry.poly;
-    spherical: typeof google.maps.geometry.spherical;
-  }): number => {
-    let placedModuleCount = 0;
-    const moduleWidth = moduleDim.width;
-    const moduleHeight = moduleDim.height;
-    const adjacentGapM = layoutParams.adjacentGap / 1000;
-    const moduleWidthWithGap = moduleWidth + adjacentGapM;
-    const intraRowSpacing = layoutParams.interRowSpacing; // Spacing between rows within a table
+      interTableSpacingX: number;
+    },
+    azimuth: number,
+    modulesPerPolygon: Record<number, number>,
+    placedModules: PlacedModule[],
+    currentPlacedCount: number,
+    moduleCount: number
+  ) {
+    if (!google.maps.geometry || !google.maps.geometry.spherical) return;
     
-    // Table dimensions
+    const { spherical } = google.maps.geometry;
+    const { poly } = google.maps.geometry;
+    
+    // Calculate table dimensions
     const rowsPerTable = tableConfig.rowsPerTable;
     const modulesPerRow = tableConfig.modulesPerRow;
+    
+    // Table width and height
     const tableWidth = modulesPerRow * moduleWidthWithGap;
-    const tableHeight = (rowsPerTable * moduleHeight) + ((rowsPerTable - 1) * intraRowSpacing);
+    const tableHeight = (rowsPerTable * moduleDim.height) + ((rowsPerTable - 1) * intraTableRowSpacing);
     const modulesPerTable = rowsPerTable * modulesPerRow;
     
-    // Spacing between tables
-    const interTableSpacingX = tableConfig.interTableSpacingX;
-    const interTableSpacingY = tableConfig.interTableSpacingY;
-    const tableSpacingX = tableWidth + interTableSpacingX;
-    const tableSpacingY = tableHeight + interTableSpacingY;
+    // Table spacing includes the table height
+    const effectiveRowSpacing = tableHeight + tableConfig.interTableSpacingY;
     
-    console.log(`Ground mount table: ${rowsPerTable} rows × ${modulesPerRow} modules per row`);
-    console.log(`Table dimensions: ${tableWidth.toFixed(2)}m × ${tableHeight.toFixed(2)}m with ${modulesPerTable} modules`);
-    console.log(`Table spacing: X=${interTableSpacingX}m, Y=${interTableSpacingY}m`);
-    
-    // Set up spiral grid search for tables
-    const rowHeading = azimuth; 
+    // Calculate headings for grid layout
+    const rowHeading = azimuth;
     const colHeading = (azimuth + 90) % 360;
+    
+    // Grid search parameters
+    const maxSearchDistance = 500; // meters
     const rowDirections = [rowHeading, (rowHeading + 180) % 360];
     const colDirections = [colHeading, (colHeading + 180) % 360];
-    const maxDistance = 300; // Max distance to search in meters
-    const placedTables: google.maps.LatLng[] = []; // Track placed tables to avoid overlaps
     
-    // For each quadrant of the spiral
+    // Track placed table centers to avoid overlap
+    const placedTableCenters: google.maps.LatLng[] = [];
+    
+    // Search in a grid pattern from the start point
     for (const rowDirection of rowDirections) {
-      if (placedModuleCount >= modulesToPlace) break;
-      
       let rowStart = startPoint;
       let rowDistance = 0;
-      let rowNum = 0;
       
-      // Spiral out row by row (tables)
-      while (rowDistance < maxDistance && placedModuleCount < modulesToPlace) {
+      // Expand rows outward
+      while (currentPlacedCount + modulesPerPolygon[polyIndex] < moduleCount && rowDistance < maxSearchDistance) {
         for (const colDirection of colDirections) {
-          if (placedModuleCount >= modulesToPlace) break;
-          
-          let currentPoint = rowStart;
+          let tableCenter = rowStart;
           let colDistance = 0;
-          let colNum = 0;
           
-          // Move along column in current direction (tables)
-          while (colDistance < maxDistance && placedModuleCount < modulesToPlace) {
+          // Place tables along row
+          while (currentPlacedCount + modulesPerPolygon[polyIndex] < moduleCount && colDistance < maxSearchDistance) {
             // Check if table center is inside polygon
-            if (polyUtil.containsLocation(currentPoint, polygon)) {
-              // Check if table is too close to other tables
-              let isTooClose = placedTables.some(point => 
-                spherical.computeDistanceBetween(point, currentPoint) < Math.min(tableWidth, tableHeight) * 0.9
-              );
+            if (poly.containsLocation(tableCenter, polygon)) {
+              // Calculate table corners
+              const tableCorners = calculateTableCorners(tableCenter, tableWidth, tableHeight, azimuth);
               
-              if (!isTooClose) {
-                // Calculate table corners
-                const halfTableWidth = tableWidth / 2;
-                const halfTableHeight = tableHeight / 2;
-                const tableCornerDist = Math.sqrt(halfTableWidth**2 + halfTableHeight**2);
-                const tableAngleOffset = Math.atan2(halfTableWidth, halfTableHeight) * (180 / Math.PI);
+              // Check if all table corners are inside the polygon
+              const tableInsidePolygon = tableCorners.every(corner => poly.containsLocation(corner, polygon));
+              
+              if (tableInsidePolygon) {
+                // Create table outline
+                const tablePolygon = new google.maps.Polygon({
+                  paths: tableCorners,
+                  strokeColor: '#FF0000',
+                  strokeOpacity: 0.8,
+                  strokeWeight: 2,
+                  fillColor: '#FF0000',
+                  fillOpacity: 0.05,
+                });
                 
-                // Calculate corner headings
-                const normalizeAngle = (angle: number): number => ((angle % 360) + 360) % 360;
-                const tableNEHeading = normalizeAngle(azimuth - tableAngleOffset);
-                const tableSEHeading = normalizeAngle(azimuth + tableAngleOffset);
-                const tableNWHeading = normalizeAngle(azimuth - tableAngleOffset + 180);
-                const tableSWHeading = normalizeAngle(azimuth + tableAngleOffset + 180);
+                // Place modules within the table
+                const allModuleCenters: google.maps.LatLng[] = [];
                 
-                // Calculate table corners
-                const tableNE = spherical.computeOffset(currentPoint, tableCornerDist, tableNEHeading);
-                const tableSE = spherical.computeOffset(currentPoint, tableCornerDist, tableSEHeading);
-                const tableSW = spherical.computeOffset(currentPoint, tableCornerDist, tableSWHeading);
-                const tableNW = spherical.computeOffset(currentPoint, tableCornerDist, tableNWHeading);
-                const tableCorners = [tableNE, tableSE, tableSW, tableNW];
-                
-                // Check if all corners are inside the polygon
-                const tableInsidePolygon = tableCorners.every(corner => 
-                  polyUtil.containsLocation(corner, polygon)
-                );
-                
-                if (tableInsidePolygon) {
-                  // Calculate module positions within the table
-                  const modulePositions: google.maps.LatLng[] = [];
-                  let allModuleCornersInside = true;
+                // Create modules within the table
+                for (let row = 0; row < rowsPerTable; row++) {
+                  // Calculate row position relative to table center
+                  const rowPosition = row - (rowsPerTable - 1) / 2;
+                  const rowOffset = rowPosition * (moduleDim.height + intraTableRowSpacing);
                   
-                  // For each row within the table
-                  for (let row = 0; row < rowsPerTable; row++) {
-                    // Calculate row offset from table center
-                    const rowPosition = row - (rowsPerTable - 1) / 2;
-                    const rowOffset = rowPosition * (moduleHeight + intraRowSpacing);
+                  // Calculate row center
+                  const rowCenter = spherical.computeOffset(
+                    tableCenter,
+                    Math.abs(rowOffset),
+                    rowOffset < 0 ? (rowHeading + 180) % 360 : rowHeading
+                  );
+                  
+                  // Place modules in this row
+                  for (let col = 0; col < modulesPerRow; col++) {
+                    // Stop if we've reached the module count
+                    if (currentPlacedCount + modulesPerPolygon[polyIndex] >= moduleCount) {
+                      break;
+                    }
                     
-                    // Calculate row center
-                    const rowCenter = spherical.computeOffset(
-                      currentPoint,
-                      Math.abs(rowOffset),
-                      rowOffset < 0 ? (azimuth + 180) % 360 : azimuth
+                    // Calculate module position within row
+                    const colPosition = col - (modulesPerRow - 1) / 2;
+                    const colOffset = colPosition * moduleWidthWithGap;
+                    
+                    // Calculate module center
+                    const moduleCenter = spherical.computeOffset(
+                      rowCenter,
+                      Math.abs(colOffset),
+                      colOffset < 0 ? (colHeading + 180) % 360 : colHeading
                     );
                     
-                    // Place modules in this row
-                    for (let col = 0; col < modulesPerRow; col++) {
-                      // Calculate column offset
-                      const colPosition = col - (modulesPerRow - 1) / 2;
-                      const colOffset = colPosition * moduleWidthWithGap;
-                      
-                      // Calculate module center
-                      const moduleCenter = spherical.computeOffset(
-                        rowCenter,
-                        Math.abs(colOffset),
-                        colOffset < 0 ? (azimuth + 270) % 360 : (azimuth + 90) % 360
-                      );
-                      
-                      // Add to list of module positions
-                      modulePositions.push(moduleCenter);
-                      
-                      // Check if module is inside polygon
-                      const moduleCorners = calculateModuleCorners(moduleCenter, moduleWidth, moduleHeight, azimuth, spherical);
-                      const moduleInside = moduleCorners.every(corner => polyUtil.containsLocation(corner, polygon));
-                      
-                      if (!moduleInside) {
-                        allModuleCornersInside = false;
-                        break;
-                      }
-                    }
+                    // Calculate module corners
+                    const corners = calculateModuleCorners(moduleCenter, moduleDim.width, moduleDim.height, azimuth);
                     
-                    if (!allModuleCornersInside) break;
-                  }
-                  
-                  // If all modules fit inside, place the table
-                  if (allModuleCornersInside) {
-                    // Draw table outline
-                    const tablePolygon = new google.maps.Polygon({
-                      paths: tableCorners,
-                      strokeColor: '#FF0000',
-                      strokeOpacity: 0.8,
-                      strokeWeight: 2,
-                      fillColor: '#FF0000',
-                      fillOpacity: 0.05,
-                      map,
+                    // Create the module rectangle
+                    const rectangle = createModuleRectangle(corners, '#3399FF');
+                    
+                    // Add to placed modules
+                    placedModules.push({
+                      rectangle,
+                      polygon: tablePolygon,
+                      center: moduleCenter,
+                      polygonIndex: polyIndex
                     });
                     
-                    moduleRectanglesRef.current.push(tablePolygon as unknown as google.maps.Rectangle);
-                    placedTables.push(currentPoint);
+                    // Track module center
+                    allModuleCenters.push(moduleCenter);
                     
-                    // Place all modules in this table
-                    for (const moduleCenter of modulePositions) {
-                      // Calculate module corners
-                      const moduleCorners = calculateModuleCorners(moduleCenter, moduleWidth, moduleHeight, azimuth, spherical);
-                      
-                      // Create bounds for the rectangle
-                      const bounds = new google.maps.LatLngBounds();
-                      moduleCorners.forEach(corner => bounds.extend(corner));
-                      
-                      // Draw rectangle for this module
-                      const rectangle = new google.maps.Rectangle({
-                        bounds: bounds,
-                        strokeColor: '#003366',
-                        strokeOpacity: 0.8,
-                        strokeWeight: 1,
-                        fillColor: '#3399FF',
-                        fillOpacity: 0.6,
-                        map,
-                        zIndex: 2
-                      });
-                      
-                      moduleRectanglesRef.current.push(rectangle);
-                      placedModuleCount++;
-                      
-                      if (placedModuleCount >= modulesToPlace) break;
-                    }
-                    
-                    // Add row divider lines
-                    if (rowsPerTable > 1) {
-                      for (let r = 1; r < rowsPerTable; r++) {
-                        const dividerPosition = -halfTableHeight + (r * (tableHeight / rowsPerTable));
-                        const dividerCenter = spherical.computeOffset(
-                          currentPoint,
-                          Math.abs(dividerPosition),
-                          dividerPosition < 0 ? (azimuth + 180) % 360 : azimuth
-                        );
-                        
-                        // Calculate line endpoints
-                        const dividerStartHeading = (azimuth + 270) % 360;
-                        const dividerEndHeading = (azimuth + 90) % 360;
-                        const lineStart = spherical.computeOffset(dividerCenter, halfTableWidth, dividerStartHeading);
-                        const lineEnd = spherical.computeOffset(dividerCenter, halfTableWidth, dividerEndHeading);
-                        
-                        // Draw divider line
-                        const rowDivider = new google.maps.Polyline({
-                          path: [lineStart, lineEnd],
-                          geodesic: true,
-                          strokeColor: '#3399FF',
-                          strokeOpacity: 0.3,
-                          strokeWeight: 1,
-                          map
-                        });
-                        
-                        moduleRectanglesRef.current.push(rowDivider as unknown as google.maps.Rectangle);
-                      }
-                    }
-                    
-                    console.log(`Placed table with ${modulesPerTable} modules at ${currentPoint.toUrlValue()}`);
+                    // Update module count
+                    modulesPerPolygon[polyIndex] = (modulesPerPolygon[polyIndex] || 0) + 1;
                   }
                 }
+                
+                // Track placed table center
+                placedTableCenters.push(tableCenter);
               }
             }
             
             // Move to next table position
-            colNum++;
-            colDistance += tableSpacingX;
-            currentPoint = spherical.computeOffset(currentPoint, tableSpacingX, colDirection);
+            tableCenter = spherical.computeOffset(
+              tableCenter, 
+              tableWidth + tableConfig.interTableSpacingX, 
+              colDirection
+            );
+            colDistance += tableWidth + tableConfig.interTableSpacingX;
           }
         }
         
-        // Move to next row of tables
-        rowNum++;
-        rowDistance += tableSpacingY;
-        rowStart = spherical.computeOffset(rowStart, tableSpacingY, rowDirection);
+        // Move to next row
+        rowStart = spherical.computeOffset(rowStart, effectiveRowSpacing, rowDirection);
+        rowDistance += effectiveRowSpacing;
       }
     }
-    
-    return placedModuleCount;
-  }, [calculateModuleCorners]);
+  }
 
-  // Function to place carport structures
-  const placeCarportStructures = useCallback(({
-    startPoint,
-    polygon,
-    modulesToPlace,
-    moduleDim,
-    layoutParams,
-    carportConfig,
-    azimuth,
-    polyIndex,
-    map,
-    polyUtil,
-    spherical
-  }: {
-    startPoint: google.maps.LatLng;
-    polygon: google.maps.Polygon;
-    modulesToPlace: number;
-    moduleDim: { width: number; height: number };
-    layoutParams: LayoutParameters;
+  // Carport module placement strategy
+  function placeCarport(
+    polygon: google.maps.Polygon,
+    polyIndex: number,
+    startPoint: google.maps.LatLng,
+    moduleDim: { width: number; height: number },
+    moduleWidthWithGap: number,
+    interRowSpacing: number,
     carportConfig: {
       rows: number;
       modulesPerRow: number;
       forceRectangle: boolean;
-    };
-    azimuth: number;
-    polyIndex: number;
-    map: google.maps.Map;
-    polyUtil: typeof google.maps.geometry.poly;
-    spherical: typeof google.maps.geometry.spherical;
-  }): number => {
-    let placedModuleCount = 0;
-    const moduleWidth = moduleDim.width;
-    const moduleHeight = moduleDim.height;
-    const adjacentGapM = layoutParams.adjacentGap / 1000;
-    const moduleWidthWithGap = moduleWidth + adjacentGapM;
+    },
+    azimuth: number,
+    modulesPerPolygon: Record<number, number>,
+    placedModules: PlacedModule[],
+    currentPlacedCount: number,
+    moduleCount: number
+  ) {
+    if (!google.maps.geometry || !google.maps.geometry.spherical) return;
     
-    // Carport dimensions
+    const { spherical } = google.maps.geometry;
+    const { poly } = google.maps.geometry;
+    
+    // Calculate carport dimensions
     const rows = carportConfig.rows;
     const modulesPerRow = carportConfig.modulesPerRow;
+    
+    // Carport width and height
     const carportWidth = modulesPerRow * moduleWidthWithGap;
-    const carportHeight = rows * moduleHeight; // No spacing between rows for carports
+    const carportHeight = rows * moduleDim.height; // No spacing between rows in a carport
     const modulesPerCarport = rows * modulesPerRow;
     
-    // Spacing between carports (20% buffer)
-    const carportSpacingX = carportWidth * 1.2;
-    const carportSpacingY = carportHeight * 1.2;
+    // Carport spacing (between separate carports)
+    const effectiveRowSpacing = carportHeight * 1.2; // 20% buffer between carports
     
-    console.log(`Carport: ${rows} rows × ${modulesPerRow} modules per row`);
-    console.log(`Carport dimensions: ${carportWidth.toFixed(2)}m × ${carportHeight.toFixed(2)}m with ${modulesPerCarport} modules`);
-    
-    // Set up spiral grid search for carports
-    const rowHeading = azimuth; 
+    // Calculate headings for grid layout
+    const rowHeading = azimuth;
     const colHeading = (azimuth + 90) % 360;
+    
+    // Grid search parameters
+    const maxSearchDistance = 500; // meters
     const rowDirections = [rowHeading, (rowHeading + 180) % 360];
     const colDirections = [colHeading, (colHeading + 180) % 360];
-    const maxDistance = 300; // Max distance to search in meters
-    const placedCarports: google.maps.LatLng[] = []; // Track placed carports to avoid overlaps
     
-    // For each quadrant of the spiral
+    // Track placed carport centers to avoid overlap
+    const placedCarportCenters: google.maps.LatLng[] = [];
+    
+    // Search in a grid pattern from the start point
     for (const rowDirection of rowDirections) {
-      if (placedModuleCount >= modulesToPlace) break;
-      
       let rowStart = startPoint;
       let rowDistance = 0;
-      let rowNum = 0;
       
-      // Spiral out row by row (carports)
-      while (rowDistance < maxDistance && placedModuleCount < modulesToPlace) {
+      // Expand rows outward
+      while (currentPlacedCount + modulesPerPolygon[polyIndex] < moduleCount && rowDistance < maxSearchDistance) {
         for (const colDirection of colDirections) {
-          if (placedModuleCount >= modulesToPlace) break;
-          
-          let currentPoint = rowStart;
+          let carportCenter = rowStart;
           let colDistance = 0;
-          let colNum = 0;
           
-          // Move along column in current direction (carports)
-          while (colDistance < maxDistance && placedModuleCount < modulesToPlace) {
+          // Place carports along row
+          while (currentPlacedCount + modulesPerPolygon[polyIndex] < moduleCount && colDistance < maxSearchDistance) {
             // Check if carport center is inside polygon
-            if (polyUtil.containsLocation(currentPoint, polygon)) {
-              // Check if carport is too close to other carports
-              let isTooClose = placedCarports.some(point => 
-                spherical.computeDistanceBetween(point, currentPoint) < Math.min(carportWidth, carportHeight) * 0.9
-              );
+            if (poly.containsLocation(carportCenter, polygon)) {
+              // Calculate carport corners
+              const carportCorners = calculateTableCorners(carportCenter, carportWidth, carportHeight, azimuth);
               
-              if (!isTooClose) {
-                // Calculate carport corners
-                const halfCarportWidth = carportWidth / 2;
-                const halfCarportHeight = carportHeight / 2;
-                const carportCornerDist = Math.sqrt(halfCarportWidth**2 + halfCarportHeight**2);
-                const carportAngleOffset = Math.atan2(halfCarportWidth, halfCarportHeight) * (180 / Math.PI);
+              // Check if all carport corners are inside the polygon
+              const carportInsidePolygon = carportCorners.every(corner => poly.containsLocation(corner, polygon));
+              
+              if (carportInsidePolygon) {
+                // Create carport outline
+                const carportPolygon = new google.maps.Polygon({
+                  paths: carportCorners,
+                  strokeColor: '#4B0082', // Indigo for carport
+                  strokeOpacity: 0.8,
+                  strokeWeight: 2,
+                  fillColor: '#4B0082',
+                  fillOpacity: 0.1,
+                });
                 
-                // Calculate corner headings
-                const normalizeAngle = (angle: number): number => ((angle % 360) + 360) % 360;
-                const carportNEHeading = normalizeAngle(azimuth - carportAngleOffset);
-                const carportSEHeading = normalizeAngle(azimuth + carportAngleOffset);
-                const carportNWHeading = normalizeAngle(azimuth - carportAngleOffset + 180);
-                const carportSWHeading = normalizeAngle(azimuth + carportAngleOffset + 180);
+                // Place modules within the carport
+                const allModuleCenters: google.maps.LatLng[] = [];
                 
-                // Calculate carport corners
-                const carportNE = spherical.computeOffset(currentPoint, carportCornerDist, carportNEHeading);
-                const carportSE = spherical.computeOffset(currentPoint, carportCornerDist, carportSEHeading);
-                const carportSW = spherical.computeOffset(currentPoint, carportCornerDist, carportSWHeading);
-                const carportNW = spherical.computeOffset(currentPoint, carportCornerDist, carportNWHeading);
-                const carportCorners = [carportNE, carportSE, carportSW, carportNW];
-                
-                // Check if all corners are inside the polygon
-                const carportInsidePolygon = carportCorners.every(corner => 
-                  polyUtil.containsLocation(corner, polygon)
-                );
-                
-                if (carportInsidePolygon) {
-                  // Calculate module positions within the carport
-                  const modulePositions: google.maps.LatLng[] = [];
-                  let allModuleCornersInside = true;
+                // Create modules within the carport
+                for (let row = 0; row < rows; row++) {
+                  // Calculate row position relative to carport center
+                  const rowPosition = row - (rows - 1) / 2;
+                  const rowOffset = rowPosition * moduleDim.height; // No spacing between rows
                   
-                  // For each row within the carport
-                  for (let row = 0; row < rows; row++) {
-                    // Calculate row offset from carport center
-                    const rowPosition = row - (rows - 1) / 2;
-                    const rowOffset = rowPosition * moduleHeight; // No spacing between rows for carports
+                  // Calculate row center
+                  const rowCenter = spherical.computeOffset(
+                    carportCenter,
+                    Math.abs(rowOffset),
+                    rowOffset < 0 ? (rowHeading + 180) % 360 : rowHeading
+                  );
+                  
+                  // Place modules in this row
+                  for (let col = 0; col < modulesPerRow; col++) {
+                    // Stop if we've reached the module count
+                    if (currentPlacedCount + modulesPerPolygon[polyIndex] >= moduleCount) {
+                      break;
+                    }
                     
-                    // Calculate row center
-                    const rowCenter = spherical.computeOffset(
-                      currentPoint,
-                      Math.abs(rowOffset),
-                      rowOffset < 0 ? (azimuth + 180) % 360 : azimuth
+                    // Calculate module position within row
+                    const colPosition = col - (modulesPerRow - 1) / 2;
+                    const colOffset = colPosition * moduleWidthWithGap;
+                    
+                    // Calculate module center
+                    const moduleCenter = spherical.computeOffset(
+                      rowCenter,
+                      Math.abs(colOffset),
+                      colOffset < 0 ? (colHeading + 180) % 360 : colHeading
                     );
                     
-                    // Place modules in this row
-                    for (let col = 0; col < modulesPerRow; col++) {
-                      // Calculate column offset
-                      const colPosition = col - (modulesPerRow - 1) / 2;
-                      const colOffset = colPosition * moduleWidthWithGap;
-                      
-                      // Calculate module center
-                      const moduleCenter = spherical.computeOffset(
-                        rowCenter,
-                        Math.abs(colOffset),
-                        colOffset < 0 ? (azimuth + 270) % 360 : (azimuth + 90) % 360
-                      );
-                      
-                      // Add to list of module positions
-                      modulePositions.push(moduleCenter);
-                      
-                      // Check if module is inside polygon
-                      const moduleCorners = calculateModuleCorners(moduleCenter, moduleWidth, moduleHeight, azimuth, spherical);
-                      const moduleInside = moduleCorners.every(corner => polyUtil.containsLocation(corner, polygon));
-                      
-                      if (!moduleInside && carportConfig.forceRectangle) {
-                        allModuleCornersInside = false;
-                        break;
-                      }
-                    }
+                    // Calculate module corners
+                    const corners = calculateModuleCorners(moduleCenter, moduleDim.width, moduleDim.height, azimuth);
                     
-                    if (!allModuleCornersInside && carportConfig.forceRectangle) break;
-                  }
-                  
-                  // If all modules fit inside or we're not forcing a rectangle
-                  if (allModuleCornersInside || !carportConfig.forceRectangle) {
-                    // Draw carport outline
-                    const carportPolygon = new google.maps.Polygon({
-                      paths: carportCorners,
-                      strokeColor: '#4B0082', // Indigo for carport
-                      strokeOpacity: 0.8,
-                      strokeWeight: 2,
-                      fillColor: '#4B0082',
-                      fillOpacity: 0.1,
-                      map,
+                    // Create the module rectangle
+                    const rectangle = createModuleRectangle(corners, '#3399FF');
+                    
+                    // Add to placed modules
+                    placedModules.push({
+                      rectangle,
+                      polygon: carportPolygon,
+                      center: moduleCenter,
+                      polygonIndex: polyIndex
                     });
                     
-                    moduleRectanglesRef.current.push(carportPolygon as unknown as google.maps.Rectangle);
-                    placedCarports.push(currentPoint);
+                    // Track module center
+                    allModuleCenters.push(moduleCenter);
                     
-                    // Place all modules in this carport
-                    for (const moduleCenter of modulePositions) {
-                      // Check if module is inside polygon (for non-forced rectangles)
-                      const moduleCorners = calculateModuleCorners(moduleCenter, moduleWidth, moduleHeight, azimuth, spherical);
-                      const moduleInside = moduleCorners.every(corner => polyUtil.containsLocation(corner, polygon));
-                      
-                      if (moduleInside || carportConfig.forceRectangle) {
-                        // Create bounds for the rectangle
-                        const bounds = new google.maps.LatLngBounds();
-                        moduleCorners.forEach(corner => bounds.extend(corner));
-                        
-                        // Draw rectangle for this module
-                        const rectangle = new google.maps.Rectangle({
-                          bounds: bounds,
-                          strokeColor: '#003366',
-                          strokeOpacity: 0.8,
-                          strokeWeight: 1,
-                          fillColor: '#3399FF',
-                          fillOpacity: 0.7, // More opaque for carport modules
-                          map: moduleInside ? map : null, // Only show if inside polygon
-                          zIndex: 2
-                        });
-                        
-                        if (moduleInside) {
-                          moduleRectanglesRef.current.push(rectangle);
-                          placedModuleCount++;
-                        }
-                      }
-                      
-                      if (placedModuleCount >= modulesToPlace) break;
-                    }
-                    
-                    // Add row divider lines
-                    if (rows > 1) {
-                      for (let r = 1; r < rows; r++) {
-                        const dividerPosition = -halfCarportHeight + (r * (carportHeight / rows));
-                        const dividerCenter = spherical.computeOffset(
-                          currentPoint,
-                          Math.abs(dividerPosition),
-                          dividerPosition < 0 ? (azimuth + 180) % 360 : azimuth
-                        );
-                        
-                        // Calculate line endpoints
-                        const dividerStartHeading = (azimuth + 270) % 360;
-                        const dividerEndHeading = (azimuth + 90) % 360;
-                        const lineStart = spherical.computeOffset(dividerCenter, halfCarportWidth, dividerStartHeading);
-                        const lineEnd = spherical.computeOffset(dividerCenter, halfCarportWidth, dividerEndHeading);
-                        
-                        // Draw divider line
-                        const rowDivider = new google.maps.Polyline({
-                          path: [lineStart, lineEnd],
-                          geodesic: true,
-                          strokeColor: '#3399FF',
-                          strokeOpacity: 0.3,
-                          strokeWeight: 0.5,
-                          map
-                        });
-                        
-                        moduleRectanglesRef.current.push(rowDivider as unknown as google.maps.Rectangle);
-                      }
-                    }
-                    
-                    console.log(`Placed carport with ${placedModuleCount % 10 === 0 ? placedModuleCount : ''} modules at ${currentPoint.toUrlValue()}`);
+                    // Update module count
+                    modulesPerPolygon[polyIndex] = (modulesPerPolygon[polyIndex] || 0) + 1;
                   }
                 }
+                
+                // Track placed carport center
+                placedCarportCenters.push(carportCenter);
               }
             }
             
             // Move to next carport position
-            colNum++;
-            colDistance += carportSpacingX;
-            currentPoint = spherical.computeOffset(currentPoint, carportSpacingX, colDirection);
+            carportCenter = spherical.computeOffset(
+              carportCenter, 
+              carportWidth * 1.05, // 5% spacing between adjacent carports
+              colDirection
+            );
+            colDistance += carportWidth * 1.05;
           }
         }
         
-        // Move to next row of carports
-        rowNum++;
-        rowDistance += carportSpacingY;
-        rowStart = spherical.computeOffset(rowStart, carportSpacingY, rowDirection);
+        // Move to next row
+        rowStart = spherical.computeOffset(rowStart, effectiveRowSpacing, rowDirection);
+        rowDistance += effectiveRowSpacing;
       }
     }
-    
-    return placedModuleCount;
-  }, [calculateModuleCorners]);
+  }
 
-  // Clean up on unmount
+  // Helper function to calculate module corners
+  function calculateModuleCorners(
+    center: google.maps.LatLng,
+    width: number,
+    height: number,
+    azimuth: number
+  ): google.maps.LatLng[] {
+    const { spherical } = google.maps.geometry;
+    const azimuthRad = (azimuth * Math.PI) / 180;
+    
+    // Calculate half dimensions
+    const halfWidth = width / 2;
+    const halfHeight = height / 2;
+    
+    // Calculate the distance from center to corner
+    const cornerDist = Math.sqrt(halfWidth * halfWidth + halfHeight * halfHeight);
+    
+    // Calculate the angle offset from the azimuth direction to the corner
+    const angleOffset = Math.atan2(halfWidth, halfHeight);
+    
+    // Calculate the heading to each corner (in degrees)
+    const neHeading = azimuth - (angleOffset * 180 / Math.PI);
+    const nwHeading = azimuth - (angleOffset * 180 / Math.PI) + 180;
+    const seHeading = azimuth + (angleOffset * 180 / Math.PI);
+    const swHeading = azimuth + (angleOffset * 180 / Math.PI) + 180;
+    
+    // Calculate the coordinates of each corner
+    const ne = spherical.computeOffset(center, cornerDist, neHeading);
+    const nw = spherical.computeOffset(center, cornerDist, nwHeading);
+    const se = spherical.computeOffset(center, cornerDist, seHeading);
+    const sw = spherical.computeOffset(center, cornerDist, swHeading);
+    
+    // Return corners in clockwise order
+    return [ne, se, sw, nw];
+  }
+
+  // Helper function to calculate table corners
+  function calculateTableCorners(
+    center: google.maps.LatLng,
+    width: number,
+    height: number,
+    azimuth: number
+  ): google.maps.LatLng[] {
+    // Same logic as module corners, just different dimensions
+    return calculateModuleCorners(center, width, height, azimuth);
+  }
+
+  // Helper function to create a module rectangle
+  function createModuleRectangle(
+    corners: google.maps.LatLng[],
+    fillColor: string
+  ): google.maps.Rectangle {
+    // Create a bounds object from the corners
+    const bounds = new google.maps.LatLngBounds();
+    corners.forEach(corner => bounds.extend(corner));
+    
+    // Create the rectangle
+    return new google.maps.Rectangle({
+      strokeColor: '#003366',
+      strokeOpacity: 0.8,
+      strokeWeight: 1,
+      fillColor: fillColor,
+      fillOpacity: 0.6,
+      clickable: false,
+      bounds: bounds,
+    });
+  }
+
+  // Memoized function to trigger calculation
+  const triggerModuleCalculation = useCallback(() => {
+    if (moduleCalculationPerformedRef.current) {
+      calculateModulePlacement();
+      moduleCalculationPerformedRef.current = false;
+    }
+  }, [calculateModulePlacement]);
+
+  // Reset calculation flag when dependencies change
+  useEffect(() => {
+    moduleCalculationPerformedRef.current = true;
+  }, [selectedPanel, moduleCount, layoutParams, structureType, polygons]);
+
+  // Clear modules when component unmounts
   useEffect(() => {
     return () => {
       clearModuleRectangles();
-      if (calculateTimeoutRef.current !== null) {
-        window.clearTimeout(calculateTimeoutRef.current);
-      }
     };
   }, [clearModuleRectangles]);
-
-  // Mark to skip the next calculation when polygons change
-  useEffect(() => {
-    if (polygons.length === 0) {
-      skipNextCalculationRef.current = true;
-    }
-  }, [polygons.length]);
 
   return {
     placedModuleCount,
     placedModulesPerPolygon,
     totalCapacity,
     polygonConfigs,
+    moduleRectanglesRef,
+    moduleCalculationPerformedRef,
     triggerModuleCalculation
   };
 };

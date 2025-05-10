@@ -1,21 +1,8 @@
 
-// GOOGLE_MAPS_LIBRARIES is used for loading specific Google Maps libraries
-export const GOOGLE_MAPS_LIBRARIES = ["drawing", "geometry", "places", "marker"] as const;
+import { LayoutParameters, StructureType } from './types';
 
-// Default polygon styling options
-export const DEFAULT_POLYGON_OPTIONS: google.maps.PolygonOptions = {
-  fillColor: "#FF0000",
-  fillOpacity: 0.30,
-  strokeWeight: 1,
-  strokeColor: "#FF0000",
-  clickable: true, 
-  editable: true,
-  draggable: true,
-  zIndex: 1
-};
-
-// Structure types with their properties
-export const STRUCTURE_TYPES = [
+// Define structure types
+export const STRUCTURE_TYPES: StructureType[] = [
   { id: 'ballasted', name: 'Ballasted Flat Roof', groundCoverageRatio: 0.5 },
   { id: 'fixed_tilt', name: 'Fixed Tilt Ground Mount', groundCoverageRatio: 0.4 },
   { id: 'ground_mount_tables', name: 'Ground Mount Tables', groundCoverageRatio: 0.45 },
@@ -23,23 +10,23 @@ export const STRUCTURE_TYPES = [
   { id: 'carport', name: 'Carport Structure', groundCoverageRatio: 0.7 },
 ];
 
-// Default layout parameters for different structure types with explicit orientation types
-export const DEFAULT_LAYOUT_PARAMS = {
+// Define default layout parameters for each structure type
+export const DEFAULT_LAYOUT_PARAMS: Record<string, LayoutParameters> = {
   ballasted: {
     tiltAngle: 10,
-    orientation: 'landscape' as 'landscape' | 'portrait',
+    orientation: 'landscape',
     interRowSpacing: 1.5,
     adjacentGap: 20,
   },
   fixed_tilt: {
     tiltAngle: 25,
-    orientation: 'portrait' as 'landscape' | 'portrait',
+    orientation: 'portrait',
     interRowSpacing: 2.0, 
     adjacentGap: 20,
   },
   ground_mount_tables: {
     tiltAngle: 20,
-    orientation: 'landscape' as 'landscape' | 'portrait',
+    orientation: 'landscape',
     interRowSpacing: 0.05, // small gap between rows within the same table
     adjacentGap: 20,       // small gap between modules in the same row
     tableConfig: {
@@ -51,16 +38,15 @@ export const DEFAULT_LAYOUT_PARAMS = {
   },
   tracker: {
     tiltAngle: 0, // Variable for trackers
-    orientation: 'landscape' as 'landscape' | 'portrait',
+    orientation: 'landscape',
     interRowSpacing: 4.0,
     adjacentGap: 25,
   },
   carport: {
     tiltAngle: 5,
-    orientation: 'landscape' as 'landscape' | 'portrait',
+    orientation: 'landscape',
     interRowSpacing: 0,
     adjacentGap: 20,
-    // Add carport-specific configuration
     carportConfig: {
       rows: 6,              // Default number of rows
       modulesPerRow: 10,    // Default modules per row
