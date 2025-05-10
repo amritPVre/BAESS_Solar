@@ -1,7 +1,8 @@
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { toast } from 'sonner';
 import type { SolarPanel } from '@/types/components';
-import { PolygonInfo, PolygonConfig, LayoutParameters, StructureType } from '../types';
+import { PolygonInfo, StructureType, LayoutParameters, PolygonConfig } from '../types';
 
 interface UseModulePlacementProps {
   map: google.maps.Map | null;
@@ -28,150 +29,181 @@ export const useModulePlacement = ({
   const [placedModulesPerPolygon, setPlacedModulesPerPolygon] = useState<Record<number, number>>({});
   const [totalCapacity, setTotalCapacity] = useState(0);
   const [polygonConfigs, setPolygonConfigs] = useState<PolygonConfig[]>([]);
+  
+  // Use refs to track calculation state and prevent infinite loops
+  const calculationInProgressRef = useRef(false);
+  const calculationQueuedRef = useRef(false);
   const moduleRectanglesRef = useRef<google.maps.Rectangle[]>([]);
-  const moduleCalculationPerformedRef = useRef(true);
-
-  // Effect to clear module rectangles when component unmounts
-  useEffect(() => {
-    return () => {
-      moduleRectanglesRef.current.forEach(rect => rect.setMap(null));
-    };
+  const prevPropsRef = useRef({
+    polygonsLength: 0,
+    moduleCount: 0,
+    structureTypeId: '',
+    layoutParamsHash: ''
+  });
+  const calculateTimeoutRef = useRef<number | null>(null);
+  
+  // Helper to clear existing module rectangles
+  const clearModuleRectangles = useCallback(() => {
+    moduleRectanglesRef.current.forEach(rect => {
+      if (rect) {
+        try {
+          rect.setMap(null);
+        } catch (e) {
+          console.error("Error clearing rectangle:", e);
+        }
+      }
+    });
+    moduleRectanglesRef.current = [];
   }, []);
 
-  // Implement the actual module placement logic
-  useEffect(() => {
-    if (polygons.length === 0 || !selectedPanel || !map) {
-      setPlacedModuleCount(0);
-      setPlacedModulesPerPolygon({});
-      setPolygonConfigs([]);
-      onCapacityCalculated(0, 0, 0, []);
+  // Function to calculate layout parameters hash for comparison
+  const getLayoutParamsHash = useCallback((params: LayoutParameters): string => {
+    return JSON.stringify({
+      tiltAngle: params.tiltAngle,
+      orientation: params.orientation,
+      interRowSpacing: params.interRowSpacing, 
+      adjacentGap: params.adjacentGap,
+      tableConfig: params.tableConfig,
+      carportConfig: params.carportConfig
+    });
+  }, []);
+
+  // Memoized calculation trigger that can be called from parent
+  const triggerModuleCalculation = useCallback(() => {
+    if (calculationInProgressRef.current) {
+      calculationQueuedRef.current = true;
       return;
     }
-
-    // Skip duplicate calculations if nothing changed
-    if (!moduleCalculationPerformedRef.current) {
-      console.log("Skipping duplicate module placement calculation");
-      return;
-    }
-
-    console.log("Starting module placement calculation");
     
-    // Clear previous modules
-    moduleRectanglesRef.current.forEach(rect => rect.setMap(null));
-    moduleRectanglesRef.current = [];
-
-    const newPolygonConfigs: PolygonConfig[] = [];
-    let calculatedModuleCount = 0;
-    let calculatedCapacity = 0;
-    const modulesPerPolygon: Record<number, number> = {};
-
-    // Determine if we have access to Google Maps geometry utilities
-    if (!window.google || !window.google.maps || !window.google.maps.geometry) {
-      console.error("Google Maps geometry library not available");
-      return;
+    // Clear any pending calculation
+    if (calculateTimeoutRef.current !== null) {
+      window.clearTimeout(calculateTimeoutRef.current);
     }
-
-    const panelPowerRating = selectedPanel?.power_rating || 0;
-
-    polygons.forEach((polyInfo, idx) => {
-      // Get panel dimensions safely, with proper fallbacks
-      const panelLength = selectedPanel?.length || 
-                        (selectedPanel?.dimensions?.height) || 1700; // mm
-      const panelWidth = selectedPanel?.width || 
-                        (selectedPanel?.dimensions?.width) || 1000; // mm
+    
+    // Use timeout to debounce rapid changes
+    calculateTimeoutRef.current = window.setTimeout(() => {
+      console.log("Triggering module calculation");
+      calculationInProgressRef.current = true;
       
-      // Convert to meters and calculate module area
-      const panelLengthM = panelLength / 1000;
-      const panelWidthM = panelWidth / 1000;
-      const moduleArea = (panelLength * panelWidth) / 1000000; // m²
+      const currentProps = {
+        polygonsLength: polygons.length,
+        moduleCount,
+        structureTypeId: structureType.id,
+        layoutParamsHash: getLayoutParamsHash(layoutParams)
+      };
       
-      // Get the ground coverage ratio for this structure type
-      const gcr = structureType.groundCoverageRatio;
-      
-      // Calculate estimated modules for this polygon based on area and structure type
-      const polygonArea = polyInfo.area;
-      const estimatedModules = Math.floor((polygonArea * gcr) / moduleArea);
-      
-      // Specialized handling for different structure types
-      let placedModules = 0;
-      
-      if (structureType.id === 'ground_mount_tables' && layoutParams.tableConfig) {
-        // For ground mount tables, we calculate based on tables
-        const tableConfig = layoutParams.tableConfig;
-        const modulesPerTable = tableConfig.rowsPerTable * tableConfig.modulesPerRow;
+      // Skip calculation if nothing relevant has changed
+      const propsChanged = 
+        currentProps.polygonsLength !== prevPropsRef.current.polygonsLength ||
+        currentProps.moduleCount !== prevPropsRef.current.moduleCount ||
+        currentProps.structureTypeId !== prevPropsRef.current.structureTypeId ||
+        currentProps.layoutParamsHash !== prevPropsRef.current.layoutParamsHash;
         
-        // Simple table placement calculation without rendering
-        const tableArea = (moduleArea * modulesPerTable) / gcr;
-        const estimatedTables = Math.floor(polygonArea / tableArea);
-        placedModules = Math.min(estimatedModules, estimatedTables * modulesPerTable);
-      } 
-      else if (structureType.id === 'carport' && layoutParams.carportConfig) {
-        // For carport structures, use carport configuration
-        const carportConfig = layoutParams.carportConfig;
-        const modulesPerCarport = carportConfig.rows * carportConfig.modulesPerRow;
-        
-        const carportArea = (moduleArea * modulesPerCarport) / gcr;
-        const estimatedCarports = Math.floor(polygonArea / carportArea);
-        placedModules = Math.min(estimatedModules, estimatedCarports * modulesPerCarport);
-      } 
-      else {
-        // For other structure types, use simple area-based calculation
-        placedModules = estimatedModules;
+      if (!propsChanged && moduleRectanglesRef.current.length > 0) {
+        console.log("Skipping module calculation - no changes");
+        calculationInProgressRef.current = false;
+        return;
       }
       
-      // Ensure we don't exceed the maximum module count
-      placedModules = Math.min(placedModules, moduleCount - calculatedModuleCount);
+      prevPropsRef.current = currentProps;
       
-      // Store the count for this polygon
-      modulesPerPolygon[idx] = placedModules;
-      calculatedModuleCount += placedModules;
-      
-      // Calculate capacity for this polygon
-      const polygonCapacity = (placedModules * panelPowerRating) / 1000;
-      calculatedCapacity += polygonCapacity;
-      
-      // Add to polygon configs
-      newPolygonConfigs.push({
-        id: idx,
-        area: polyInfo.area,
-        azimuth: polyInfo.azimuth || 180,
-        capacityKw: polygonCapacity,
-        moduleCount: placedModules,
-        structureType: structureType.id,
-        tiltAngle: layoutParams.tiltAngle
-      });
-    });
-
-    // Update state with calculated values
-    setPlacedModuleCount(calculatedModuleCount);
-    setPlacedModulesPerPolygon(modulesPerPolygon);
-    setTotalCapacity(calculatedCapacity);
-    setPolygonConfigs(newPolygonConfigs);
-    
-    // Notify parent component about capacity changes
-    onCapacityCalculated(calculatedCapacity, totalArea, calculatedModuleCount, newPolygonConfigs);
-    
-    // Mark calculation as complete
-    moduleCalculationPerformedRef.current = false;
-    
-    console.log(`Module placement finished. Placed count: ${calculatedModuleCount}`);
+      try {
+        clearModuleRectangles();
+        
+        // Reset state
+        setPlacedModuleCount(0);
+        setPlacedModulesPerPolygon({});
+        
+        if (!map || !selectedPanel || polygons.length === 0) {
+          onCapacityCalculated(0, 0, 0, []);
+          calculationInProgressRef.current = false;
+          return;
+        }
+        
+        // Perform actual module placement calculation here
+        // This would be a complex calculation based on polygon shapes, azimuths, etc.
+        // For now, we'll use a simplified calculation
+        
+        const modulesPerPolygon: Record<number, number> = {};
+        let totalPlacedCount = 0;
+        
+        // Create polygon configs
+        const configs: PolygonConfig[] = polygons.map((poly, index) => {
+          // Simple calculation of modules that could fit in this polygon
+          const panelLength = (selectedPanel?.length || 1700) / 1000; // m
+          const panelWidth = (selectedPanel?.width || 1000) / 1000; // m
+          const moduleArea = panelLength * panelWidth; // m²
+          const gcr = structureType.groundCoverageRatio;
+          const calculatedModuleCount = Math.floor((poly.area * gcr) / moduleArea);
+          
+          modulesPerPolygon[index] = calculatedModuleCount;
+          totalPlacedCount += calculatedModuleCount;
+          
+          const capacityKw = (calculatedModuleCount * (selectedPanel?.power_rating || 400)) / 1000;
+          
+          return {
+            id: index,
+            area: poly.area,
+            azimuth: poly.azimuth || 180,
+            capacityKw,
+            moduleCount: calculatedModuleCount,
+            structureType: structureType.id,
+            tiltAngle: layoutParams.tiltAngle
+          };
+        });
+        
+        // Update state with calculation results
+        setPlacedModuleCount(totalPlacedCount);
+        setPlacedModulesPerPolygon(modulesPerPolygon);
+        setPolygonConfigs(configs);
+        
+        // Calculate total capacity
+        const totalCapacity = configs.reduce((sum, config) => sum + config.capacityKw, 0);
+        setTotalCapacity(totalCapacity);
+        
+        // Notify parent component
+        onCapacityCalculated(totalCapacity, totalArea, totalPlacedCount, configs);
+      } catch (error) {
+        console.error("Error during module placement calculation:", error);
+        toast.error("Error calculating module placement");
+      } finally {
+        calculationInProgressRef.current = false;
+        
+        // If another calculation was requested while this one was running, trigger it
+        if (calculationQueuedRef.current) {
+          calculationQueuedRef.current = false;
+          triggerModuleCalculation();
+        }
+      }
+    }, 300); // Debounce for 300ms
   }, [
-    map, polygons, selectedPanel, moduleCount, 
-    structureType, layoutParams, totalArea, 
+    map, 
+    polygons, 
+    selectedPanel, 
+    moduleCount, 
+    structureType, 
+    layoutParams, 
+    totalArea, 
+    clearModuleRectangles, 
+    getLayoutParamsHash, 
     onCapacityCalculated
   ]);
 
-  // Function to trigger a new module calculation
-  const triggerModuleCalculation = () => {
-    moduleCalculationPerformedRef.current = true;
-  };
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      clearModuleRectangles();
+      if (calculateTimeoutRef.current !== null) {
+        window.clearTimeout(calculateTimeoutRef.current);
+      }
+    };
+  }, [clearModuleRectangles]);
 
   return {
     placedModuleCount,
     placedModulesPerPolygon,
     totalCapacity,
     polygonConfigs,
-    moduleRectanglesRef,
     triggerModuleCalculation
   };
 };

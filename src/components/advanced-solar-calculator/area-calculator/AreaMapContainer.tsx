@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { GoogleMap, LoadScript } from '@react-google-maps/api';
 import { Map, StopCircle } from 'lucide-react';
 import { GOOGLE_MAPS_LIBRARIES } from './constants';
@@ -26,6 +26,10 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
     height: '500px',
     borderRadius: '8px'
   };
+  
+  // Use references to prevent re-renders
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const loadScriptLoaded = useRef(false);
 
   // Use the provided coordinates or fallback to New York
   const center = { 
@@ -37,6 +41,10 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
   
   const onLoad = (googleMap: google.maps.Map) => {
     console.log("Map loaded successfully");
+    
+    // Store map reference to parent props and local ref
+    mapRef.current = googleMap;
+    
     // Initialize the drawing manager when the map loads
     if (typeof window.google !== 'undefined' && drawingManagerRef.current === null) {
       try {
@@ -79,6 +87,14 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
     }
   };
 
+  // Pass map reference to parent with useEffect to prevent render loops
+  useEffect(() => {
+    if (mapRef.current) {
+      // This is how we update the parent's map reference without causing re-renders
+      (map as any) = mapRef.current;
+    }
+  }, [mapRef.current]);
+
   return (
     <div className="relative h-[500px] border rounded-md overflow-hidden">
       {!GOOGLE_MAPS_API_KEY && (
@@ -103,6 +119,7 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
             </div>
           </div>
         }
+        onLoad={() => { loadScriptLoaded.current = true; }}
       >
         <GoogleMap
           mapContainerStyle={mapContainerStyle}

@@ -28,7 +28,21 @@ export const useAreaCalculator = ({
   const [layoutParams, setLayoutParams] = useState<LayoutParameters>(DEFAULT_LAYOUT_PARAMS.ballasted);
   const [moduleCount, setModuleCount] = useState(0);
   const [layoutAzimuth, setLayoutAzimuth] = useState<number>(180);
+  
+  // Use refs to prevent infinite loops
+  const mapRef = useRef<google.maps.Map | null>(null);
   const moduleCalculationRef = useRef<{ triggerCalculation: () => void }>({ triggerCalculation: () => {} });
+  const structureTypeRef = useRef(structureType);
+  const layoutParamsRef = useRef(layoutParams);
+
+  // Update refs when state changes
+  useEffect(() => {
+    structureTypeRef.current = structureType;
+  }, [structureType]);
+
+  useEffect(() => {
+    layoutParamsRef.current = layoutParams;
+  }, [layoutParams]);
 
   // Use the polygon manager hook
   const { 
@@ -40,7 +54,12 @@ export const useAreaCalculator = ({
     polygonDrawOptions,
     clearAllPolygons
   } = usePolygonManager({
-    onPolygonChange: () => moduleCalculationRef.current.triggerCalculation()
+    onPolygonChange: () => {
+      // Use debounced calculation to prevent rapid consecutive calls
+      if (moduleCalculationRef.current.triggerCalculation) {
+        moduleCalculationRef.current.triggerCalculation();
+      }
+    }
   });
 
   // Handle midpoint marker clicks (for setting azimuth)
@@ -61,10 +80,12 @@ export const useAreaCalculator = ({
     setSelectedPolygonIndex(midpoint.polygonIndex);
     
     // Trigger module calculation after azimuth changes
-    moduleCalculationRef.current.triggerCalculation();
+    if (moduleCalculationRef.current.triggerCalculation) {
+      setTimeout(() => moduleCalculationRef.current.triggerCalculation(), 0);
+    }
   }, [setPolygons, setSelectedPolygonIndex]);
 
-  // Use the midpoint markers hook
+  // Use the midpoint markers hook with memoized dependencies
   const { midpointMarkersRef } = useMidpointMarkers({
     map,
     polygons,
@@ -73,7 +94,7 @@ export const useAreaCalculator = ({
     onMidpointClick: handleMidpointClick
   });
 
-  // Use the map drawing hook
+  // Use the map drawing hook with proper dependency injection
   const {
     drawingManagerRef,
     initializeDrawingManager,
@@ -84,7 +105,11 @@ export const useAreaCalculator = ({
     polygons,
     setPolygons,
     setSelectedPolygonIndex,
-    triggerModuleCalculation: () => moduleCalculationRef.current.triggerCalculation()
+    triggerModuleCalculation: () => {
+      if (moduleCalculationRef.current && moduleCalculationRef.current.triggerCalculation) {
+        moduleCalculationRef.current.triggerCalculation();
+      }
+    }
   });
 
   // Handle missing API key warning
@@ -94,7 +119,7 @@ export const useAreaCalculator = ({
     }
   }, []);
 
-  // Update layout parameters when structure type changes
+  // Update layout parameters when structure type changes - using refs to prevent loops
   useEffect(() => {
     const defaultParams = DEFAULT_LAYOUT_PARAMS[structureType.id] || DEFAULT_LAYOUT_PARAMS.ballasted;
     
@@ -107,49 +132,48 @@ export const useAreaCalculator = ({
     } else {
       setLayoutParams(defaultParams);
     }
-    
-    // Signal that module calculation should be performed
-    moduleCalculationRef.current.triggerCalculation();
   }, [structureType.id]);
 
-  // Calculate theoretical module count
+  // Calculate theoretical module count using refs
   useEffect(() => {
-    if (polygons.length === 0) {
-      setModuleCount(0);
-      return;
-    }
+    // Only recalculate when relevant dependencies change
+    const calculateModuleCount = () => {
+      if (polygons.length === 0) {
+        setModuleCount(0);
+        return;
+      }
+      
+      if (totalArea > 0 && selectedPanel) {
+        // Get panel dimensions correctly using appropriate type handling
+        const defaultLength = 1700; // mm
+        const defaultWidth = 1000;  // mm
+        
+        // Safely extract dimensions with proper type checking
+        let panelLength = defaultLength;
+        let panelWidth = defaultWidth;
+        
+        if ('length' in selectedPanel && typeof selectedPanel.length === 'number') {
+          panelLength = selectedPanel.length;
+        } else if (selectedPanel.dimensions && typeof selectedPanel.dimensions.height === 'number') {
+          panelLength = selectedPanel.dimensions.height;
+        }
+        
+        if ('width' in selectedPanel && typeof selectedPanel.width === 'number') {
+          panelWidth = selectedPanel.width;
+        } else if (selectedPanel.dimensions && typeof selectedPanel.dimensions.width === 'number') {
+          panelWidth = selectedPanel.dimensions.width;
+        }
+        
+        const moduleArea = (panelLength * panelWidth) / 1000000; // m²
+        const gcr = structureTypeRef.current.groundCoverageRatio;
+        const calculatedModuleCount = Math.floor((totalArea * gcr) / moduleArea);
+        
+        setModuleCount(calculatedModuleCount);
+      }
+    };
     
-    // Calculate theoretical module counts just for display
-    if (totalArea > 0 && selectedPanel) {
-      // Get panel dimensions correctly using appropriate type handling
-      // Default values in case dimensions are not available
-      const defaultLength = 1700; // mm
-      const defaultWidth = 1000;  // mm
-      
-      // Safely extract dimensions with proper type checking
-      let panelLength = defaultLength;
-      let panelWidth = defaultWidth;
-      
-      // Check if the panel has length/width as direct properties
-      if ('length' in selectedPanel && typeof selectedPanel.length === 'number') {
-        panelLength = selectedPanel.length;
-      } else if (selectedPanel.dimensions && typeof selectedPanel.dimensions.height === 'number') {
-        panelLength = selectedPanel.dimensions.height;
-      }
-      
-      if ('width' in selectedPanel && typeof selectedPanel.width === 'number') {
-        panelWidth = selectedPanel.width;
-      } else if (selectedPanel.dimensions && typeof selectedPanel.dimensions.width === 'number') {
-        panelWidth = selectedPanel.dimensions.width;
-      }
-      
-      const moduleArea = (panelLength * panelWidth) / 1000000; // m²
-      const gcr = structureType.groundCoverageRatio;
-      const calculatedModuleCount = Math.floor((totalArea * gcr) / moduleArea);
-      
-      setModuleCount(calculatedModuleCount);
-    }
-  }, [polygons, selectedPanel, structureType.groundCoverageRatio, totalArea]);
+    calculateModuleCount();
+  }, [polygons.length, totalArea, selectedPanel, structureType.groundCoverageRatio]);
 
   // Use the module placement hook
   const {
@@ -169,10 +193,10 @@ export const useAreaCalculator = ({
     onCapacityCalculated
   });
 
-  // Store reference to trigger calculation function
+  // Store reference to trigger calculation function - wrapped in useEffect to prevent loops
   useEffect(() => {
     moduleCalculationRef.current = {
-      triggerCalculation: triggerModuleCalculation
+      triggerCalculation
     };
   }, [triggerModuleCalculation]);
 
