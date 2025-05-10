@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import type { SolarPanel } from '@/types/components';
@@ -26,7 +25,10 @@ export const useAreaCalculator = ({
   const mapRef = useRef<google.maps.Map | null>(null);
   const [structureType, setStructureType] = useState<StructureType>(STRUCTURE_TYPES[0]);
   const [instructionsVisible, setInstructionsVisible] = useState(true);
-  const [layoutParams, setLayoutParams] = useState<LayoutParameters>(DEFAULT_LAYOUT_PARAMS.ballasted);
+  const [layoutParams, setLayoutParams] = useState<LayoutParameters>({
+    ...DEFAULT_LAYOUT_PARAMS.ballasted,
+    orientation: DEFAULT_LAYOUT_PARAMS.ballasted.orientation as "landscape" | "portrait"
+  });
   const [moduleCount, setModuleCount] = useState(0);
   const [layoutAzimuth, setLayoutAzimuth] = useState<number>(180);
   const [userMapBounds, setUserMapBounds] = useState<google.maps.LatLngBounds | null>(null);

@@ -23,23 +23,23 @@ export const STRUCTURE_TYPES = [
   { id: 'carport', name: 'Carport Structure', groundCoverageRatio: 0.7 },
 ];
 
-// Default layout parameters for different structure types
+// Default layout parameters for different structure types with explicit orientation types
 export const DEFAULT_LAYOUT_PARAMS = {
   ballasted: {
     tiltAngle: 10,
-    orientation: 'landscape',
+    orientation: 'landscape' as 'landscape' | 'portrait',
     interRowSpacing: 1.5,
     adjacentGap: 20,
   },
   fixed_tilt: {
     tiltAngle: 25,
-    orientation: 'portrait',
+    orientation: 'portrait' as 'landscape' | 'portrait',
     interRowSpacing: 2.0, 
     adjacentGap: 20,
   },
   ground_mount_tables: {
     tiltAngle: 20,
-    orientation: 'landscape',
+    orientation: 'landscape' as 'landscape' | 'portrait',
     interRowSpacing: 0.05, // small gap between rows within the same table
     adjacentGap: 20,       // small gap between modules in the same row
     tableConfig: {
@@ -51,13 +51,13 @@ export const DEFAULT_LAYOUT_PARAMS = {
   },
   tracker: {
     tiltAngle: 0, // Variable for trackers
-    orientation: 'landscape',
+    orientation: 'landscape' as 'landscape' | 'portrait',
     interRowSpacing: 4.0,
     adjacentGap: 25,
   },
   carport: {
     tiltAngle: 5,
-    orientation: 'landscape',
+    orientation: 'landscape' as 'landscape' | 'portrait',
     interRowSpacing: 0,
     adjacentGap: 20,
     // Add carport-specific configuration

@@ -8,6 +8,18 @@ import { GOOGLE_MAPS_LIBRARIES } from './constants';
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 const GOOGLE_MAPS_ID = import.meta.env.VITE_GOOGLE_MAPS_ID || '';
 
+// Add TypeScript interface for window to include our custom properties
+declare global {
+  interface Window {
+    _mapInitialized?: boolean;
+    gm_authFailure?: () => void;
+  }
+}
+
+// Define the libraries type correctly
+type Libraries = ("drawing" | "geometry" | "places" | "visualization" | "marker")[];
+const libraries: Libraries = ["drawing", "geometry", "places", "marker"];
+
 interface AreaMapContainerProps {
   latitude: number;
   longitude: number;
@@ -119,7 +131,7 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
       )}
       <LoadScript 
         googleMapsApiKey={GOOGLE_MAPS_API_KEY} 
-        libraries={GOOGLE_MAPS_LIBRARIES}
+        libraries={libraries}
         loadingElement={
           <div className="h-full w-full flex items-center justify-center bg-gray-100">
             <div className="text-center">
