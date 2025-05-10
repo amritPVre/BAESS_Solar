@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { GoogleMap, LoadScript } from '@react-google-maps/api';
 import { Map, StopCircle } from 'lucide-react';
 import { GOOGLE_MAPS_LIBRARIES } from './constants';
@@ -37,7 +37,46 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
   
   const onLoad = (googleMap: google.maps.Map) => {
     console.log("Map loaded successfully");
-    // The parent component handles setting the map instance
+    // Initialize the drawing manager when the map loads
+    if (typeof window.google !== 'undefined' && drawingManagerRef.current === null) {
+      try {
+        const drawingManager = new window.google.maps.drawing.DrawingManager({
+          drawingMode: null,
+          drawingControl: true,
+          drawingControlOptions: {
+            position: window.google.maps.ControlPosition.TOP_CENTER,
+            drawingModes: [
+              window.google.maps.drawing.OverlayType.POLYGON,
+              window.google.maps.drawing.OverlayType.RECTANGLE
+            ]
+          },
+          polygonOptions: {
+            fillColor: "#FF0000",
+            fillOpacity: 0.30,
+            strokeWeight: 1,
+            strokeColor: "#FF0000",
+            clickable: true, 
+            editable: true,
+            draggable: true,
+            zIndex: 1
+          },
+          rectangleOptions: {
+            fillColor: "#FF0000",
+            fillOpacity: 0.30,
+            strokeWeight: 1,
+            strokeColor: "#FF0000",
+            clickable: true, 
+            editable: true,
+            draggable: true,
+            zIndex: 1
+          }
+        });
+        drawingManager.setMap(googleMap);
+        drawingManagerRef.current = drawingManager;
+      } catch (error) {
+        console.error("Failed to initialize drawing manager:", error);
+      }
+    }
   };
 
   return (

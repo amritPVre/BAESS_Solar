@@ -66,53 +66,24 @@ export const useModulePlacement = ({
     const modulesPerPolygon: Record<number, number> = {};
 
     // Determine if we have access to Google Maps geometry utilities
-    const hasGeometryLib = window.google && 
-                          window.google.maps && 
-                          window.google.maps.geometry && 
-                          window.google.maps.geometry.spherical;
-
-    if (!hasGeometryLib) {
+    if (!window.google || !window.google.maps || !window.google.maps.geometry) {
       console.error("Google Maps geometry library not available");
       return;
     }
 
+    const panelPowerRating = selectedPanel?.power_rating || 0;
+
     polygons.forEach((polyInfo, idx) => {
-      // Get panel dimensions correctly using appropriate type handling
-      // Default values in case dimensions are not available
-      const defaultLength = 1700; // mm
-      const defaultWidth = 1000;  // mm
-      
-      // Safely extract dimensions with proper type checking
-      let panelLength = defaultLength;
-      let panelWidth = defaultWidth;
-      
-      // Check if the panel has length/width as direct properties
-      if (selectedPanel.length && typeof selectedPanel.length === 'number') {
-        panelLength = selectedPanel.length;
-      } else if (selectedPanel.dimensions && typeof selectedPanel.dimensions?.height === 'number') {
-        panelLength = selectedPanel.dimensions.height;
-      }
-      
-      if (selectedPanel.width && typeof selectedPanel.width === 'number') {
-        panelWidth = selectedPanel.width;
-      } else if (selectedPanel.dimensions && typeof selectedPanel.dimensions?.width === 'number') {
-        panelWidth = selectedPanel.dimensions.width;
-      }
+      // Get panel dimensions safely, with proper fallbacks
+      const panelLength = selectedPanel?.length || 
+                        (selectedPanel?.dimensions?.height) || 1700; // mm
+      const panelWidth = selectedPanel?.width || 
+                        (selectedPanel?.dimensions?.width) || 1000; // mm
       
       // Convert to meters and calculate module area
       const panelLengthM = panelLength / 1000;
       const panelWidthM = panelWidth / 1000;
       const moduleArea = (panelLength * panelWidth) / 1000000; // m²
-      const adjacentGapM = layoutParams.adjacentGap / 1000;
-      
-      // Get module dimensions based on orientation
-      const moduleDim = layoutParams.orientation === 'landscape'
-        ? { width: panelLengthM, height: panelWidthM }
-        : { width: panelWidthM, height: panelLengthM };
-      
-      // Calculate important spacing parameters
-      const moduleWidthWithGap = moduleDim.width + adjacentGapM;
-      let effectiveRowSpacing = moduleDim.height + layoutParams.interRowSpacing;
       
       // Get the ground coverage ratio for this structure type
       const gcr = structureType.groundCoverageRatio;
@@ -121,66 +92,31 @@ export const useModulePlacement = ({
       const polygonArea = polyInfo.area;
       const estimatedModules = Math.floor((polygonArea * gcr) / moduleArea);
       
-      // For advanced placement calculations, get the polygon shape details
-      const polygon = polyInfo.polygon;
-      const azimuth = polyInfo.azimuth || 180; // Default to 180 if not set
-      
       // Specialized handling for different structure types
       let placedModules = 0;
       
-      // Get the path of the polygon
-      const path = polygon.getPath();
-      
-      if (path && path.getLength() > 0) {
-        // Calculate the bounds of the polygon for visualization
-        const bounds = new google.maps.LatLngBounds();
-        path.forEach(point => bounds.extend(point));
+      if (structureType.id === 'ground_mount_tables' && layoutParams.tableConfig) {
+        // For ground mount tables, we calculate based on tables
+        const tableConfig = layoutParams.tableConfig;
+        const modulesPerTable = tableConfig.rowsPerTable * tableConfig.modulesPerRow;
         
-        // Different placement logic based on structure type
-        if (structureType.id === 'ground_mount_tables' && layoutParams.tableConfig) {
-          // For ground mount tables, place tables instead of individual modules
-          const tableConfig = layoutParams.tableConfig;
-          const modulesPerTable = tableConfig.rowsPerTable * tableConfig.modulesPerRow;
-          
-          // Estimate how many tables can fit in this area
-          const tableArea = (moduleArea * modulesPerTable) / gcr;
-          const estimatedTables = Math.floor(polygonArea / tableArea);
-          placedModules = Math.min(estimatedModules, estimatedTables * modulesPerTable);
-          
-          // Place visual representations of tables if we have a map
-          if (map && estimatedTables > 0) {
-            // Visual representation code would go here
-            // This would include creating rectangles on the map for each table
-            // For simplicity, we'll just update the count
-          }
-          
-        } else if (structureType.id === 'carport' && layoutParams.carportConfig) {
-          // For carport structures, use carport configuration
-          const carportConfig = layoutParams.carportConfig;
-          const modulesPerCarport = carportConfig.rows * carportConfig.modulesPerRow;
-          
-          // Estimate how many carports can fit in this area
-          const carportArea = (moduleArea * modulesPerCarport) / gcr;
-          const estimatedCarports = Math.floor(polygonArea / carportArea);
-          placedModules = Math.min(estimatedModules, estimatedCarports * modulesPerCarport);
-          
-          // Place visual representations of carports if we have a map
-          if (map && estimatedCarports > 0) {
-            // Visual representation code would go here
-            // This would include creating rectangles on the map for each carport
-          }
-          
-        } else {
-          // For other structure types (ballasted, fixed_tilt), place individual modules
-          // Use the estimated module count directly
-          placedModules = estimatedModules;
-          
-          // Place visual representations of modules if we have a map
-          if (map && placedModules > 0) {
-            // Visual representation code would go here
-            // This would include creating rectangles on the map for each module
-          }
-        }
+        // Simple table placement calculation without rendering
+        const tableArea = (moduleArea * modulesPerTable) / gcr;
+        const estimatedTables = Math.floor(polygonArea / tableArea);
+        placedModules = Math.min(estimatedModules, estimatedTables * modulesPerTable);
+      } 
+      else if (structureType.id === 'carport' && layoutParams.carportConfig) {
+        // For carport structures, use carport configuration
+        const carportConfig = layoutParams.carportConfig;
+        const modulesPerCarport = carportConfig.rows * carportConfig.modulesPerRow;
+        
+        const carportArea = (moduleArea * modulesPerCarport) / gcr;
+        const estimatedCarports = Math.floor(polygonArea / carportArea);
+        placedModules = Math.min(estimatedModules, estimatedCarports * modulesPerCarport);
+      } 
+      else {
+        // For other structure types, use simple area-based calculation
+        placedModules = estimatedModules;
       }
       
       // Ensure we don't exceed the maximum module count
@@ -191,7 +127,7 @@ export const useModulePlacement = ({
       calculatedModuleCount += placedModules;
       
       // Calculate capacity for this polygon
-      const polygonCapacity = (placedModules * selectedPanel.power_rating) / 1000;
+      const polygonCapacity = (placedModules * panelPowerRating) / 1000;
       calculatedCapacity += polygonCapacity;
       
       // Add to polygon configs

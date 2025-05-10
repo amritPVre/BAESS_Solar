@@ -1,5 +1,6 @@
 
 import { useRef, useCallback, useState } from 'react';
+import { toast } from "sonner";
 import { PolygonInfo } from '../types';
 import { convertRectangleToPolygon, calculatePolygonArea, setupPolygonListeners, initializeDrawingManager } from '../utils/drawingUtils';
 
@@ -32,7 +33,7 @@ export const useMapDrawing = ({
     // Set up listeners for polygon changes
     setupPolygonListeners(
       polygon, 
-      () => polygons.length, 
+      polygons.length, 
       calculatePolygonArea,
       polygonDrawOptions,
       polygons,
@@ -45,10 +46,17 @@ export const useMapDrawing = ({
     if (drawingManagerRef.current) {
       drawingManagerRef.current.setDrawingMode(null);
     }
+    
+    toast.success("Polygon created successfully");
   }, [polygons, polygonDrawOptions, setPolygons, setSelectedPolygonIndex, triggerModuleCalculation]);
   
   // Handle rectangle complete event from DrawingManager
   const handleRectangleComplete = useCallback((rectangle: google.maps.Rectangle) => {
+    if (!map) {
+      console.error("Map is not initialized");
+      return;
+    }
+    
     const polygon = convertRectangleToPolygon(rectangle, map, polygonDrawOptions);
     
     if (!polygon) {
@@ -79,6 +87,8 @@ export const useMapDrawing = ({
     if (drawingManagerRef.current) {
       drawingManagerRef.current.setDrawingMode(null);
     }
+    
+    toast.success("Rectangle created successfully");
   }, [map, polygons, polygonDrawOptions, setPolygons, setSelectedPolygonIndex, triggerModuleCalculation]);
 
   // Initialize Google Maps DrawingManager
@@ -86,30 +96,58 @@ export const useMapDrawing = ({
     setMap(googleMap);
     console.log("Map loaded successfully");
     
-    const manager = initializeDrawingManager(
-      googleMap, 
-      polygonDrawOptions,
-      handlePolygonComplete,
-      handleRectangleComplete
-    );
+    // Check if drawing manager is already initialized
+    if (drawingManagerRef.current) {
+      drawingManagerRef.current.setMap(null);
+      drawingManagerRef.current = null;
+    }
     
-    drawingManagerRef.current = manager;
+    // Wait a moment to ensure Google Maps API is fully loaded
+    setTimeout(() => {
+      const manager = initializeDrawingManager(
+        googleMap, 
+        polygonDrawOptions,
+        handlePolygonComplete,
+        handleRectangleComplete
+      );
+      
+      drawingManagerRef.current = manager;
+      
+      // Register event listeners for polygon and rectangle complete
+      if (window.google && window.google.maps && manager) {
+        google.maps.event.addListener(manager, 'polygoncomplete', handlePolygonComplete);
+        google.maps.event.addListener(manager, 'rectanglecomplete', handleRectangleComplete);
+        console.log("Drawing event listeners registered");
+      }
+    }, 500);
     
     return googleMap;
   }, [handlePolygonComplete, handleRectangleComplete, polygonDrawOptions]);
 
   // Start drawing mode with the drawing manager
   const startDrawingPolygon = useCallback(() => {
-    if (drawingManagerRef.current) {
-      drawingManagerRef.current.setDrawingMode(google.maps.drawing.OverlayType.POLYGON);
+    if (!drawingManagerRef.current || !window.google || !window.google.maps) {
+      console.error("Drawing manager not initialized");
+      toast.error("Drawing tool not ready. Please try again.");
+      return;
     }
+    
+    console.log("Starting polygon drawing mode");
+    drawingManagerRef.current.setDrawingMode(google.maps.drawing.OverlayType.POLYGON);
+    toast.info("Click on the map to start drawing a polygon");
   }, []);
   
   // Start drawing rectangle with the drawing manager
   const startDrawingRectangle = useCallback(() => {
-    if (drawingManagerRef.current) {
-      drawingManagerRef.current.setDrawingMode(google.maps.drawing.OverlayType.RECTANGLE);
+    if (!drawingManagerRef.current || !window.google || !window.google.maps) {
+      console.error("Drawing manager not initialized");
+      toast.error("Drawing tool not ready. Please try again.");
+      return;
     }
+    
+    console.log("Starting rectangle drawing mode");
+    drawingManagerRef.current.setDrawingMode(google.maps.drawing.OverlayType.RECTANGLE);
+    toast.info("Click and drag on the map to draw a rectangle");
   }, []);
 
   return {

@@ -35,6 +35,7 @@ export const initializeDrawingManager = (
   console.log("Initializing drawing manager");
   
   if (!window.google || !window.google.maps || !window.google.maps.drawing) {
+    console.error("Google Maps drawing library not loaded, libraries:", GOOGLE_MAPS_LIBRARIES);
     toast.error("Failed to initialize drawing tools. Google Maps API not loaded.");
     return null;
   }
@@ -57,22 +58,17 @@ export const initializeDrawingManager = (
     drawingManager.setMap(map);
     
     // Add polygon complete listener
-    window.google.maps.event.addListener(drawingManager, 'polygoncomplete', (polygon: google.maps.Polygon) => {
-      console.log("Polygon completed");
-      onPolygonComplete(polygon);
-    });
+    window.google.maps.event.addListener(drawingManager, 'polygoncomplete', onPolygonComplete);
     
     // Add rectangle complete listener
-    window.google.maps.event.addListener(drawingManager, 'rectanglecomplete', (rectangle: google.maps.Rectangle) => {
-      console.log("Rectangle completed");
-      onRectangleComplete(rectangle);
-    });
+    window.google.maps.event.addListener(drawingManager, 'rectanglecomplete', onRectangleComplete);
 
     // Keep drawing mode enabled after completing a shape
-    google.maps.event.addListener(drawingManager, 'overlaycomplete', () => {
+    window.google.maps.event.addListener(drawingManager, 'overlaycomplete', () => {
       drawingManager.setDrawingMode(null);
     });
     
+    console.log("Drawing manager initialized successfully");
     return drawingManager;
   } catch (error) {
     console.error("Error initializing drawing manager:", error);
@@ -146,18 +142,22 @@ export const setupPolygonListeners = (
     }
     
     updateTimeout = window.setTimeout(() => {
-      const updatedArea = calculatePolygonArea(polygon);
-      polygon.setOptions(polygonDrawOptions);
-      
-      // Update the specific polygon's area and trigger re-render which recalculates midpoints
-      setPolygons(prevPolygons => 
-        prevPolygons.map(poly => 
-          poly.polygon === polygon ? { ...poly, area: updatedArea } : poly
-        )
-      );
-      
-      // Signal that module calculation should be performed
-      triggerModuleCalculation();
+      try {
+        const updatedArea = calculatePolygonArea(polygon);
+        polygon.setOptions(polygonDrawOptions);
+        
+        // Update the specific polygon's area and trigger re-render which recalculates midpoints
+        setPolygons(prevPolygons => 
+          prevPolygons.map(poly => 
+            poly.polygon === polygon ? { ...poly, area: updatedArea } : poly
+          )
+        );
+        
+        // Signal that module calculation should be performed
+        triggerModuleCalculation();
+      } catch (error) {
+        console.error("Error updating polygon:", error);
+      }
       
       updateTimeout = undefined;
     }, 200); // Debounce for 200ms
@@ -183,7 +183,14 @@ export const setupPolygonListeners = (
   
   google.maps.event.addListener(polygon, 'mouseup', updatePolygon);
   google.maps.event.addListener(polygon, 'dragend', updatePolygon);
-  google.maps.event.addListener(path, 'set_at', updatePolygon);
-  google.maps.event.addListener(path, 'insert_at', updatePolygon);
-  google.maps.event.addListener(path, 'remove_at', updatePolygon);
+  
+  // Add path listeners
+  if (path) {
+    google.maps.event.addListener(path, 'set_at', updatePolygon);
+    google.maps.event.addListener(path, 'insert_at', updatePolygon);
+    google.maps.event.addListener(path, 'remove_at', updatePolygon);
+  }
 };
+
+// Ensure we export the Google Maps libraries constant for consistent usage
+export const GOOGLE_MAPS_LIBRARIES = ["drawing", "geometry", "places"];
