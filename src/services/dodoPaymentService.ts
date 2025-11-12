@@ -231,7 +231,7 @@ export class SubscriptionAPIClient {
     tier: string;
     nextBillingDate: string;
   }> {
-    const response = await fetch(`${this.baseUrl}/subscription/status`);
+    const response = await fetch(`${this.baseUrl}/api/subscription/status`);
     
     if (!response.ok) {
       throw new Error('Failed to fetch subscription status');
@@ -244,7 +244,7 @@ export class SubscriptionAPIClient {
    * Cancel current subscription
    */
   async cancelSubscription(): Promise<{ success: boolean; message: string }> {
-    const response = await fetch(`${this.baseUrl}/subscription/cancel`, {
+    const response = await fetch(`${this.baseUrl}/api/subscription/cancel`, {
       method: 'POST',
     });
 

@@ -1,22 +1,10 @@
 /**
  * Vercel Serverless Function: Create Dodo Checkout Session
- * This file is for VERCEL deployment
  * Path: /api/checkout/create-session
  */
 
 import { createClient } from '@supabase/supabase-js';
-import DodoPayments from 'dodopayments';
-
-// Initialize Supabase
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL,
-  process.env.VITE_SUPABASE_ANON_KEY
-);
-
-// Initialize Dodo Payments
-const dodoClient = new DodoPayments({
-  bearerToken: process.env.DODO_PAYMENTS_API_KEY,
-});
+import { DodoPayments } from 'dodopayments';
 
 export default async function handler(req, res) {
   // Enable CORS
@@ -40,39 +28,61 @@ export default async function handler(req, res) {
   }
 
   try {
+    console.log('📦 Checkout request received:', {
+      planId: req.body.planId,
+      hasAuthHeader: !!req.headers.authorization
+    });
+
     const { planId } = req.body;
-
-    // Validate plan ID
+    
+    // Validate planId
     if (!planId || !['pro', 'advanced', 'enterprise'].includes(planId)) {
-      return res.status(400).json({ error: 'Invalid plan ID' });
+      return res.status(400).json({
+        error: 'Invalid planId. Must be: pro, advanced, or enterprise'
+      });
     }
 
-    // Get authorization header
+    // Get auth token from header
     const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'No authorization header' });
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Missing or invalid authorization header' });
     }
 
-    // Get user from token
     const token = authHeader.replace('Bearer ', '');
+
+    // Create Supabase client
+    const supabase = createClient(
+      process.env.VITE_SUPABASE_URL,
+      process.env.VITE_SUPABASE_ANON_KEY
+    );
+
+    // Authenticate user with token
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
     if (authError || !user) {
-      console.error('Auth error:', authError);
-      return res.status(401).json({ error: 'User not authenticated' });
+      console.error('❌ Auth error:', authError);
+      return res.status(401).json({ error: 'Unauthorized' });
     }
+
+    console.log('✅ User authenticated:', user.email);
 
     // Get user profile
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('name, email')
+      .select('*')
       .eq('id', user.id)
       .single();
 
     if (profileError || !profile) {
-      console.error('Profile error:', profileError);
+      console.error('❌ Profile error:', profileError);
       return res.status(404).json({ error: 'User profile not found' });
     }
+
+    console.log('📋 User profile:', {
+      userId: profile.id,
+      email: profile.email,
+      currentTier: profile.subscription_tier
+    });
 
     // Get product ID from environment
     const productIdMap = {
@@ -82,50 +92,58 @@ export default async function handler(req, res) {
     };
 
     const productId = productIdMap[planId];
+    
     if (!productId) {
-      return res.status(400).json({ error: 'Product ID not configured for ' + planId });
+      console.error('❌ Missing product ID for plan:', planId);
+      return res.status(500).json({ 
+        error: `Product ID not configured for ${planId} plan. Check your environment variables.`
+      });
     }
 
-    console.log('Creating checkout session:', {
-      userId: user.id,
-      planId,
+    console.log('💳 Creating checkout session:', {
       productId,
-      email: profile.email
+      planId,
+      userEmail: profile.email
     });
 
-    // Create checkout session with Dodo
-    const session = await dodoClient.checkoutSessions.create({
+    // Initialize Dodo Payments
+    const dodoClient = new DodoPayments({
+      bearerToken: process.env.DODO_PAYMENTS_API_KEY
+    });
+
+    // Create checkout session
+    const checkoutSession = await dodoClient.checkoutSessions.create({
       product_cart: [
         {
           product_id: productId,
           quantity: 1,
         },
       ],
+      success_url: `${process.env.VITE_APP_URL}/subscription/success`,
+      cancel_url: `${process.env.VITE_APP_URL}/account`,
       customer: {
         email: profile.email,
         name: profile.name || profile.email,
       },
       metadata: {
-        user_id: user.id,
+        user_id: profile.id,
         plan_id: planId,
+        current_tier: profile.subscription_tier,
       },
-      return_url: `${process.env.VITE_APP_URL || 'https://your-app.vercel.app'}/subscription/success`,
     });
 
-    console.log('Checkout session created:', session.session_id);
+    console.log('✅ Checkout session created:', checkoutSession.checkout_url);
 
-    return res.status(200).json({
-      success: true,
-      sessionId: session.session_id,
-      checkoutUrl: session.checkout_url,
+    res.status(200).json({
+      checkoutUrl: checkoutSession.checkout_url,
+      sessionId: checkoutSession.id,
     });
 
   } catch (error) {
-    console.error('Checkout session creation error:', error);
-    return res.status(500).json({
+    console.error('❌ Checkout error:', error);
+    res.status(500).json({
       error: 'Failed to create checkout session',
-      message: error.message,
+      details: error.message
     });
   }
 }
-
