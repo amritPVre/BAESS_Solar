@@ -1,4 +1,3 @@
-
 export interface SolarCalculationResult {
   energy: EnergyData;
   irradiation: IrradiationData;
@@ -17,19 +16,34 @@ export interface SolarCalculationResult {
 
 export interface EnergyData {
   monthly: { Month: string; "Monthly Energy Production (kWh)": number }[];
+  hourly?: number[]; // 8760 hourly AC energy production values (kWh)
+  hourlyDC?: number[]; // 8760 hourly DC energy production values (kWh)
   metrics: {
     max_daily: number;
     min_daily: number;
     total_yearly: number;
+    max_hourly?: number;
+    min_hourly?: number;
   };
 }
 
 export interface IrradiationData {
   monthly: { Month: string; "Monthly Solar Irradiation (kWh/m²)": number }[];
+  hourly?: {
+    poa: number[];    // 8760 hourly plane-of-array irradiance (W/m²)
+    dn: number[];     // 8760 hourly direct normal irradiance (W/m²)
+    df: number[];     // 8760 hourly diffuse horizontal irradiance (W/m²)
+    gh: number[];     // 8760 hourly global horizontal irradiance (W/m²)
+    tamb: number[];   // 8760 hourly ambient temperature (°C)
+    tcell: number[];  // 8760 hourly cell temperature (°C)
+    wspd: number[];   // 8760 hourly wind speed (m/s)
+  };
   metrics: {
     max_daily: number;
     min_daily: number;
     total_yearly: number;
+    max_hourly?: number;
+    min_hourly?: number;
   };
 }
 
@@ -44,6 +58,12 @@ export interface SystemDetails {
   pvWattsParams?: {
     array_type: number;
     losses: number;
+  };
+  pvwattsInfo?: {
+    moduleType: string;
+    adjustmentFactor: number;
+    adjustedCapacity: number;
+    capacityFactor: number;
   };
 }
 
@@ -62,8 +82,8 @@ export interface InverterParams {
   count?: number;        // Added for compatibility
   dcRatio?: number;      // Added for compatibility
   model?: string;        // Added for compatibility
-  specifications?: any;  // Added for compatibility
-  configuration?: any;   // Added for compatibility
+  specifications?: Record<string, unknown>;  // Added for compatibility
+  configuration?: Record<string, unknown>;   // Added for compatibility
 }
 
 export interface SolarParams {
@@ -80,7 +100,10 @@ export interface SolarParams {
   inverterParams?: InverterParams | null;
   array_type?: number; // Added for PVWatts integration
   losses?: number;     // Added for PVWatts integration
-  polygonConfigs?: any[]; // Added for multi-area support
+  polygonConfigs?: Record<string, unknown>[]; // Added for multi-area support
+  bifaciality?: number; // Added for PVWatts bifaciality parameter (0-1 range)
+  albedo?: number; // Surface albedo value (0-1 range)
+  gcr?: number; // Ground coverage ratio (0.01-0.99 range)
 }
 
 export interface SolarPanel {
@@ -122,7 +145,7 @@ export interface ElectricityData {
   
   // Added for compatibility with financialCalculator.ts
   system_type?: string;
-  consumption?: any;
+  consumption?: number | Record<string, unknown>;
   tariff?: {
     type: string;
     rate?: number;
@@ -215,7 +238,7 @@ export interface FinancialMetrics {
 
 // Interface for PVWatts API response
 export interface PVWattsResponse {
-  inputs: any;
+  inputs: Record<string, unknown>;
   outputs: {
     ac_monthly: number[];
     dc_monthly: number[];

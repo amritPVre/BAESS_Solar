@@ -1,0 +1,299 @@
+{
+  "All_breakers-ratings": [
+    {
+      "Breaker Type": "MCB",
+      "Ampacity (A)": 0.5,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCB",
+      "Ampacity (A)": 1,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCB",
+      "Ampacity (A)": 2,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCB",
+      "Ampacity (A)": 4,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCB",
+      "Ampacity (A)": 6,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCB",
+      "Ampacity (A)": 10,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCB",
+      "Ampacity (A)": 16,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCB",
+      "Ampacity (A)": 20,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCB",
+      "Ampacity (A)": 25,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCB",
+      "Ampacity (A)": 32,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCB",
+      "Ampacity (A)": 40,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCB",
+      "Ampacity (A)": 50,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCB",
+      "Ampacity (A)": 63,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCCB",
+      "Ampacity (A)": 10,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCCB",
+      "Ampacity (A)": 16,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCCB",
+      "Ampacity (A)": 20,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCCB",
+      "Ampacity (A)": 25,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCCB",
+      "Ampacity (A)": 32,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCCB",
+      "Ampacity (A)": 40,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCCB",
+      "Ampacity (A)": 50,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCCB",
+      "Ampacity (A)": 63,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCCB",
+      "Ampacity (A)": 80,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCCB",
+      "Ampacity (A)": 100,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCCB",
+      "Ampacity (A)": 125,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCCB",
+      "Ampacity (A)": 160,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCCB",
+      "Ampacity (A)": 200,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCCB",
+      "Ampacity (A)": 250,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCCB",
+      "Ampacity (A)": 315,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCCB",
+      "Ampacity (A)": 400,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCCB",
+      "Ampacity (A)": 500,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCCB",
+      "Ampacity (A)": 630,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCCB",
+      "Ampacity (A)": 800,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCCB",
+      "Ampacity (A)": 1000,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCCB",
+      "Ampacity (A)": 1250,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCCB",
+      "Ampacity (A)": 1600,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCCB",
+      "Ampacity (A)": 2000,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "MCCB",
+      "Ampacity (A)": 3200,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "ACB",
+      "Ampacity (A)": 400,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "ACB",
+      "Ampacity (A)": 630,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "ACB",
+      "Ampacity (A)": 800,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "ACB",
+      "Ampacity (A)": 1000,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "ACB",
+      "Ampacity (A)": 1250,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "ACB",
+      "Ampacity (A)": 1600,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "ACB",
+      "Ampacity (A)": 2000,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "ACB",
+      "Ampacity (A)": 2500,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "ACB",
+      "Ampacity (A)": 3200,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "ACB",
+      "Ampacity (A)": 4000,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "ACB",
+      "Ampacity (A)": 5000,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "ACB",
+      "Ampacity (A)": 6300,
+      "Rated Voltage (kV)": 0.415
+    },
+    {
+      "Breaker Type": "VCB",
+      "Ampacity (A)": 630,
+      "Rated Voltage (kV)": 11
+    },
+    {
+      "Breaker Type": "VCB",
+      "Ampacity (A)": 1250,
+      "Rated Voltage (kV)": 11
+    },
+    {
+      "Breaker Type": "VCB",
+      "Ampacity (A)": 1600,
+      "Rated Voltage (kV)": 11
+    },
+    {
+      "Breaker Type": "VCB",
+      "Ampacity (A)": 2000,
+      "Rated Voltage (kV)": 11
+    },
+    {
+      "Breaker Type": "VCB",
+      "Ampacity (A)": 2500,
+      "Rated Voltage (kV)": 11
+    },
+    {
+      "Breaker Type": "VCB",
+      "Ampacity (A)": 1250,
+      "Rated Voltage (kV)": 22
+    },
+    {
+      "Breaker Type": "VCB",
+      "Ampacity (A)": 2000,
+      "Rated Voltage (kV)": 22
+    },
+    {
+      "Breaker Type": "VCB",
+      "Ampacity (A)": 2500,
+      "Rated Voltage (kV)": 22
+    },
+    {
+      "Breaker Type": "VCB",
+      "Ampacity (A)": 1250,
+      "Rated Voltage (kV)": 33
+    },
+    {
+      "Breaker Type": "VCB",
+      "Ampacity (A)": 2000,
+      "Rated Voltage (kV)": 33
+    }
+  ]
+}

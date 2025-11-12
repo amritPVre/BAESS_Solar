@@ -47,4 +47,17 @@ export interface PolygonConfig {
   moduleCount: number;
   structureType: string;
   tiltAngle: number;
+  orientation?: 'landscape' | 'portrait'; // Module orientation from user configuration
+  tableConfig?: {
+    rowsPerTable: number;
+    modulesPerRow: number;
+    interTableSpacingY: number;
+    interTableSpacingX: number;
+  };
+  carportConfig?: {
+    rows: number;
+    modulesPerRow: number;
+    forceRectangle: boolean;
+  };
+  tableCount?: number; // Number of PV tables/structures in this area
 }

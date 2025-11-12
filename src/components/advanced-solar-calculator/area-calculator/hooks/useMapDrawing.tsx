@@ -80,8 +80,9 @@ export const useMapDrawing = ({
               const options = {...polygonDrawOptions};
               if (idx === index) {
                 options.fillColor = "#FF6600";
+                options.fillOpacity = 0.0;  // Keep transparent even when selected
                 options.strokeColor = "#FF6600";
-                options.strokeWeight = 2;
+                options.strokeWeight = 3;   // Make border thicker to show selection
               }
               poly.polygon.setOptions(options);
             } catch (err) {
@@ -203,8 +204,22 @@ export const useMapDrawing = ({
               
               // Trigger module calculation after a short delay
               setTimeout(() => {
+                console.log("Explicitly triggering module calculation after rectangle drawing");
                 triggerModuleCalculation();
-              }, 300);
+                
+                // Add retry mechanism to ensure calculation happens
+                setTimeout(() => {
+                  // Check if polygon exists but no modules were placed
+                  console.log("Secondary calculation check for rectangle");
+                  triggerModuleCalculation();
+                  
+                  // Third attempt with more delay
+                  setTimeout(() => {
+                    console.log("Final calculation attempt for rectangle");
+                    triggerModuleCalculation();
+                  }, 1500);
+                }, 1200);
+              }, 800);
             });
             
             toast.success(`Rectangle area added (${area.toFixed(1)} m²)`);
@@ -236,8 +251,22 @@ export const useMapDrawing = ({
               
               // Trigger module calculation after a short delay
               setTimeout(() => {
+                console.log("Explicitly triggering module calculation after polygon drawing");
                 triggerModuleCalculation();
-              }, 300);
+                
+                // Add retry mechanism to ensure calculation happens
+                setTimeout(() => {
+                  // Check if polygon exists but no modules were placed
+                  console.log("Secondary calculation check for polygon");
+                  triggerModuleCalculation();
+                  
+                  // Third attempt with more delay
+                  setTimeout(() => {
+                    console.log("Final calculation attempt for polygon");
+                    triggerModuleCalculation();
+                  }, 1500);
+                }, 1200);
+              }, 800);
             });
             
             toast.success(`Polygon area added (${area.toFixed(1)} m²)`);

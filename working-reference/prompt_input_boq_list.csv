@@ -1,0 +1,90 @@
+1. AC Side – LV Connection type
+Inverter Capacity
+Qty of Inverter
+Inverter output voltage (V)
+"Inverter output current (A, per inverter)"
+Distance from each inverter to the AC combiner panel (m)
+AC phase cable cross-section from inverter to AC combiner (mm²)
+Distance from AC combiner panel to the Point of Connection (m)
+AC phase cable cross-section from combiner to PoC (mm²)
+Current rating of AC combiner panel incomer breaker (A)
+Current rating of AC combiner panel outgoing breaker (A)
+Qty of Inputs per LV Combiner panel
+Each LV Combiner panel has only 1 output
+Total no of LV Combiner panels
+
+
+2. AC Side – HV connection type + String Inverter Inputs
+Number of String inverters
+Inverter output voltage (V)
+"Inverter output current (A, per inverter)"
+No of Inverters connected to LV AC Combiner Panel
+Total no of LV AC Combiner Panel
+Distance from LV AC combiner panel to the Point of Connection (m)
+AC phase cable cross-section from combiner to PoC (mm²)
+Inverter Duty Transformers (IDT):
+Quantity of IDTs
+Input voltage (V) of each IDT
+Input current (A) of each IDT
+Output voltage (V) of each IDT
+Output current (A) of each IDT
+Power Transformers (PT) (PT qty is always one in system)
+Input voltage (V) of each PT
+Input current (A) of each PT
+Output voltage (V) of each PT
+Output current (A) of each PT
+Cable details:
+Distance from each inverter to the AC combiner panel (m)
+AC phase cable cross-section from inverter to AC combiner (mm²)
+Distance from LV Combiner Panel to IDT (m)
+Phase cable size from LV Combiner Panel to IDT (mm²)
+Distance from IDT to PT (m)
+Phase cable size from IDT to PT (mm²)
+Distance from PT to PoC (m)
+Phase cable size from PT to PoC (mm²)
+Transformer details:
+Transformer MVA rating
+Transformer percentage impedance (%Z)
+Circuit Breaker details:
+  Current rating of AC combiner panel incomer breaker (A)
+  Current rating of AC combiner panel outgoing breaker (A)
+Qty of Inputs per LV Combiner panel
+Each LV Combiner panel has only 1 output
+Circuit Breaker Type from Central Inverter to IDT
+Circuit Breaker Rating from Central Inverter to IDT
+Circuit Breaker Type from IDT to PT
+Circuit Breaker Rating from IDT to PT
+Circuit Breaker Type from PT to PoC
+Circuit Breaker Rating from PT to PoC
+
+
+3. AC Side – HV connection type + Central Inverter Inputs
+Number of central inverters
+Inverter Duty Transformers (IDT):
+Quantity of IDTs
+Input voltage (V) of each IDT
+Input current (A) of each IDT
+Output voltage (V) of each IDT
+Output current (A) of each IDT
+Power Transformers (PT):
+Quantity of PTs
+Input voltage (V) of each PT
+Input current (A) of each PT
+Output voltage (V) of each PT
+Output current (A) of each PT
+Cable details:
+Distance from inverter to IDT (m)
+Phase cable size from inverter to IDT (mm²)
+Distance from IDT to PT (m)
+Phase cable size from IDT to PT (mm²)
+Distance from PT to PoC (m)
+Phase cable size from PT to PoC (mm²)
+"Transformer details (optional, if available):"
+Transformer MVA rating
+Transformer percentage impedance (%Z)
+Circuit Breaker Type from Central Inverter to IDT
+Circuit Breaker Rating from Central Inverter to IDT
+Circuit Breaker Type from IDT to PT
+Circuit Breaker Rating from IDT to PT
+Circuit Breaker Type from PT to PoC
+Circuit Breaker Rating from PT to PoC

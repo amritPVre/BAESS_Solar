@@ -1,36 +1,11 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import type { Tables } from "@/integrations/supabase/types";
 
-export interface SolarPanel {
-  id: string;
-  manufacturer: string;
-  model: string;
-  nominal_power_w: number;
-  technology: string;
-  vmp_v: number;
-  imp_a: number;
-  voc_v: number;
-  isc_a: number;
-  module_length: number;
-  module_width: number;
-  panel_area_m2: number;
-  efficiency_percent: number;
-}
-
-export interface SolarInverter {
-  id: string;
-  manufacturer: string;
-  model: string;
-  nominal_ac_power_kw: number;
-  maximum_ac_power_kw: number;
-  phase: string;
-  topology: string;
-  min_mpp_voltage_v: number;
-  max_dc_voltage_v: number;
-  total_mppt: number;
-  total_string_inputs: number;
-}
+// Use Supabase generated types
+export type SolarPanel = Tables<'solar_panels'>;
+export type SolarInverter = Tables<'solar_inverters'>;
 
 export const fetchSolarPanels = async (
   search: string = "", 
@@ -106,8 +81,8 @@ export const fetchPanelManufacturers = async (): Promise<string[]> => {
     }
 
     // Extract unique manufacturers
-    const manufacturers = [...new Set(data.map(item => (item as any).manufacturer))];
-    return manufacturers;
+    const manufacturers = [...new Set(data.map(item => item.manufacturer))];
+    return manufacturers.filter(Boolean);
   } catch (error) {
     console.error("Error fetching manufacturers:", error);
     toast.error("Failed to load manufacturers");
@@ -127,8 +102,8 @@ export const fetchInverterManufacturers = async (): Promise<string[]> => {
     }
 
     // Extract unique manufacturers
-    const manufacturers = [...new Set(data.map(item => (item as any).manufacturer))];
-    return manufacturers;
+    const manufacturers = [...new Set(data.map(item => item.manufacturer))];
+    return manufacturers.filter(Boolean);
   } catch (error) {
     console.error("Error fetching manufacturers:", error);
     toast.error("Failed to load manufacturers");

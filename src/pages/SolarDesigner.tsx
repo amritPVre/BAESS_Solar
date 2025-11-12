@@ -36,7 +36,7 @@ const SolarDesigner: React.FC = () => {
   return (
     <div className="container mx-auto py-6">
       <Helmet>
-        <title>Solar PV Designer | Solar Financial Tool</title>
+        <title>Solar PV Designer | BAESS Labs</title>
         <script src="https://polyfill.io/v3/polyfill.min.js?features=default"></script>
       </Helmet>
 

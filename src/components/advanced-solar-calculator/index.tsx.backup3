@@ -1,0 +1,694 @@
+import React, { useState, useEffect } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { 
+  BarChart3, 
+  Calculator, 
+  Download, 
+  Layers,
+  LineChart, 
+  MapPin,
+  Settings, 
+  Sun 
+} from "lucide-react";
+import { calculateSolarEnergy, calculateMultiplePVSystems, MultiplePVSystemsParams } from "@/utils/solarEnergyCalculation";
+import { InverterParams, SolarCalculationResult, SolarParams } from "@/types/solarCalculations";
+import { PolygonConfig } from "./area-calculator/types";
+import SystemConfiguration from "../advanced-solar-calculator/SystemConfiguration";
+import ComponentSelector from "./ComponentSelector";
+import EfficiencyAdjustment from "./EfficiencyAdjustment";
+import ProductionResults from "./ProductionResults";
+import AreaCalculator from "./AreaCalculator";
+import LocationInputs from "../advanced-solar-inputs/LocationInputs";
+import { Card } from "@/components/ui/card";
+import { getArrayTypeForStructure } from "./area-calculator/utils/drawingUtils";
+import SystemLosses from "../advanced-solar-calculator/SystemLosses";
+
+const AdvancedSolarCalculator: React.FC = () => {
+  // Location parameters
+  const [latitude, setLatitude] = useState(40.7128);
+  const [longitude, setLongitude] = useState(-74.0060);
+  const [timezone, setTimezone] = useState("America/New_York");
+  const [country, setCountry] = useState("United States");
+  const [city, setCity] = useState("New York");
+  
+  // PV system parameters
+  const [tilt, setTilt] = useState(30);
+  const [azimuth, setAzimuth] = useState(180); // 180 = south
+  const [arrayType, setArrayType] = useState(0); // 0 = Fixed (open rack)
+  const [losses, setLosses] = useState(14.08); // Default value
+  const [moduleEfficiency, setModuleEfficiency] = useState(0.2); // 20%
+  const [performanceRatio, setPerformanceRatio] = useState(0.8); // 80%
+  const [capacity, setCapacity] = useState(10); // 10 kW
+  const [moduleArea, setModuleArea] = useState(1.7); // m²
+  const [moduleWattPeak, setModuleWattPeak] = useState(400); // Wp
+  
+  // Component selection
+  const [selectedPanel, setSelectedPanel] = useState(null);
+  const [selectedInverter, setSelectedInverter] = useState(null);
+  
+  // Area calculation results
+  const [areaBasedLayout, setAreaBasedLayout] = useState(null);
+  const [polygonConfigs, setPolygonConfigs] = useState([]);
+  
+  // Inverter configuration
+  const [inverterParams, setInverterParams] = useState<InverterParams | null>(null);
+  const [dcAcRatio, setDcAcRatio] = useState(120); // Fixed value
+  
+  // Results state
+  const [results, setResults] = useState<SolarCalculationResult | null>(null);
+  const [calculating, setCalculating] = useState(false);
+  const [activeTab, setActiveTab] = useState("components");
+  
+  // Step tracking
+  const [currentStep, setCurrentStep] = useState(1);
+  const [completedSteps, setCompletedSteps] = useState<Record<number, boolean>>({});
+  // When components are selected, automatically go to location tab
+  useEffect(() => {
+    if (selectedPanel && selectedInverter) {
+      setCompletedSteps(prev => ({...prev, 1: true}));
+      updateModuleParameters();
+    }
+  }, [selectedPanel, selectedInverter]);
+  
+  // Update module parameters when panel is selected
+  const updateModuleParameters = () => {
+    if (selectedPanel) {
+      // Extract panel dimensions and calculate area, with proper fallbacks
+      let panelArea = 0;
+      
+      // First check for explicit panel_area_m2 field
+      if (selectedPanel.panel_area_m2 && selectedPanel.panel_area_m2 > 0) {
+        panelArea = selectedPanel.panel_area_m2;
+        console.log(`Using panel_area_m2 directly: ${panelArea.toFixed(3)}m²`);
+      } 
+      // Then check for module_length and module_width fields (in mm)
+      else if (selectedPanel.module_length && selectedPanel.module_width) {
+        panelArea = (selectedPanel.module_length * selectedPanel.module_width) / 1000000;
+        console.log(`Using module_length × module_width: ${panelArea.toFixed(3)}m²`);
+      }
+      // Then check for length and width fields (in mm)
+      else if (selectedPanel.length && selectedPanel.width) {
+        panelArea = (selectedPanel.length * selectedPanel.width) / 1000000;
+        console.log(`Using length × width: ${panelArea.toFixed(3)}m²`);
+      }
+      // Finally fall back to standard dimensions
+      else {
+        const defaultLength = 1700; // mm
+        const defaultWidth = 1000; // mm
+        panelArea = (defaultLength * defaultWidth) / 1000000;
+        console.log(`Using default dimensions: ${panelArea.toFixed(3)}m²`);
+      }
+      
+      // Correctly extract panel efficiency from all possible fields
+      let panelEfficiency = 20; // default fallback %
+      
+      if (selectedPanel.efficiency_percent && selectedPanel.efficiency_percent > 0) {
+        panelEfficiency = selectedPanel.efficiency_percent;
+        console.log(`Using panel efficiency_percent: ${panelEfficiency}%`);
+      } else if (selectedPanel.efficiency && selectedPanel.efficiency > 0) {
+        // Handle efficiency as decimal or percentage
+        panelEfficiency = selectedPanel.efficiency > 1 ? selectedPanel.efficiency : selectedPanel.efficiency * 100;
+        console.log(`Using panel efficiency: ${panelEfficiency}%`);
+      }
+      
+      // Enhanced panel power extraction
+      let panelPower = 0;
+      
+      console.log('SelectedPanel object:', selectedPanel);
+      
+      const possiblePowerFields = [
+        'nominal_power_w',
+        'power_rating',
+        'power',
+        'wattage',
+        'watt_peak',
+        'max_power',
+        'pmax',
+        'rated_power',
+        'module_power',
+        'wp',
+        'w',
+      ];
+      
+      for (const field of possiblePowerFields) {
+        let value = selectedPanel[field];
+        if (typeof value === 'string') {
+          value = parseFloat(value.replace(/[^\d.]/g, ''));
+        }
+        if (typeof value === 'number' && value > 0) {
+          panelPower = value;
+          console.log(`Panel power found in field '${field}':`, panelPower);
+          break;
+        }
+      }
+      
+      // Handle the specific error case (34kW bug)
+      if (panelPower > 30000 && panelPower < 40000) {
+        panelPower = panelPower / 100;
+        console.log(`Converting specific error case panel from 34kW to ${panelPower}W`);
+      }
+      
+      if (!panelPower || panelPower <= 0) {
+        // Calculate power from area and efficiency as fallback
+        panelPower = Math.round(panelArea * 1000 * panelEfficiency);
+        console.warn('No power value available - calculating from area and efficiency:', panelPower);
+      }
+      
+      setModuleArea(panelArea);
+      setModuleEfficiency(panelEfficiency / 100);
+      setModuleWattPeak(panelPower);
+      
+      console.log(`Panel parameters updated: ${panelArea.toFixed(2)}m², ${panelEfficiency}%, ${panelPower}W`);
+    }
+  };
+  // Enhance the handleAreaCalculation function with additional debugging and safeguards
+  const handleAreaCalculation = (capacityKw: number, areaM2: number, moduleCount: number, configs?: PolygonConfig[]) => {
+    console.log("Area calculation received:", { capacityKw, areaM2, moduleCount, configCount: configs?.length });
+    
+    // Validate incoming data
+    if (isNaN(capacityKw) || capacityKw === undefined) {
+      console.error("Invalid capacity value received:", capacityKw);
+      capacityKw = 0;
+    }
+    
+    if (moduleCount > 0 && capacityKw === 0) {
+      console.warn("Modules placed but capacity is zero - recalculating");
+      // More robust panel power determination with improved consistency
+      console.log("Selected panel for capacity calculation:", selectedPanel);
+      
+      let panelPower = 0;
+      
+      // Check for nominal_power_w first as it's the most reliable source
+      if (selectedPanel?.nominal_power_w && selectedPanel.nominal_power_w > 0) {
+        panelPower = selectedPanel.nominal_power_w;
+        console.log(`Using nominal_power_w: ${panelPower}W`);
+      }
+      // ONLY handle the specific edge case of 34kW panels
+      else if (selectedPanel?.power_rating && selectedPanel.power_rating > 30000 && selectedPanel.power_rating < 40000) {
+        panelPower = selectedPanel.power_rating / 100; // Convert from 34000W to 340W
+        console.log(`Converting specific error case panel from ${selectedPanel.power_rating}W to ${panelPower}W`);
+      } 
+      else if (selectedPanel?.power && selectedPanel.power > 30000 && selectedPanel.power < 40000) {
+        panelPower = selectedPanel.power / 100; // Convert from 34000W to 340W
+        console.log(`Converting specific error case panel from ${selectedPanel.power}W to ${panelPower}W`);
+      }
+      // For all other values, use the actual power values
+      else if (selectedPanel?.power_rating && selectedPanel.power_rating > 0) {
+        panelPower = selectedPanel.power_rating;
+        console.log(`Using actual panel power_rating: ${panelPower}W`);
+      } 
+      else if (selectedPanel?.power && selectedPanel.power > 0) {
+        panelPower = selectedPanel.power;
+        console.log(`Using actual panel power: ${panelPower}W`);
+      } 
+      else {
+        // Use default panel power if no valid value found
+        panelPower = 400;
+        console.warn("No valid panel power found, using default:", panelPower);
+      }
+      
+      // Calculate capacity with the extracted power value
+      capacityKw = (moduleCount * panelPower) / 1000;
+      console.log("Recalculated capacity:", capacityKw.toFixed(2), "kW from", moduleCount, "modules at", panelPower, "W each");
+    }
+    
+    setAreaBasedLayout({
+      capacityKw,
+      areaM2,
+      moduleCount
+    });
+    
+    // Update the PV capacity based on actual placed modules
+    if (capacityKw > 0) {
+      console.log(`Setting system capacity to ${capacityKw.toFixed(2)} kW`);
+      setCapacity(capacityKw);
+    } else {
+      console.warn("Zero capacity value - check panel power rating");
+    }
+    
+    // Store polygon configurations for PVWatts
+    if (configs && configs.length > 0) {
+      console.log("Using polygon configs:", configs);
+      setPolygonConfigs(configs);
+      
+      // Update tilt and azimuth based on first polygon
+      setTilt(configs[0].tiltAngle);
+      setAzimuth(configs[0].azimuth);
+      
+      // Automatically assign array type based on structure types
+      const structureTypes = configs.map(config => config.structureType);
+      const uniqueStructureTypes = [...new Set(structureTypes)];
+      
+      // If all areas use the same structure type, use that mapping
+      if (uniqueStructureTypes.length === 1) {
+        const arrayType = getArrayTypeForStructure(uniqueStructureTypes[0]);
+        setArrayType(arrayType);
+        console.log(`Auto-assigned array type ${arrayType} for structure type: ${uniqueStructureTypes[0]}`);
+      } 
+      // If mixed structure types, prioritize ballasted (roof mount) if present, otherwise use open rack
+      else {
+        const hasBallasted = structureTypes.includes('ballasted');
+        const arrayType = hasBallasted ? 1 : 0; // Roof mount if ballasted present, otherwise open rack
+        setArrayType(arrayType);
+        console.log(`Mixed structure types detected. Auto-assigned array type ${arrayType} (prioritizing ${hasBallasted ? 'roof mount for ballasted' : 'open rack'})`);
+      }
+      
+      // Mark the area definition step as completed
+      setCompletedSteps(prev => ({...prev, 3: true}));
+    } else {
+      console.log("No polygon configurations received");
+      setPolygonConfigs([]);
+    }
+  };
+  // Calculate inverter parameters based on capacity
+  useEffect(() => {
+    if (selectedInverter && capacity > 0) {
+      const inverterPowerKw = selectedInverter.power_rating || selectedInverter.nominal_ac_power_kw || 1;
+      const suggestedInverterCount = Math.max(1, Math.ceil(capacity / inverterPowerKw / (dcAcRatio / 100)));
+      
+      setInverterParams({
+        inverter_model: selectedInverter.model || selectedInverter.id,
+        quantity: suggestedInverterCount,
+        dc_ac_ratio: dcAcRatio / 100,
+        power: inverterPowerKw,
+        efficiency: selectedInverter.efficiency || 0.96
+      });
+    }
+  }, [selectedInverter, capacity, dcAcRatio]);
+  const handleCalculate = () => {
+    setCalculating(true);
+    
+    try {
+      // Validate required parameters
+      if (!latitude || !longitude) {
+        throw new Error("Missing location parameters. Please set latitude and longitude.");
+      }
+      
+      if (!polygonConfigs || polygonConfigs.length === 0) {
+        throw new Error("No PV areas defined. Please draw at least one PV area.");
+      }
+      
+      if (!selectedPanel || !selectedInverter) {
+        throw new Error("Missing component selection. Please select both panel and inverter.");
+      }
+
+      console.log("Starting multiple PV systems calculation with:", {
+        latitude,
+        longitude,
+        timezone,
+        systemCount: polygonConfigs.length,
+        totalCapacity: capacity
+      });
+
+      // Prepare parameters for multiple PV systems
+      const params: MultiplePVSystemsParams = {
+        latitude,
+        longitude,
+        timezone,
+        module_efficiency: moduleEfficiency,
+        performance_ratio: performanceRatio,
+        module_area: moduleArea,
+        module_watt_peak: moduleWattPeak,
+        inverterParams,
+        losses: losses,
+        pvSystems: polygonConfigs.map(config => ({
+          structureType: config.structureType,
+          area: config.area,
+          moduleCount: config.moduleCount,
+          capacityKw: config.capacityKw,
+          azimuth: config.azimuth,
+          tiltAngle: config.tiltAngle
+        }))
+      };
+      
+      // Calculate solar energy for multiple PV systems
+      const calculationResults = calculateMultiplePVSystems(params);
+      setResults(calculationResults);
+      setActiveTab("results");
+      
+      toast.success(`Solar energy calculations completed for ${polygonConfigs.length} PV system(s)!`);
+      
+      // Mark all steps as completed when calculations are done
+      setCompletedSteps({1: true, 2: true, 3: true, 4: true});
+    } catch (error) {
+      console.error("Calculation error:", error);
+      toast.error(error instanceof Error ? error.message : "Error in solar calculations");
+    } finally {
+      setCalculating(false);
+    }
+  };
+  
+  // Update step completion status
+  useEffect(() => {
+    const newCompletedSteps = { ...completedSteps };
+    let hasChanged = false;
+    
+    // Step 1: Components selected
+    if (selectedPanel && selectedInverter) {
+      if (!newCompletedSteps[1]) {
+        newCompletedSteps[1] = true;
+        hasChanged = true;
+      }
+    } else if (newCompletedSteps[1]) {
+      newCompletedSteps[1] = false;
+      hasChanged = true;
+    }
+    
+    // Step 2: Location parameters defined
+    if (latitude && longitude) {
+      if (!newCompletedSteps[2]) {
+        newCompletedSteps[2] = true;
+        hasChanged = true;
+      }
+    } else if (newCompletedSteps[2]) {
+      newCompletedSteps[2] = false;
+      hasChanged = true;
+    }
+    
+    // Step 4: Configuration parameters set
+    // We'll consider this done if the user has visited the tab
+    if (activeTab === 'configuration' && !newCompletedSteps[4]) {
+      newCompletedSteps[4] = true;
+      hasChanged = true;
+    }
+    
+    // Only update state if something actually changed
+    if (hasChanged) {
+      setCompletedSteps(newCompletedSteps);
+    }
+  }, [selectedPanel, selectedInverter, latitude, longitude, activeTab]);
+  
+  // Update current step based on active tab
+  useEffect(() => {
+    switch(activeTab) {
+      case 'components':
+        setCurrentStep(1);
+        break;
+      case 'location':
+        setCurrentStep(2);
+        break;
+      case 'areas':
+        setCurrentStep(3);
+        break;
+      case 'configuration':
+        setCurrentStep(4);
+        break;
+      case 'results':
+        setCurrentStep(5);
+        break;
+      default:
+        setCurrentStep(1);
+    }
+  }, [activeTab]);
+  return (
+    <div className="w-full max-w-6xl mx-auto pb-8">
+      {/* Progress Bar */}
+      <div className="sticky top-0 pt-4 pb-2 bg-white z-10 border-b mb-6">
+        <div className="w-full max-w-6xl mx-auto">
+          <div className="flex justify-between items-center mb-2">
+            <h1 className="text-2xl font-bold">Advanced Solar Energy Calculator</h1>
+            {results && (
+              <Button onClick={() => window.print()} variant="outline" size="sm" className="hidden md:flex">
+                <Download className="h-4 w-4 mr-2" />
+                Export Results
+              </Button>
+            )}
+          </div>
+          
+          <div className="relative mb-1">
+            <div className="w-full bg-muted rounded-full h-2">
+              <div 
+                className="bg-primary h-2 rounded-full transition-all" 
+                style={{ width: `${(currentStep - 1) * 25}%` }} 
+              />
+            </div>
+            <div className="absolute top-0 left-0 w-full flex justify-between transform translate-y-[-10px]">
+              <div className="text-center">
+                <div className={`w-4 h-4 mb-1 mx-auto rounded-full flex items-center justify-center text-[10px] font-bold ${completedSteps[1] ? 'bg-primary text-primary-foreground' : 'bg-muted border border-input'}`}>
+                  {completedSteps[1] ? '✓' : '1'}
+                </div>
+                <span className="text-xs hidden md:inline-block absolute left-0 transform translate-x(-50%)">Components</span>
+              </div>
+              <div className="text-center">
+                <div className={`w-4 h-4 mb-1 mx-auto rounded-full flex items-center justify-center text-[10px] font-bold ${completedSteps[2] ? 'bg-primary text-primary-foreground' : 'bg-muted border border-input'}`}>
+                  {completedSteps[2] ? '✓' : '2'}
+                </div>
+                <span className="text-xs hidden md:inline-block">Location</span>
+              </div>
+              <div className="text-center">
+                <div className={`w-4 h-4 mb-1 mx-auto rounded-full flex items-center justify-center text-[10px] font-bold ${completedSteps[3] ? 'bg-primary text-primary-foreground' : 'bg-muted border border-input'}`}>
+                  {completedSteps[3] ? '✓' : '3'}
+                </div>
+                <span className="text-xs hidden md:inline-block">PV Areas</span>
+              </div>
+              <div className="text-center">
+                <div className={`w-4 h-4 mb-1 mx-auto rounded-full flex items-center justify-center text-[10px] font-bold ${completedSteps[4] ? 'bg-primary text-primary-foreground' : 'bg-muted border border-input'}`}>
+                  {completedSteps[4] ? '✓' : '4'}
+                </div>
+                <span className="text-xs hidden md:inline-block">Configuration</span>
+              </div>
+              <div className="text-center">
+                <div className={`w-4 h-4 mb-1 mx-auto rounded-full flex items-center justify-center text-[10px] font-bold ${results ? 'bg-primary text-primary-foreground' : 'bg-muted border border-input'}`}>
+                  {results ? '✓' : '5'}
+                </div>
+                <span className="text-xs hidden md:inline-block absolute right-0 transform translate-x(50%)">Results</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="mb-4">
+          <TabsTrigger value="components">
+            <Calculator className="h-4 w-4 mr-2" />
+            Components
+          </TabsTrigger>
+          <TabsTrigger value="location">
+            <MapPin className="h-4 w-4 mr-2" />
+            Location
+          </TabsTrigger>
+          <TabsTrigger value="areas" disabled={!selectedPanel}>
+            <Layers className="h-4 w-4 mr-2" />
+            PV Areas
+          </TabsTrigger>
+          <TabsTrigger value="results" disabled={!results}>
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Results
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="components">
+          <ComponentSelector 
+            onPanelSelect={setSelectedPanel}
+            onInverterSelect={setSelectedInverter}
+            selectedPanel={selectedPanel}
+            selectedInverter={selectedInverter}
+          />
+          
+          <div className="flex justify-between mt-6">
+            <div></div>
+            <Button
+              onClick={() => setActiveTab("location")}
+              className="bg-primary"
+              disabled={!selectedPanel || !selectedInverter}
+            >
+              Continue to Location
+            </Button>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="location">
+          <Card className="p-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-amber-500" />
+              Location Settings
+            </h2>
+            
+            <LocationInputs 
+              latitude={latitude}
+              longitude={longitude}
+              timezone={timezone}
+              country={country}
+              city={city}
+              setLatitude={setLatitude}
+              setLongitude={setLongitude}
+              setTimezone={setTimezone}
+              setCountry={setCountry}
+              setCity={setCity}
+            />
+          </Card>
+          
+          <div className="flex justify-between mt-6">
+            <Button
+              onClick={() => setActiveTab("components")}
+              variant="outline"
+            >
+              Back
+            </Button>
+            <Button
+              onClick={() => setActiveTab("areas")}
+              className="bg-primary"
+              disabled={!latitude || !longitude}
+            >
+              Continue to PV Areas
+            </Button>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="areas">
+          {selectedPanel ? (
+            <>
+              <AreaCalculator 
+                selectedPanel={selectedPanel} 
+                onCapacityCalculated={handleAreaCalculation}
+                latitude={latitude}
+                longitude={longitude}
+              />
+              
+              {/* Configuration section moved from separate tab */}
+              {polygonConfigs && polygonConfigs.length > 0 && (
+                <div className="mt-8">
+                  <h2 className="text-xl font-semibold mb-4">System Configuration</h2>
+                  <SystemConfiguration
+                    arrayType={arrayType}
+                    losses={losses}
+                    polygonConfigs={polygonConfigs}
+                    onArrayTypeChange={setArrayType}
+                    onLossesChange={setLosses}
+                  />
+                  
+                  {polygonConfigs.length > 0 && (
+                    <div className="mt-6 bg-muted/20 p-4 rounded-md border">
+                      <h3 className="text-lg font-semibold mb-2">Multiple Installation Areas</h3>
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full">
+                          <thead className="bg-muted/50">
+                            <tr>
+                              <th className="px-3 py-2 text-left text-sm">Area</th>
+                              <th className="px-3 py-2 text-left text-sm">Structure</th>
+                              <th className="px-3 py-2 text-right text-sm">Size (m²)</th>
+                              <th className="px-3 py-2 text-center text-sm">Azimuth</th>
+                                                            <th className="px-3 py-2 text-center text-sm">Tilt</th>
+                              <th className="px-3 py-2 text-right text-sm">Modules</th>
+                              <th className="px-3 py-2 text-right text-sm">Capacity (kWp)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {polygonConfigs.map((config, index) => (
+                              <tr key={`poly-${index}`} className="border-t border-muted">
+                                <td className="px-3 py-2 text-sm font-medium">Area {index + 1}</td>
+                                <td className="px-3 py-2 text-sm">
+                                  {config.structureType === 'ballasted' && 'Ballasted Roof'}
+                                  {config.structureType === 'fixed_tilt' && 'Fixed Tilt Elevated'}
+                                  {config.structureType === 'ground_mount_tables' && 'Ground Mount Tables'}
+                                  {config.structureType === 'carport' && 'Carport'}
+                                  {config.structureType === 'pv_table_free_form' && 'PV Table - Free Form'}
+                                </td>
+                                <td className="px-3 py-2 text-sm text-right">{config.area.toFixed(1)}</td>
+                                <td className="px-3 py-2 text-sm text-center">
+                                  {config.azimuth.toFixed(0)}°
+                                </td>
+                                <td className="px-3 py-2 text-sm text-center">
+                                  {config.tiltAngle.toFixed(0)}°
+                                </td>
+                                <td className="px-3 py-2 text-sm text-right">{config.moduleCount}</td>
+                                <td className="px-3 py-2 text-sm text-right">{config.capacityKw.toFixed(1)}</td>
+                              </tr>
+                            ))}
+                            <tr className="border-t border-muted bg-muted/20 font-medium">
+                              <td className="px-3 py-2 text-sm">Total</td>
+                              <td className="px-3 py-2 text-sm">-</td>
+                              <td className="px-3 py-2 text-sm text-right">
+                                {polygonConfigs.reduce((sum, config) => sum + config.area, 0).toFixed(1)}
+                              </td>
+                              <td className="px-3 py-2 text-sm text-center">-</td>
+                              <td className="px-3 py-2 text-sm text-right">
+                                {polygonConfigs.reduce((sum, config) => sum + config.moduleCount, 0)}
+                              </td>
+                              <td className="px-3 py-2 text-sm text-right">
+                                {polygonConfigs.reduce((sum, config) => sum + config.capacityKw, 0).toFixed(1)}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      
+                      <div className="mt-4 text-sm bg-muted/30 p-2 rounded">
+                        <p><strong>Note:</strong> Each PV area will be calculated as a separate system using its individual parameters (tilt, azimuth, structure type), then combined for the final energy calculation.</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="p-8 text-center">
+              <p>Please select a panel before defining array areas.</p>
+              <Button
+                onClick={() => setActiveTab("components")}
+                className="mt-4"
+              >
+                Go to Component Selection
+              </Button>
+            </div>
+          )}
+          
+          <div className="flex justify-between mt-6">
+            <Button
+              onClick={() => setActiveTab("location")}
+              variant="outline"
+            >
+              Back
+            </Button>
+            <Button
+              onClick={handleCalculate}
+              className="bg-primary"
+              disabled={calculating || !latitude || !longitude || !capacity || !(polygonConfigs && polygonConfigs.length > 0)}
+            >
+              {calculating ? (
+                <>Calculating...</>
+              ) : (
+                <>Calculate Solar Energy Production</>
+              )}
+            </Button>
+          </div>
+        </TabsContent>
+        
+        {/* Keep empty configuration tab to maintain structure but hide from user */}
+        <TabsContent value="configuration" className="hidden">
+        </TabsContent>
+        
+        <TabsContent value="results">
+          {results && (
+            <ProductionResults 
+              results={results} 
+              systemParams={{
+                capacity,
+                tilt,
+                azimuth,
+                moduleEfficiency,
+                losses,
+                arrayType,
+                latitude,
+                longitude,
+                timezone
+              }}
+              selectedPanel={selectedPanel}
+              selectedInverter={selectedInverter}
+              polygonConfigs={polygonConfigs}
+              onNewCalculation={() => setActiveTab("configuration")}
+            />
+          )}
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+};
+export default AdvancedSolarCalculator;
+
+
+
+

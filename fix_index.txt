@@ -1,0 +1,36 @@
+// Fix for MultiplePVSystemsParams - replace the entire object with this:
+const pvSystemsParams: MultiplePVSystemsParams = {
+  latitude,
+  longitude,
+  timezone,
+  module_efficiency: moduleEfficiency,
+  performance_ratio: performanceRatio,
+  module_area: moduleArea,
+  module_watt_peak: moduleWattPeak,
+  inverterParams: calculateInverterParameters(),
+  losses: losses,
+  pvSystems: polygonConfigs.map((config) => ({
+    structureType: config.structureType,
+    area: config.area,
+    moduleCount: config.moduleCount,
+    capacityKw: config.capacityKw,
+    azimuth: config.azimuth,
+    tiltAngle: config.tiltAngle
+  }))
+};
+
+// Fix for SolarParams - replace the entire object with this:
+const solarParams: SolarParams = {
+  plant_capacity_kw: capacity,
+  surface_tilt: tilt,
+  surface_azimuth: azimuth,
+  latitude,
+  longitude,
+  timezone,
+  array_type: arrayType,
+  losses,
+  module_efficiency: moduleEfficiency,
+  performance_ratio: performanceRatio,
+  module_area: moduleArea,
+  module_watt_peak: moduleWattPeak
+}; 

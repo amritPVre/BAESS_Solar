@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { PolygonInfo, EdgeMidpoint } from '../types';
 
@@ -114,7 +113,18 @@ export const useMidpointMarkers = ({
             
             const heading = spherical.computeHeading(startPoint, endPoint);
             const normalizedHeading = (heading < 0) ? heading + 360 : heading;
-            const solarAzimuth = (normalizedHeading + 90) % 360;
+            
+            // Fix the solar azimuth calculation
+            // The solar azimuth should be perpendicular to the edge, but in the right direction
+            // For a South-facing array (180°), the edge runs East-West
+            // For an East-facing array (90°), the edge runs North-South
+            let solarAzimuth = (normalizedHeading - 90) % 360; // Changed from +90 to -90
+            
+            // Ensure azimuth is in range 0-360
+            if (solarAzimuth < 0) {
+              solarAzimuth += 360;
+            }
+            
             const markerTooltip = `Set Azimuth (${solarAzimuth.toFixed(1)}°)`;
             
             const midpointData: EdgeMidpoint = {

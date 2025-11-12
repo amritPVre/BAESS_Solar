@@ -1,0 +1,5574 @@
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Label } from "../ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { Input } from "../ui/input";
+import { Checkbox } from "../ui/checkbox";
+import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
+import { Separator } from "../ui/separator";
+import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
+import { Zap, Box, Users, Target, CheckCircle2, AlertTriangle, Layers, Settings, Server, Activity, Cpu, Factory, Shield, Cable, Download, Camera } from "lucide-react";
+import { fetchLVCables, fetchHVCables, selectCable, CableSelectionParams } from "../../services/cableSelectionService";
+import { selectCircuitBreaker, BreakerSelectionParams } from "../../services/circuitBreakerService";
+import type { LVCable, HVCable } from "../../services/cableSelectionService";
+import type { CircuitBreaker } from "../../services/circuitBreakerService";
+import CableSizingSection from "./CableSizingSection";
+import CircuitBreakerSection from "./CircuitBreakerSection";
+import HTCableSizingSection from "./HTCableSizingSection";
+
+interface ACSideConfigurationProps {
+  systemSize: number; // kW
+  inverterPower: number; // kW
+  inverterCount: number;
+  inverterOutputVoltage: number; // V
+  inverterOutputCurrent: number; // A
+  onConfigurationChange: (config: ACConfiguration) => void;
+  onSLDImageCaptured?: (imageDataUrl: string, metadata: {
+    connectionType: 'LV' | 'HV';
+    systemSize: number;
+    inverterType: string;
+    timestamp: Date;
+  }) => void;
+  initialConfiguration?: ACConfiguration; // For restoring saved projects
+}
+
+// Expose SLD capture function via ref
+export interface ACSideConfigurationRef {
+  captureSLD: () => Promise<boolean>;
+}
+
+export interface TransformerConfig {
+  powerRating: number; // MVA
+  primaryVoltage: number; // V
+  secondaryVoltage: number; // V
+  copperLoss: number; // kW
+  ironLoss: number; // kW
+  count: number;
+}
+
+// Inverter type classification
+export type InverterType = 'STRING' | 'CENTRAL';
+
+// HV configuration for String inverters
+export interface HVStringConfiguration {
+  lvACCombinerPanels: {
+    count: number;
+    configurations: Array<{
+      inputs: number; // Number of inverters per panel
+      outputCurrent: number; // Output current from panel
+      maxInverters: number; // Maximum allowed inverters per panel (typically 16)
+    }>;
+  };
+  idts: {
+    count: number;
+    configurations: Array<{
+      powerRating: number; // MVA per IDT
+      primaryVoltage: number; // V (typically 415V)
+      secondaryVoltage: number; // V (typically 11kV)
+      copperLoss: number; // kW (calculated from percentage)
+      ironLoss: number; // kW (calculated from percentage)
+      copperLossPercent: number; // % (user input)
+      ironLossPercent: number; // % (user input)
+      combinerPanelsPerIDT: number; // Number of LV AC Combiner panels per IDT
+    }>;
+  };
+  powerTransformer?: {
+    powerRating: number; // MVA for total system
+    primaryVoltage: number; // V (IDT secondary voltage)
+    secondaryVoltage: number; // V (PoC voltage)
+    copperLoss: number; // kW (calculated from percentage)
+    ironLoss: number; // kW (calculated from percentage)
+    copperLossPercent: number; // % (user input)
+    ironLossPercent: number; // % (user input)
+    vectorGrouping: string; // Vector grouping (e.g., Dyn11)
+  };
+}
+
+// HV configuration for Central inverters  
+export interface HVCentralConfiguration {
+  idts: {
+    count: number;
+    configurations: Array<{
+      powerRating: number; // MVA per IDT
+      primaryVoltage: number; // V (typically 415V)
+      secondaryVoltage: number; // V (typically 11kV)
+      copperLoss: number; // kW (calculated from percentage)
+      ironLoss: number; // kW (calculated from percentage)
+      copperLossPercent: number; // % (user input)
+      ironLossPercent: number; // % (user input)
+      invertersPerIDT: number; // Number of central inverters per IDT (max 4)
+      vectorGrouping: string; // Vector grouping (e.g., Dyn11)
+    }>;
+  };
+  powerTransformer?: {
+    powerRating: number; // MVA for total system
+    primaryVoltage: number; // V (IDT secondary voltage)
+    secondaryVoltage: number; // V (PoC voltage)
+    copperLoss: number; // kW (calculated from percentage)
+    ironLoss: number; // kW (calculated from percentage)
+    copperLossPercent: number; // % (user input)
+    ironLossPercent: number; // % (user input)
+    vectorGrouping: string; // Vector grouping (e.g., Dyn11)
+  };
+}
+
+// Circuit breaker configurations at different stages
+export interface CircuitBreakerConfiguration {
+  // Breakers at LV AC Combiner Panel level
+  combinerPanelBreakers: {
+    inputBreakers: CircuitBreaker[]; // One per inverter input
+    outputBreakers: CircuitBreaker[]; // One per panel output
+  };
+  
+  // Breakers between LV AC Combiner Panels and IDTs
+  idtInputBreakers: CircuitBreaker[]; // One per combiner panel to IDT connection
+  
+  // Breakers between IDTs and Power Transformer
+  idtOutputBreakers: CircuitBreaker[]; // One per IDT output
+  
+  // Breaker after Power Transformer (if used)
+  powerTransformerOutputBreaker?: CircuitBreaker;
+}
+
+export interface ACConfiguration {
+  connectionType: 'LV' | 'HV';
+  pocVoltage: number;
+  
+  // Inverter classification
+  inverterType: InverterType;
+  
+  // Legacy LV configuration
+  useIDT: boolean;
+  usePowerTransformer: boolean;
+  idtConfig?: TransformerConfig;
+  powerTransformerConfig?: TransformerConfig;
+  acCombinerPanels?: {
+    count: number;
+    configurations: Array<{
+      inputs: number;
+      outputCurrent: number;
+    }>;
+  };
+  
+  // Enhanced HV String configuration
+  hvStringConfig?: HVStringConfiguration;
+  
+  // Enhanced HV Central configuration
+  hvCentralConfig?: HVCentralConfiguration;
+  
+  // Circuit breaker configurations
+  circuitBreakers?: CircuitBreakerConfiguration;
+  
+  inputCables?: {
+    material: 'COPPER' | 'ALUMINUM';
+    cable: LVCable | HVCable;
+    length: number;
+    calculatedCurrent: number;
+    deratedCurrent: number;
+  };
+  outputCables?: {
+    material: 'COPPER' | 'ALUMINUM';
+    cable: LVCable | HVCable;
+    length: number;
+    calculatedCurrent: number;
+    deratedCurrent: number;
+  };
+  inputBreaker?: CircuitBreaker;
+  outputBreaker?: CircuitBreaker;
+  totalACLosses: number; // kW
+  
+  // Actual cable losses calculated from configuration
+  actualCableLosses?: {
+    kW: number;
+    percentage: number;
+    sections: number;
+    details: Record<string, { kW: number; percentage: number }>;
+    sequentialDetails?: Record<string, { kW: number; percentage: number; powerAtStage: number }>;
+  };
+
+  // Selected component details for design summary
+  selectedBreakers?: Map<string, {
+    breaker: CircuitBreaker;
+    sectionType: string;
+    sectionTitle: string;
+  }>;
+  selectedCables?: Map<string, {
+    cable: LVCable | HVCable | null;
+    material: 'COPPER' | 'ALUMINUM';
+    length: number;
+    numberOfRuns: number;
+    calculatedCurrent: number;
+    deratedCurrent: number;
+    sectionType: string;
+    sectionTitle: string;
+  }>;
+}
+
+// Voltage options
+const LV_VOLTAGES = [230, 380, 400, 415, 480, 600, 800];
+const HV_VOLTAGES = [11000, 12000, 20000, 33000, 66000, 110000, 132000];
+
+// Vector grouping options for transformers
+const TRANSFORMER_VECTOR_GROUPS = [
+  'Dyn11', 'Dyn1', 'Dyn5', 'Dyn7', 
+  'Yd11', 'Yd1', 'Yd5', 'Yd7',
+  'Yyn0', 'Yyn6', 'Dd0', 'Dd6'
+];
+
+export const ACSideConfiguration = forwardRef<ACSideConfigurationRef, ACSideConfigurationProps>((props, ref) => {
+  const {
+    systemSize,
+    inverterPower,
+    inverterCount,
+    inverterOutputVoltage,
+    inverterOutputCurrent,
+    onConfigurationChange,
+    onSLDImageCaptured,
+    initialConfiguration
+  } = props;
+  const [loading, setLoading] = useState(false);
+  const [cableLosses, setCableLosses] = useState<Record<string, { kW: number; percentage: number }>>({});
+  
+  // Helper function to convert object to Map (for database restoration)
+  const objectToMap = <K extends string, V>(obj: Record<K, V> | Map<K, V> | undefined): Map<K, V> => {
+    if (!obj) return new Map();
+    if (obj instanceof Map) return obj;
+    return new Map(Object.entries(obj) as Array<[K, V]>);
+  };
+
+  // State for storing selected breakers and cables - Initialize from saved data if available
+  const [selectedBreakers, setSelectedBreakers] = useState<Map<string, {
+    breaker: CircuitBreaker;
+    sectionType: string;
+    sectionTitle: string;
+  }>>(() => {
+    const map = objectToMap(initialConfiguration?.selectedBreakers);
+    console.log('🔧 Initializing selectedBreakers state:', {
+      hasInitialConfig: !!initialConfiguration,
+      hasSelectedBreakers: !!initialConfiguration?.selectedBreakers,
+      mapSize: map.size,
+      mapKeys: Array.from(map.keys())
+    });
+    return map;
+  });
+  
+  const [selectedCables, setSelectedCables] = useState<Map<string, {
+    cable: LVCable | HVCable | null;
+    material: 'COPPER' | 'ALUMINUM';
+    length: number;
+    numberOfRuns: number;
+    calculatedCurrent: number;
+    deratedCurrent: number;
+    sectionType: string;
+    sectionTitle: string;
+  }>>(() => {
+    const map = objectToMap(initialConfiguration?.selectedCables);
+    console.log('🔧 Initializing selectedCables state:', {
+      hasInitialConfig: !!initialConfiguration,
+      hasSelectedCables: !!initialConfiguration?.selectedCables,
+      mapSize: map.size,
+      mapKeys: Array.from(map.keys())
+    });
+    return map;
+  });
+  
+  // Classify inverter type based on power
+  const classifyInverterType = (inverterPowerKW: number): InverterType => {
+    return inverterPowerKW >= 500 ? 'CENTRAL' : 'STRING';
+  };
+
+  // Initialize config from saved data or defaults
+  const [config, setConfig] = useState<ACConfiguration>(
+    initialConfiguration || {
+      connectionType: 'LV',
+      pocVoltage: 400,
+      inverterType: classifyInverterType(inverterPower),
+      useIDT: false,
+      usePowerTransformer: false,
+      acCombinerPanels: {
+        count: 1,
+        configurations: [{ inputs: inverterCount, outputCurrent: 0 }]
+      },
+      totalACLosses: 0
+    }
+  );
+
+  // Track if we're restoring from saved configuration
+  const [isRestoringConfig, setIsRestoringConfig] = useState(!!initialConfiguration);
+  
+  // Log restoration if initial configuration is provided
+  useEffect(() => {
+    if (initialConfiguration) {
+      console.log('🔄 ACSideConfiguration: Restoring AC configuration from saved project:', {
+        connectionType: initialConfiguration.connectionType,
+        pocVoltage: initialConfiguration.pocVoltage,
+        inverterType: initialConfiguration.inverterType,
+        useIDT: initialConfiguration.useIDT,
+        usePowerTransformer: initialConfiguration.usePowerTransformer,
+        hvStringConfig: !!initialConfiguration.hvStringConfig,
+        hvCentralConfig: !!initialConfiguration.hvCentralConfig,
+        selectedBreakersInConfig: !!initialConfiguration.selectedBreakers,
+        selectedBreakersType: typeof initialConfiguration.selectedBreakers,
+        selectedBreakersIsMap: initialConfiguration.selectedBreakers instanceof Map,
+        selectedBreakersCount: initialConfiguration.selectedBreakers instanceof Map ? 
+          initialConfiguration.selectedBreakers.size : 
+          (initialConfiguration.selectedBreakers ? Object.keys(initialConfiguration.selectedBreakers).length : 0),
+        selectedCablesInConfig: !!initialConfiguration.selectedCables,
+        selectedCablesType: typeof initialConfiguration.selectedCables,
+        selectedCablesIsMap: initialConfiguration.selectedCables instanceof Map,
+        selectedCablesCount: initialConfiguration.selectedCables instanceof Map ? 
+          initialConfiguration.selectedCables.size : 
+          (initialConfiguration.selectedCables ? Object.keys(initialConfiguration.selectedCables).length : 0),
+        currentSelectedBreakersSize: selectedBreakers.size,
+        currentSelectedCablesSize: selectedCables.size
+      });
+      
+      // Mark that we're no longer in restoration mode after a short delay
+      const timeout = setTimeout(() => {
+        setIsRestoringConfig(false);
+        console.log('✅ ACSideConfiguration: Configuration restoration complete');
+      }, 1000);
+      
+      return () => clearTimeout(timeout);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Load available cables on component mount
+  useEffect(() => {
+    const loadCables = async () => {
+      try {
+        await Promise.all([fetchLVCables(), fetchHVCables()]);
+      } catch (error) {
+        console.error("Failed to load cable data:", error);
+      }
+    };
+    
+    loadCables();
+  }, []);
+
+  // Memoize initial breakers and cables data - computed once from initialConfiguration
+  // This prevents infinite re-render loops by not depending on state
+  const initialBreakersRef = React.useRef(initialConfiguration?.selectedBreakers);
+  const initialCablesRef = React.useRef(initialConfiguration?.selectedCables);
+  
+  // Helper function to get saved breaker for a section (uses refs to avoid re-creation)
+  const getSavedBreaker = React.useCallback((sectionType: string, sectionTitle: string): CircuitBreaker | null => {
+    if (!initialBreakersRef.current) return null;
+    const key = `${sectionType}-${sectionTitle}`;
+    const saved = initialBreakersRef.current.get(key);
+    return saved?.breaker || null;
+  }, []); // No dependencies - uses refs
+  
+  // Helper function to get saved cable for a section (uses refs to avoid re-creation)
+  const getSavedCable = React.useCallback((sectionType: string, sectionTitle: string): {
+    cable: LVCable | null;
+    material: 'COPPER' | 'ALUMINUM';
+    length: number;
+    numberOfRuns: number;
+  } | null => {
+    if (!initialCablesRef.current) return null;
+    const key = `${sectionType}-${sectionTitle}`;
+    const saved = initialCablesRef.current.get(key);
+    if (!saved) return null;
+    // Type cast cable to LVCable for CableSizingSection compatibility
+    return {
+      cable: saved.cable as LVCable | null,
+      material: saved.material,
+      length: saved.length,
+      numberOfRuns: saved.numberOfRuns
+    };
+  }, []); // No dependencies - uses refs
+
+  const getSavedHVCable = React.useCallback((sectionType: string, sectionTitle: string): {
+    cable: HVCable | null;
+    material: 'COPPER' | 'ALUMINUM';
+    length: number;
+    numberOfRuns: number;
+  } | null => {
+    if (!initialCablesRef.current) return null;
+    const key = `${sectionType}-${sectionTitle}`;
+    const saved = initialCablesRef.current.get(key);
+    if (!saved) return null;
+    // Type cast cable to HVCable for HTCableSizingSection compatibility
+    return {
+      cable: saved.cable as HVCable | null,
+      material: saved.material,
+      length: saved.length,
+      numberOfRuns: saved.numberOfRuns
+    };
+  }, []); // No dependencies - uses refs
+
+  // Update inverter type when inverter power changes
+  useEffect(() => {
+    // Skip this during restoration
+    if (isRestoringConfig) {
+      console.log('⏸️  Skipping inverter type update - restoring from saved config');
+      return;
+    }
+    
+    const newInverterType = classifyInverterType(inverterPower);
+    if (newInverterType !== config.inverterType) {
+      setConfig(prev => ({
+        ...prev,
+        inverterType: newInverterType,
+        // Reset HV configuration when inverter type changes
+        hvStringConfig: undefined,
+        hvCentralConfig: undefined,
+        circuitBreakers: undefined
+      }));
+    }
+  }, [inverterPower, config.inverterType, isRestoringConfig]);
+
+  // Initialize AC combiner configuration for LV
+  useEffect(() => {
+    // Skip initialization if we're restoring from saved configuration
+    if (isRestoringConfig) {
+      console.log('⏸️  Skipping LV AC combiner initialization - restoring from saved config');
+      return;
+    }
+    
+    if (config.connectionType === 'LV') {
+      // Only initialize if not already set
+      if (!config.acCombinerPanels) {
+        const defaultConfigs = [{ inputs: inverterCount, outputCurrent: inverterOutputCurrent * inverterCount }];
+        
+        setConfig(prev => ({
+          ...prev,
+          acCombinerPanels: {
+            count: 1,
+            configurations: defaultConfigs
+          }
+        }));
+      } 
+      // Or if the total assigned inverters doesn't match the current inverter count
+      else {
+        const totalAssigned = config.acCombinerPanels.configurations.reduce(
+          (total, panel) => total + panel.inputs, 0
+        );
+        
+        if (totalAssigned !== inverterCount) {
+          // Update the first panel to match the current inverter count
+          const updatedConfigurations = [...config.acCombinerPanels.configurations];
+          updatedConfigurations[0] = {
+            inputs: inverterCount,
+            outputCurrent: inverterOutputCurrent * inverterCount
+          };
+          
+          setConfig(prev => ({
+            ...prev,
+            acCombinerPanels: {
+              count: prev.acCombinerPanels?.count || 1,
+              configurations: updatedConfigurations
+            }
+          }));
+        }
+      }
+    }
+  }, [config.connectionType, config.acCombinerPanels, inverterCount, inverterOutputCurrent, isRestoringConfig]);
+
+  // Initialize HV String configuration
+  useEffect(() => {
+    // Skip initialization if we're restoring from saved configuration
+    if (isRestoringConfig) {
+      console.log('⏸️  Skipping HV String config initialization - restoring from saved config');
+      return;
+    }
+    
+    if (config.connectionType === 'HV' && config.inverterType === 'STRING') {
+      if (!config.hvStringConfig) {
+        const maxInvertersPerPanel = 16; // Typical maximum
+        const invertersPerPanel = Math.min(inverterCount, maxInvertersPerPanel);
+        const combinerPanelCount = Math.ceil(inverterCount / maxInvertersPerPanel);
+        
+        // Calculate default IDT configuration
+        const totalSystemPowerMVA = (inverterPower * inverterCount) / 1000; // Total inverter AC power output in MVA
+        const combinerPanelsPerIDT = 4; // 4 panels per IDT
+        const idtCount = Math.ceil(combinerPanelCount / combinerPanelsPerIDT);
+        const idtRatingMVA = totalSystemPowerMVA / idtCount; // IDT rating based on actual power distribution
+        
+        const hvStringConfig: HVStringConfiguration = {
+          lvACCombinerPanels: {
+            count: combinerPanelCount,
+            configurations: Array(combinerPanelCount).fill(null).map((_, index) => {
+              const isLastPanel = index === combinerPanelCount - 1;
+              const remainingInverters = inverterCount - (index * maxInvertersPerPanel);
+              const panelInverters = isLastPanel ? remainingInverters : maxInvertersPerPanel;
+              
+              return {
+                inputs: panelInverters,
+                outputCurrent: inverterOutputCurrent * panelInverters,
+                maxInverters: maxInvertersPerPanel
+              };
+            })
+          },
+          idts: {
+            count: idtCount,
+            configurations: Array(idtCount).fill(null).map(() => ({
+              powerRating: idtRatingMVA,
+              primaryVoltage: inverterOutputVoltage, // Inverter AC output voltage
+              secondaryVoltage: config.pocVoltage, // HV PoC voltage
+              copperLoss: idtRatingMVA * 10, // Will be calculated from percentage
+              ironLoss: idtRatingMVA * 1, // Will be calculated from percentage
+              copperLossPercent: 1.0, // 1% default copper loss
+              ironLossPercent: 0.1, // 0.1% default iron loss
+              combinerPanelsPerIDT: Math.min(combinerPanelsPerIDT, combinerPanelCount)
+            }))
+          }
+        };
+        
+        setConfig(prev => ({
+          ...prev,
+          hvStringConfig,
+          useIDT: true, // Always use IDTs for HV String
+          usePowerTransformer: false // Optional, can be enabled by user
+        }));
+      } else {
+        // Update existing configuration to ensure IDT power ratings match calculated values
+        const calculatedIDTPowerRating = (inverterPower * inverterCount / 1000) / config.hvStringConfig.idts.count;
+        
+        // Check if stored IDT power rating differs significantly from calculated value
+        const currentIDTPowerRating = config.hvStringConfig.idts.configurations[0]?.powerRating || 0;
+        const ratingDifference = Math.abs(currentIDTPowerRating - calculatedIDTPowerRating);
+        
+        // If difference is more than 0.1 MVA, update to calculated value
+        if (ratingDifference > 0.1) {
+          const updatedConfigurations = config.hvStringConfig.idts.configurations.map(idt => ({
+            ...idt,
+            powerRating: calculatedIDTPowerRating,
+            // Recalculate copper and iron losses based on new power rating
+            copperLoss: (idt.copperLossPercent * calculatedIDTPowerRating * 1000) / 100,
+            ironLoss: (idt.ironLossPercent * calculatedIDTPowerRating * 1000) / 100,
+          }));
+          
+          setConfig(prev => ({
+            ...prev,
+            hvStringConfig: {
+              ...prev.hvStringConfig!,
+              idts: {
+                ...prev.hvStringConfig!.idts,
+                configurations: updatedConfigurations
+              }
+            }
+          }));
+        }
+      }
+    }
+  }, [config.connectionType, config.inverterType, config.hvStringConfig, config.pocVoltage, inverterCount, inverterOutputCurrent, inverterOutputVoltage, systemSize, inverterPower, isRestoringConfig]);
+
+  // Initialize HV Central configuration
+  useEffect(() => {
+    // Skip initialization if we're restoring from saved configuration
+    if (isRestoringConfig) {
+      console.log('⏸️  Skipping HV Central config initialization - restoring from saved config');
+      return;
+    }
+    
+    if (config.connectionType === 'HV' && config.inverterType === 'CENTRAL') {
+      if (!config.hvCentralConfig) {
+        const maxInvertersPerIDT = 4; // Maximum 4 central inverters per IDT
+        const idtCount = Math.ceil(inverterCount / maxInvertersPerIDT);
+        
+        // Intelligent inverter distribution algorithm
+        const distributeInverters = (totalInverters: number, idtCount: number) => {
+          const baseInvertersPerIDT = Math.floor(totalInverters / idtCount);
+          const extraInverters = totalInverters % idtCount;
+          
+          // Create distribution array where first IDTs get ceiling division (priority)
+          const distribution = [];
+          for (let i = 0; i < idtCount; i++) {
+            if (i < extraInverters) {
+              distribution.push(baseInvertersPerIDT + 1); // First few IDTs get +1
+            } else {
+              distribution.push(baseInvertersPerIDT); // Remaining IDTs get base amount
+            }
+          }
+          
+          return distribution;
+        };
+        
+        const invertersDistribution = distributeInverters(inverterCount, idtCount);
+        
+        const hvCentralConfig: HVCentralConfiguration = {
+          idts: {
+            count: idtCount,
+            configurations: invertersDistribution.map((invertersForThisIDT) => ({
+              powerRating: (inverterPower * invertersForThisIDT) / 1000, // Power rating based on actual inverters assigned
+              primaryVoltage: inverterOutputVoltage, // Inverter AC output voltage
+              secondaryVoltage: config.pocVoltage, // HV PoC voltage
+              copperLoss: ((inverterPower * invertersForThisIDT) / 1000) * 10, // Will be calculated from percentage
+              ironLoss: ((inverterPower * invertersForThisIDT) / 1000) * 1, // Will be calculated from percentage
+              copperLossPercent: 1.0, // 1% default copper loss
+              ironLossPercent: 0.1, // 0.1% default iron loss
+              invertersPerIDT: invertersForThisIDT, // Actual inverters assigned to this IDT
+              vectorGrouping: 'Dyn11' // Default vector grouping
+            }))
+          }
+        };
+        
+        setConfig(prev => ({
+          ...prev,
+          hvCentralConfig,
+          useIDT: true, // Always use IDTs for HV Central
+          usePowerTransformer: false // Optional, can be enabled by user
+        }));
+      }
+    }
+  }, [config.connectionType, config.inverterType, config.hvCentralConfig, inverterCount, inverterPower, inverterOutputVoltage, config.pocVoltage, isRestoringConfig]);
+
+  // Prevent auto-calculation during initialization
+  const [isInitialized, setIsInitialized] = useState(false);
+  
+  // Track if we're currently calculating to prevent loops
+  const [isCalculating, setIsCalculating] = useState(false);
+
+  // Auto-calculate cable and breaker selections only after initialization and when not already calculating
+  const lastCalculationRef = useRef<string>('');
+
+  // Mark as initialized after first render
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setIsInitialized(true);
+    }, 500);
+    
+    return () => clearTimeout(timeoutId);
+  }, []);
+
+  const calculateTotalLosses = React.useCallback((currentConfig: ACConfiguration): number => {
+    let totalLosses = 0;
+
+    // Transformer losses
+    if (currentConfig.idtConfig) {
+      totalLosses += (currentConfig.idtConfig.copperLoss + currentConfig.idtConfig.ironLoss) * currentConfig.idtConfig.count;
+    }
+    
+    if (currentConfig.powerTransformerConfig) {
+      totalLosses += currentConfig.powerTransformerConfig.copperLoss + currentConfig.powerTransformerConfig.ironLoss;
+    }
+
+    // Cable losses (simplified calculation - 1% for input, 1.5% for output)
+    totalLosses += systemSize * 0.01; // Input cable losses
+    totalLosses += systemSize * 0.015; // Output cable losses
+
+    return totalLosses;
+  }, [systemSize]);
+
+  const calculateCablesAndBreakers = React.useCallback(async () => {
+    if (isCalculating) return; // Prevent multiple simultaneous calculations
+    
+    console.log('🔄 calculateCablesAndBreakers called for:', {
+      connectionType: config.connectionType,
+      inverterType: config.inverterType,
+      hvStringConfig: !!config.hvStringConfig,
+      hvCentralConfig: !!config.hvCentralConfig
+    });
+    
+    setIsCalculating(true);
+    setLoading(true);
+    
+    try {
+      let inputCurrent = 0;
+      let outputCurrent = 0;
+      let inputVoltage = inverterOutputVoltage;
+      let outputVoltage = config.pocVoltage;
+
+      if (config.connectionType === 'LV' && config.acCombinerPanels) {
+        // For LV with AC combiners: input current is per combiner panel
+        const maxInputsPerPanel = Math.max(...config.acCombinerPanels.configurations.map(c => c.inputs));
+        inputCurrent = inverterOutputCurrent * maxInputsPerPanel;
+        
+        // Output current is total from all combiner panels
+        outputCurrent = config.acCombinerPanels.configurations.reduce((total, panel) => 
+          total + (inverterOutputCurrent * panel.inputs), 0
+        );
+      } else if (config.connectionType === 'HV') {
+        // Handle HV String configuration
+        if (config.inverterType === 'STRING' && config.hvStringConfig) {
+          // For string inverters, calculate based on combiner panels and IDTs
+          const totalInverters = inverterCount;
+          const maxInvertersPerPanel = 16; // As defined in HV configuration
+          const combinerPanelCount = config.hvStringConfig.lvACCombinerPanels.count;
+          
+          // Input current: current per combiner panel (from inverters to panel)
+          const invertersPerPanel = Math.ceil(totalInverters / combinerPanelCount);
+          inputCurrent = inverterOutputCurrent * Math.min(invertersPerPanel, maxInvertersPerPanel);
+          inputVoltage = inverterOutputVoltage;
+          
+          // Output current: depends on whether power transformer is used
+          if (config.hvStringConfig.powerTransformer) {
+            outputCurrent = (systemSize * 1000) / (Math.sqrt(3) * config.hvStringConfig.powerTransformer.secondaryVoltage);
+            outputVoltage = config.hvStringConfig.powerTransformer.secondaryVoltage;
+          } else {
+            // Use IDT output
+            const avgIDTRating = config.hvStringConfig.idts.configurations.reduce((sum, idt) => sum + idt.powerRating, 0) / config.hvStringConfig.idts.count;
+            outputCurrent = (avgIDTRating * 1000 * config.hvStringConfig.idts.count) / (Math.sqrt(3) * config.hvStringConfig.idts.configurations[0].secondaryVoltage);
+            outputVoltage = config.hvStringConfig.idts.configurations[0].secondaryVoltage;
+          }
+        }
+        // Handle HV Central configuration
+        else if (config.inverterType === 'CENTRAL' && config.hvCentralConfig) {
+          // For central inverters, calculate based on direct connection to IDTs
+          const invertersPerIDT = config.hvCentralConfig.idts.configurations[0].invertersPerIDT;
+          
+          // Input current: current per IDT (from inverters to IDT)
+          inputCurrent = inverterOutputCurrent * invertersPerIDT;
+          inputVoltage = inverterOutputVoltage;
+          
+          // Output current: depends on whether power transformer is used
+          if (config.hvCentralConfig.powerTransformer) {
+            outputCurrent = (systemSize * 1000) / (Math.sqrt(3) * config.hvCentralConfig.powerTransformer.secondaryVoltage);
+            outputVoltage = config.hvCentralConfig.powerTransformer.secondaryVoltage;
+          } else {
+            // Use IDT output
+            const avgIDTRating = config.hvCentralConfig.idts.configurations.reduce((sum, idt) => sum + idt.powerRating, 0) / config.hvCentralConfig.idts.count;
+            outputCurrent = (avgIDTRating * 1000 * config.hvCentralConfig.idts.count) / (Math.sqrt(3) * config.hvCentralConfig.idts.configurations[0].secondaryVoltage);
+            outputVoltage = config.hvCentralConfig.idts.configurations[0].secondaryVoltage;
+          }
+        }
+      }
+
+      // Only proceed with cable and breaker selection if we have valid currents
+      if (inputCurrent > 0 && outputCurrent > 0) {
+      // Select input cables
+      const inputCableParams: CableSelectionParams = {
+        current: inputCurrent,
+        voltage: inputVoltage,
+        cableType: config.connectionType,
+        material: 'COPPER',
+        installationType: 'BURIED',
+        ambientTemperature: 50,
+        groundTemperature: 40,
+        soilResistivity: 1.5,
+        burialDepth: 0.7,
+        grouping: 1,
+        groupingSpacing: 0.3,
+        length: 100
+      };
+
+      const inputCable = await selectCable(inputCableParams);
+
+      // Select output cables
+      const outputCableParams: CableSelectionParams = {
+        current: outputCurrent,
+        voltage: outputVoltage,
+        cableType: config.connectionType,
+        material: 'COPPER',
+        installationType: 'BURIED',
+        ambientTemperature: 50,
+        groundTemperature: 40,
+        soilResistivity: 1.5,
+        burialDepth: 0.7,
+        grouping: 1,
+        groupingSpacing: 0.3,
+        length: 500
+      };
+
+      const outputCable = await selectCable(outputCableParams);
+
+      // Select breakers
+      const inputBreakerParams: BreakerSelectionParams = {
+        currentRating: inputCurrent,
+        voltageRating: inputVoltage,
+        breakerType: config.connectionType === 'LV' ? 'MCCB' : 'VCB'
+      };
+
+      const outputBreakerParams: BreakerSelectionParams = {
+        currentRating: outputCurrent,
+        voltageRating: outputVoltage,
+        breakerType: config.connectionType === 'LV' ? 'MCCB' : 'VCB'
+      };
+
+      const [inputBreaker, outputBreaker] = await Promise.all([
+        selectCircuitBreaker(inputBreakerParams),
+        selectCircuitBreaker(outputBreakerParams)
+      ]);
+
+        // Calculate total AC losses (need to pass the current config)
+        const totalLosses = calculateTotalLosses(config);
+
+        // Update configuration with selected components
+        const updatedConfig: ACConfiguration = {
+        ...config,
+          inputCables: inputCable ? {
+            material: 'COPPER',
+          cable: inputCable.recommendedCable,
+          length: 100,
+          calculatedCurrent: inputCurrent,
+            deratedCurrent: inputCable.recommendedCable.current_in_air * 0.8
+          } : undefined,
+          outputCables: outputCable ? {
+            material: 'COPPER',
+          cable: outputCable.recommendedCable,
+          length: 500,
+          calculatedCurrent: outputCurrent,
+            deratedCurrent: outputCable.recommendedCable.current_in_air * 0.8
+          } : undefined,
+          inputBreaker,
+          outputBreaker,
+          totalACLosses: totalLosses,
+          actualCableLosses: {
+            kW: totalLosses,
+            percentage: (totalLosses / systemSize) * 100,
+            sections: Object.keys(cableLosses).length,
+            details: cableLosses
+          },
+          selectedBreakers,
+          selectedCables
+        };
+
+        // Debug: Log what we're sending to the design summary (only when actually called)
+        console.log('🔧 Sending configuration to design summary:', {
+          connectionType: updatedConfig.connectionType,
+          inputBreaker: !!updatedConfig.inputBreaker,
+          outputBreaker: !!updatedConfig.outputBreaker,
+          selectedBreakers: updatedConfig.selectedBreakers?.size || 0,
+          selectedCables: updatedConfig.selectedCables?.size || 0,
+          inputCables: !!updatedConfig.inputCables,
+          outputCables: !!updatedConfig.outputCables
+        });
+
+        // Call the configuration change handler
+      onConfigurationChange(updatedConfig);
+      }
+
+    } catch (error) {
+      console.error('Error calculating cables and breakers:', error);
+    } finally {
+      setLoading(false);
+      setIsCalculating(false);
+    }
+  }, [config, inverterOutputCurrent, inverterOutputVoltage, systemSize, inverterCount, isCalculating, calculateTotalLosses, onConfigurationChange, selectedBreakers, selectedCables, cableLosses]);
+
+  // Auto-calculate cable and breaker selections only after initialization and when not already calculating
+  useEffect(() => {
+    // Skip during initial configuration restoration
+    if (isRestoringConfig) return;
+    
+    if (isInitialized && !isCalculating && !loading) {
+      // Create a hash of key calculation inputs to detect actual changes
+      const calculationKey = `${config.connectionType}-${config.pocVoltage}-${config.useIDT}-${config.usePowerTransformer}-${inverterOutputCurrent}-${inverterCount}`;
+      
+      if (calculationKey !== lastCalculationRef.current) {
+        lastCalculationRef.current = calculationKey;
+        
+        const timeoutId = setTimeout(() => {
+          calculateCablesAndBreakers();
+        }, 200); // Small delay to prevent rapid re-calculations
+        
+        return () => clearTimeout(timeoutId);
+      }
+    }
+  }, [
+    config.connectionType,
+    config.pocVoltage,
+    config.useIDT,
+    config.usePowerTransformer,
+    inverterOutputCurrent,
+    inverterCount,
+    isInitialized,
+    isCalculating,
+    loading,
+    calculateCablesAndBreakers,
+    isRestoringConfig
+  ]);
+
+  const handleConnectionTypeChange = (type: 'LV' | 'HV') => {
+    setConfig(prev => ({
+      ...prev,
+      connectionType: type,
+      pocVoltage: type === 'LV' ? 400 : 11000,
+      useIDT: type === 'HV',
+      usePowerTransformer: type === 'HV',
+      idtConfig: type === 'HV' ? {
+        powerRating: 2.5, // MVA
+        primaryVoltage: 400,
+        secondaryVoltage: 11000,
+        copperLoss: 25, // kW
+        ironLoss: 5, // kW
+        count: Math.ceil(systemSize / 2500) // 2.5 MVA per transformer
+      } : undefined,
+      powerTransformerConfig: type === 'HV' ? {
+        powerRating: 10, // MVA
+        primaryVoltage: 11000,
+        secondaryVoltage: 33000,
+        copperLoss: 50, // kW
+        ironLoss: 10, // kW
+        count: 1
+      } : undefined
+    }));
+  };
+
+  const handleIDTConfigChange = (field: keyof TransformerConfig, value: number) => {
+    setConfig(prev => ({
+      ...prev,
+      idtConfig: prev.idtConfig ? {
+        ...prev.idtConfig,
+        [field]: value
+      } : undefined
+    }));
+  };
+
+  const handlePowerTransformerConfigChange = (field: keyof TransformerConfig, value: number) => {
+    setConfig(prev => ({
+      ...prev,
+      powerTransformerConfig: prev.powerTransformerConfig ? {
+        ...prev.powerTransformerConfig,
+        [field]: value
+      } : undefined
+    }));
+  };
+
+  const handleCombinerPanelChange = (panelIndex: number, inputs: number) => {
+    if (config.acCombinerPanels) {
+      const newConfigurations = [...config.acCombinerPanels.configurations];
+      newConfigurations[panelIndex] = {
+        inputs,
+        outputCurrent: inverterOutputCurrent * inputs
+      };
+      
+      setConfig(prev => ({
+        ...prev,
+        acCombinerPanels: {
+          ...prev.acCombinerPanels!,
+          configurations: newConfigurations
+        }
+      }));
+    }
+  };
+
+  const handleCombinerPanelCountChange = (count: number) => {
+    const currentConfigs = config.acCombinerPanels?.configurations || [];
+    const newConfigurations = [];
+    
+    for (let i = 0; i < count; i++) {
+      if (i < currentConfigs.length) {
+        newConfigurations.push(currentConfigs[i]);
+      } else {
+        // Default to remaining inverters for new panels
+        const usedInverters = newConfigurations.reduce((sum, cfg) => sum + cfg.inputs, 0);
+        const remainingInverters = Math.max(1, inverterCount - usedInverters);
+        newConfigurations.push({
+          inputs: remainingInverters,
+          outputCurrent: inverterOutputCurrent * remainingInverters
+        });
+      }
+    }
+    
+    setConfig(prev => ({
+      ...prev,
+      acCombinerPanels: {
+        count,
+        configurations: newConfigurations
+      }
+    }));
+  };
+
+  const getTotalAssignedInverters = () => {
+    return config.acCombinerPanels?.configurations.reduce((total, panel) => total + panel.inputs, 0) || 0;
+  };
+
+  const isValidCombinerConfiguration = () => {
+    const totalAssigned = getTotalAssignedInverters();
+    return totalAssigned === inverterCount;
+  };
+
+  // HV String validation functions
+  const getHVStringTotalAssignedInverters = () => {
+    return config.hvStringConfig?.lvACCombinerPanels.configurations.reduce((total, panel) => total + panel.inputs, 0) || 0;
+  };
+
+  const isValidHVStringCombinerConfiguration = () => {
+    const totalAssigned = getHVStringTotalAssignedInverters();
+    return totalAssigned === inverterCount;
+  };
+
+  // Get maximum inverters per panel for design calculations
+  const getHVStringMaxInvertersPerPanel = () => {
+    if (!config.hvStringConfig?.lvACCombinerPanels.configurations) return 0;
+    return Math.max(...config.hvStringConfig.lvACCombinerPanels.configurations.map(panel => panel.inputs));
+  };
+
+  // Get minimum inverters per panel 
+  const getHVStringMinInvertersPerPanel = () => {
+    if (!config.hvStringConfig?.lvACCombinerPanels.configurations) return 0;
+    return Math.min(...config.hvStringConfig.lvACCombinerPanels.configurations.map(panel => panel.inputs));
+  };
+
+  // Check if distribution is uneven (requires caution message)
+  const isHVStringDistributionUneven = () => {
+    const max = getHVStringMaxInvertersPerPanel();
+    const min = getHVStringMinInvertersPerPanel();
+    return max > min;
+  };
+
+  // HV Central validation functions
+  const getHVCentralTotalAssignedInverters = () => {
+    return config.hvCentralConfig?.idts.configurations.reduce((total, idt) => total + idt.invertersPerIDT, 0) || 0;
+  };
+
+  const isValidHVCentralConfiguration = () => {
+    const totalAssigned = getHVCentralTotalAssignedInverters();
+    return totalAssigned === inverterCount;
+  };
+
+  // Get maximum inverters per IDT for design calculations
+  const getHVCentralMaxInvertersPerIDT = () => {
+    if (!config.hvCentralConfig?.idts.configurations) return 0;
+    return Math.max(...config.hvCentralConfig.idts.configurations.map(idt => idt.invertersPerIDT));
+  };
+
+  // Get minimum inverters per IDT 
+  const getHVCentralMinInvertersPerIDT = () => {
+    if (!config.hvCentralConfig?.idts.configurations) return 0;
+    return Math.min(...config.hvCentralConfig.idts.configurations.map(idt => idt.invertersPerIDT));
+  };
+
+  // Check if distribution is uneven (requires caution message)
+  const isHVCentralDistributionUneven = () => {
+    const max = getHVCentralMaxInvertersPerIDT();
+    const min = getHVCentralMinInvertersPerIDT();
+    return max > min;
+  };
+
+  // Handle cable losses changes
+  const handleCableLossesChange = React.useCallback((losses: { kW: number; percentage: number }, sectionId: string) => {
+    setCableLosses(prev => ({
+      ...prev,
+      [sectionId]: losses
+    }));
+  }, []);
+
+  // Handler for circuit breaker selection
+  const handleBreakerSelect = React.useCallback((breaker: CircuitBreaker | null, sectionType: string, sectionTitle: string) => {
+    const key = `${sectionType}-${sectionTitle}`;
+    setSelectedBreakers(prev => {
+      const newMap = new Map(prev);
+      if (breaker) {
+        newMap.set(key, { breaker, sectionType, sectionTitle });
+      } else {
+        newMap.delete(key);
+      }
+      return newMap;
+    });
+  }, []);
+
+  // Handler for cable selection
+  const handleCableSelect = React.useCallback((cableData: {
+    cable: LVCable | HVCable | null;
+    material: 'COPPER' | 'ALUMINUM';
+    length: number;
+    numberOfRuns: number;
+    calculatedCurrent: number;
+    deratedCurrent: number;
+  }, sectionType: string, sectionTitle: string) => {
+    const key = `${sectionType}-${sectionTitle}`;
+    
+    setSelectedCables(prev => {
+      const newMap = new Map(prev);
+      if (cableData.cable) {
+        newMap.set(key, { ...cableData, sectionType, sectionTitle });
+      } else {
+        newMap.delete(key);
+      }
+      return newMap;
+    });
+  }, []);
+
+  // Use ref to track current config and update configuration when selected components change
+  const configRef = useRef(config);
+  configRef.current = config;
+
+  // Expose SLD capture function to parent component via ref
+  useImperativeHandle(ref, () => ({
+    captureSLD: async () => {
+      console.log("📸 captureSLD called from parent via ref");
+      
+      const elementId = config.connectionType === 'LV' ? 'lv-sld-diagram' : 'sld-diagram';
+      const element = document.getElementById(elementId);
+      
+      if (!element) {
+        console.error(`SLD element not found: ${elementId}`);
+        return false;
+      }
+      
+      try {
+        const html2canvas = await import('html2canvas');
+        const canvas = await html2canvas.default(element, {
+          backgroundColor: '#ffffff',
+          scale: 2,
+          useCORS: true,
+          allowTaint: true
+        });
+        
+        const imageDataUrl = canvas.toDataURL('image/png');
+        
+        // Capture for reports
+        if (onSLDImageCaptured) {
+          onSLDImageCaptured(imageDataUrl, {
+            connectionType: config.connectionType,
+            systemSize,
+            inverterType: config.inverterType,
+            timestamp: new Date()
+          });
+          console.log("✅ SLD captured successfully!");
+          return true;
+        }
+        
+        return false;
+      } catch (error) {
+        console.error('Error capturing SLD:', error);
+        return false;
+      }
+    }
+  }), [config.connectionType, config.inverterType, systemSize, onSLDImageCaptured]);
+
+  // Calculate total cable losses using cascaded/multiplicative approach (memoized) - declare before usage
+  const totalCableLosses = React.useMemo(() => {
+    if (Object.keys(cableLosses).length === 0) {
+      return {
+        kW: 0,
+        percentage: 0,
+        sections: 0
+      };
+    }
+
+    // Define the power flow path order based on system configuration
+    const getPowerFlowOrder = (): string[] => {
+      const order: string[] = [];
+      
+      if (config.connectionType === 'LV') {
+        // LV Configuration flow
+        // Add all panel input cables first (inverter to combiner)
+        if (config.acCombinerPanels) {
+          for (let i = 0; i < config.acCombinerPanels.count; i++) {
+            order.push(`panel-${i}-input`);
+          }
+        }
+        
+        // Add all panel output cables (combiner outputs)
+        if (config.acCombinerPanels) {
+          for (let i = 0; i < config.acCombinerPanels.count; i++) {
+            order.push(`panel-${i}-output`);
+          }
+        }
+        
+        // Add HT cables if IDT is used
+        if (config.useIDT) {
+          if (config.usePowerTransformer) {
+            order.push('ht-cable-idt_to_transformer');
+            order.push('ht-cable-transformer_to_poc');
+          } else {
+            order.push('ht-cable-idt_to_poc');
+          }
+        }
+      } else if (config.connectionType === 'HV') {
+        if (config.inverterType === 'STRING' && config.hvStringConfig) {
+          // HV String Configuration flow
+          // Add all panel input cables first (inverter to combiner)
+          for (let i = 0; i < config.hvStringConfig.lvACCombinerPanels.count; i++) {
+            order.push(`panel-${i}-input`);
+          }
+          
+          // Add all panel output cables (combiner outputs)
+          for (let i = 0; i < config.hvStringConfig.lvACCombinerPanels.count; i++) {
+            order.push(`panel-${i}-output`);
+          }
+          
+          // Add HT cables (always have IDT in HV)
+          if (config.hvStringConfig.powerTransformer) {
+            order.push('ht-cable-idt_to_transformer');
+            order.push('ht-cable-transformer_to_poc');
+          } else {
+            order.push('ht-cable-idt_to_poc');
+          }
+        } else if (config.inverterType === 'CENTRAL' && config.hvCentralConfig) {
+          // HV Central Configuration flow
+          // Central inverters connect directly to IDT, so no panel input/output cables
+          // Add HT cables (always have IDT in HV)
+          if (config.hvCentralConfig.powerTransformer) {
+            order.push('ht-cable-inverter_to_idt'); // Central inverter to IDT
+            order.push('ht-cable-idt_to_transformer');
+            order.push('ht-cable-transformer_to_poc');
+          } else {
+            order.push('ht-cable-inverter_to_idt'); // Central inverter to IDT
+            order.push('ht-cable-idt_to_poc');
+          }
+        }
+      }
+      
+      return order;
+    };
+
+    // For HV connections, use additive percentages approach
+    // For LV connections, use sequential losses approach
+    let totalLossPercentage: number;
+    let totalLossKW: number;
+    const sectionLossDetails: Record<string, { kW: number; percentage: number; powerAtStage: number }> = {};
+    
+    if (config.connectionType === 'HV') {
+      // HV Approach: Add all percentages together
+      totalLossPercentage = Object.values(cableLosses).reduce((total, loss) => total + loss.percentage, 0);
+      
+      // Calculate total absolute loss based on system size and total percentage
+      totalLossKW = systemSize * (totalLossPercentage / 100);
+      
+      // For display, calculate what each section's absolute loss would be based on total system power
+      Object.entries(cableLosses).forEach(([sectionKey, loss]) => {
+        sectionLossDetails[sectionKey] = {
+          kW: systemSize * (loss.percentage / 100), // Each section loss based on full system power
+          percentage: loss.percentage,
+          powerAtStage: systemSize // All stages see full system power in additive approach
+        };
+      });
+      
+    } else {
+      // LV Approach: Sequential losses (cascaded/multiplicative)
+      const powerFlowOrder = getPowerFlowOrder();
+      let cumulativeRemainingPowerFraction = 1.0; // Start with 100% power
+      
+      // Apply losses sequentially in power flow order
+      for (const sectionKey of powerFlowOrder) {
+        const sectionLoss = cableLosses[sectionKey];
+        if (sectionLoss) {
+          // Power available at this stage (before this loss)
+          const powerAtThisStageKW = systemSize * cumulativeRemainingPowerFraction;
+          
+          // Calculate actual power loss at this stage
+          const actualPowerLossKW = powerAtThisStageKW * (sectionLoss.percentage / 100);
+          
+          // Store details for breakdown display
+          sectionLossDetails[sectionKey] = {
+            kW: actualPowerLossKW,
+            percentage: sectionLoss.percentage,
+            powerAtStage: powerAtThisStageKW
+          };
+          
+          // Update cumulative remaining power after this stage
+          cumulativeRemainingPowerFraction *= (1 - sectionLoss.percentage / 100);
+        }
+      }
+      
+      // Calculate total losses using sequential method
+      totalLossPercentage = (1 - cumulativeRemainingPowerFraction) * 100;
+      totalLossKW = systemSize * totalLossPercentage / 100;
+    }
+    
+    return {
+      kW: totalLossKW,
+      percentage: totalLossPercentage,
+      sections: Object.keys(cableLosses).length,
+      sequentialDetails: sectionLossDetails
+    };
+  }, [cableLosses, systemSize, config.connectionType, config.useIDT, config.usePowerTransformer, config.inverterType, config.hvStringConfig, config.hvCentralConfig, config.acCombinerPanels]);
+
+  useEffect(() => {
+    // Skip during initial configuration restoration
+    if (isRestoringConfig) return;
+    
+    // Update configuration with selected components and actual cable losses
+    const updatedConfigWithComponents = {
+      ...configRef.current,
+      selectedBreakers,
+      selectedCables,
+      actualCableLosses: {
+        kW: totalCableLosses.kW,
+        percentage: totalCableLosses.percentage,
+        sections: totalCableLosses.sections,
+        details: cableLosses,
+        sequentialDetails: totalCableLosses.sequentialDetails
+      }
+    };
+    onConfigurationChange(updatedConfigWithComponents);
+  }, [selectedBreakers, selectedCables, totalCableLosses, cableLosses, onConfigurationChange, isRestoringConfig]);
+
+  // HV String configuration handlers
+  // Note: Individual panel configuration has been replaced with uniform configuration
+
+  const handleHVStringIDTChange = (idtIndex: number, field: keyof HVStringConfiguration['idts']['configurations'][0], value: number) => {
+    setConfig(prev => {
+      if (!prev.hvStringConfig) return prev;
+      
+      const newConfigurations = [...prev.hvStringConfig.idts.configurations];
+      newConfigurations[idtIndex] = {
+        ...newConfigurations[idtIndex],
+        [field]: value
+      };
+      
+      return {
+        ...prev,
+        hvStringConfig: {
+          ...prev.hvStringConfig,
+          idts: {
+            ...prev.hvStringConfig.idts,
+            configurations: newConfigurations
+          }
+        }
+      };
+    });
+  };
+
+  const handleHVStringPowerTransformerChange = (field: keyof NonNullable<HVStringConfiguration['powerTransformer']>, value: number) => {
+    setConfig(prev => {
+      const newConfig = { ...prev };
+      if (newConfig.hvStringConfig) {
+        newConfig.hvStringConfig = {
+          ...newConfig.hvStringConfig,
+          powerTransformer: {
+            ...newConfig.hvStringConfig.powerTransformer!,
+            [field]: value
+          }
+        };
+      }
+      return newConfig;
+    });
+  };
+
+  const handleHVStringPowerTransformerPercentageChange = (field: 'copperLossPercent' | 'ironLossPercent', value: number) => {
+    setConfig(prev => {
+      if (!prev.hvStringConfig?.powerTransformer) return prev;
+      
+      const updatedTransformer = {
+        ...prev.hvStringConfig.powerTransformer,
+        [field]: value
+      };
+      
+      // Recalculate the corresponding kW values from percentages
+      if (field === 'copperLossPercent') {
+        updatedTransformer.copperLoss = (value * prev.hvStringConfig.powerTransformer.powerRating * 1000) / 100;
+      } else if (field === 'ironLossPercent') {
+        updatedTransformer.ironLoss = (value * prev.hvStringConfig.powerTransformer.powerRating * 1000) / 100;
+      }
+      
+      return {
+        ...prev,
+        hvStringConfig: {
+          ...prev.hvStringConfig,
+          powerTransformer: updatedTransformer
+        }
+      };
+    });
+  };
+
+  const handleHVStringPowerTransformerVectorChange = (value: string) => {
+    setConfig(prev => {
+      if (!prev.hvStringConfig?.powerTransformer) return prev;
+      
+      return {
+        ...prev,
+        hvStringConfig: {
+          ...prev.hvStringConfig,
+          powerTransformer: {
+            ...prev.hvStringConfig.powerTransformer,
+            vectorGrouping: value
+          }
+        }
+      };
+    });
+  };
+
+  const toggleHVStringPowerTransformer = (enabled: boolean) => {
+    setConfig(prev => {
+      if (!prev.hvStringConfig) return prev;
+      
+      if (enabled) {
+        // Create power transformer configuration
+        const powerTransformerConfig = {
+          powerRating: (inverterPower * inverterCount) / 1000, // Total Inverter AC power output
+          primaryVoltage: prev.hvStringConfig.idts.configurations[0]?.secondaryVoltage || prev.pocVoltage, // IDT secondary voltage
+          secondaryVoltage: prev.pocVoltage, // PoC voltage
+          copperLoss: ((inverterPower * inverterCount) / 1000) * 10, // Will be calculated from percentage
+          ironLoss: ((inverterPower * inverterCount) / 1000) * 1, // Will be calculated from percentage
+          copperLossPercent: 1.0, // 1% default copper loss
+          ironLossPercent: 0.1, // 0.1% default iron loss
+          vectorGrouping: 'Dyn11' // Default vector grouping
+        };
+        
+        return {
+          ...prev,
+          hvStringConfig: {
+            ...prev.hvStringConfig,
+            powerTransformer: powerTransformerConfig
+          }
+        };
+      } else {
+        // Remove power transformer configuration
+        const { powerTransformer, ...hvStringConfigWithoutTransformer } = prev.hvStringConfig;
+        return {
+          ...prev,
+          hvStringConfig: hvStringConfigWithoutTransformer
+        };
+      }
+    });
+  };
+
+  const handleHVStringCombinerPanelCountChange = (count: number) => {
+    setConfig(prev => {
+      if (!prev.hvStringConfig || count < 1) return prev;
+      
+      // Intelligent distribution algorithm that preserves total inverter count
+      const distributeInverters = (totalInverters: number, panelCount: number) => {
+        const distribution = [];
+        let remainingInverters = totalInverters;
+        let remainingPanels = panelCount;
+        
+        for (let i = 0; i < panelCount; i++) {
+          // For the first few panels, use ceiling to give priority
+          // For remaining panels, distribute evenly
+          const invertersForThisPanel = Math.ceil(remainingInverters / remainingPanels);
+          distribution.push(invertersForThisPanel);
+          remainingInverters -= invertersForThisPanel;
+          remainingPanels--;
+        }
+        
+        return distribution;
+      };
+      
+      const inverterDistribution = distributeInverters(inverterCount, count);
+      
+      // Create configurations based on intelligent distribution
+      const newConfigurations = inverterDistribution.map((invertersForPanel) => ({
+        inputs: invertersForPanel,
+        outputCurrent: inverterOutputCurrent * invertersForPanel,
+        maxInverters: 16 // Standard maximum
+      }));
+      
+      // Recalculate IDT configuration based on new panel count
+      const idtCount = Math.ceil(count / 4); // 4 panels per IDT
+      const newIDTConfigurations = Array.from({ length: idtCount }, (_, i) => ({
+        powerRating: (inverterPower * inverterCount / 1000) / idtCount, // Total Inverter AC power output / IDT count
+        primaryVoltage: inverterOutputVoltage, // Inverter AC output voltage
+        secondaryVoltage: config.pocVoltage, // HV PoC voltage
+        copperLoss: ((inverterPower * inverterCount / 1000) / idtCount) * 10, // Will be calculated from percentage
+        ironLoss: ((inverterPower * inverterCount / 1000) / idtCount) * 1, // Will be calculated from percentage
+        copperLossPercent: 1.0, // 1% default copper loss
+        ironLossPercent: 0.1, // 0.1% default iron loss
+        combinerPanelsPerIDT: Math.min(4, Math.max(1, count - (i * 4)))
+      }));
+      
+      return {
+        ...prev,
+        hvStringConfig: {
+          ...prev.hvStringConfig,
+          lvACCombinerPanels: {
+            count,
+            configurations: newConfigurations
+          },
+          idts: {
+            count: idtCount,
+            configurations: newIDTConfigurations
+          }
+        }
+      };
+    });
+  };
+
+  // New function to handle uniform combiner panel configuration changes
+  const handleHVStringUniformCombinerPanelChange = (field: 'inputs' | 'outputCurrent', value: number) => {
+    setConfig(prev => {
+      if (!prev.hvStringConfig) return prev;
+      
+      // Apply the same configuration to all panels
+      const newConfigurations = prev.hvStringConfig.lvACCombinerPanels.configurations.map(panel => ({
+        ...panel,
+        [field]: value,
+        // Always keep outputCurrent in sync with inputs
+        outputCurrent: field === 'inputs' ? inverterOutputCurrent * value : panel.outputCurrent
+      }));
+      
+      return {
+        ...prev,
+        hvStringConfig: {
+          ...prev.hvStringConfig,
+          lvACCombinerPanels: {
+            ...prev.hvStringConfig.lvACCombinerPanels,
+            configurations: newConfigurations
+          }
+        }
+      };
+    });
+  };
+
+  const handleHVStringIDTUniformChange = (field: keyof HVStringConfiguration['idts']['configurations'][0], value: number) => {
+    setConfig(prev => {
+      if (!prev.hvStringConfig) return prev;
+      
+      // Apply the same change to all IDT configurations
+      const newConfigurations = prev.hvStringConfig.idts.configurations.map(idt => ({
+        ...idt,
+        [field]: value
+      }));
+      
+      return {
+        ...prev,
+        hvStringConfig: {
+          ...prev.hvStringConfig,
+          idts: {
+            ...prev.hvStringConfig.idts,
+            configurations: newConfigurations
+          }
+        }
+      };
+    });
+  };
+
+  const handleHVStringIDTPercentageChange = (field: 'copperLossPercent' | 'ironLossPercent', value: number) => {
+    setConfig(prev => {
+      if (!prev.hvStringConfig) return prev;
+      
+      // Apply the same percentage change to all IDT configurations and calculate kW values
+      const newConfigurations = prev.hvStringConfig.idts.configurations.map(idt => {
+        const updatedIdt = {
+          ...idt,
+          [field]: value
+        };
+        
+        // Recalculate the corresponding kW values from percentages
+        if (field === 'copperLossPercent') {
+          updatedIdt.copperLoss = (value * idt.powerRating * 1000) / 100;
+        } else if (field === 'ironLossPercent') {
+          updatedIdt.ironLoss = (value * idt.powerRating * 1000) / 100;
+        }
+        
+        return updatedIdt;
+      });
+      
+      return {
+        ...prev,
+        hvStringConfig: {
+          ...prev.hvStringConfig,
+          idts: {
+            ...prev.hvStringConfig.idts,
+            configurations: newConfigurations
+          }
+        }
+      };
+    });
+  };
+
+  const handleHVStringIDTCountChange = (count: number) => {
+    setConfig(prev => {
+      if (!prev.hvStringConfig || count < 1) return prev;
+      
+      const currentIDTConfigurations = prev.hvStringConfig.idts.configurations;
+      let newIDTConfigurations = [...currentIDTConfigurations];
+      
+      // Adjust IDT configurations array to match new count
+      if (count > newIDTConfigurations.length) {
+        // Add new IDTs
+        for (let i = newIDTConfigurations.length; i < count; i++) {
+          newIDTConfigurations.push({
+            powerRating: (inverterPower * inverterCount / 1000) / count, // Total Inverter AC power output / IDT count
+            primaryVoltage: inverterOutputVoltage, // Inverter AC output voltage
+            secondaryVoltage: config.pocVoltage, // HV PoC voltage
+            copperLoss: ((inverterPower * inverterCount / 1000) / count) * 10, // Will be calculated from percentage
+            ironLoss: ((inverterPower * inverterCount / 1000) / count) * 1, // Will be calculated from percentage
+            copperLossPercent: 1.0, // 1% default copper loss
+            ironLossPercent: 0.1, // 0.1% default iron loss
+            combinerPanelsPerIDT: Math.max(1, Math.floor(prev.hvStringConfig.lvACCombinerPanels.count / count)) // Distribute panels evenly
+          });
+        }
+      } else if (count < newIDTConfigurations.length) {
+        // Remove excess IDTs
+        newIDTConfigurations = newIDTConfigurations.slice(0, count);
+      }
+      
+      // Recalculate combiner panels per IDT to ensure proper distribution
+      const totalCombinerPanels = prev.hvStringConfig.lvACCombinerPanels.count;
+      newIDTConfigurations = newIDTConfigurations.map((idt, index) => {
+        const basePanelsPerIDT = Math.floor(totalCombinerPanels / count);
+        const extraPanels = totalCombinerPanels % count;
+        const panelsForThisIDT = basePanelsPerIDT + (index < extraPanels ? 1 : 0);
+        
+        return {
+          ...idt,
+          combinerPanelsPerIDT: Math.max(1, panelsForThisIDT)
+        };
+      });
+      
+      return {
+        ...prev,
+        hvStringConfig: {
+          ...prev.hvStringConfig,
+          idts: {
+            count,
+            configurations: newIDTConfigurations
+          }
+        }
+      };
+    });
+  };
+
+  // HV Central configuration handlers
+  const handleHVCentralIDTChange = (idtIndex: number, field: keyof HVCentralConfiguration['idts']['configurations'][0], value: number) => {
+    setConfig(prev => {
+      if (!prev.hvCentralConfig) return prev;
+      
+      const newConfigurations = [...prev.hvCentralConfig.idts.configurations];
+      newConfigurations[idtIndex] = {
+        ...newConfigurations[idtIndex],
+        [field]: value
+      };
+      
+      return {
+        ...prev,
+        hvCentralConfig: {
+          ...prev.hvCentralConfig,
+          idts: {
+            ...prev.hvCentralConfig.idts,
+            configurations: newConfigurations
+          }
+        }
+      };
+    });
+  };
+
+  const handleHVCentralPowerTransformerChange = (field: keyof NonNullable<HVCentralConfiguration['powerTransformer']>, value: number) => {
+    setConfig(prev => {
+      const newConfig = { ...prev };
+      if (newConfig.hvCentralConfig) {
+        newConfig.hvCentralConfig = {
+          ...newConfig.hvCentralConfig,
+          powerTransformer: {
+            ...newConfig.hvCentralConfig.powerTransformer!,
+            [field]: value
+          }
+        };
+      }
+      return newConfig;
+    });
+  };
+
+  const handleHVCentralPowerTransformerPercentageChange = (field: 'copperLossPercent' | 'ironLossPercent', value: number) => {
+    setConfig(prev => {
+      if (!prev.hvCentralConfig?.powerTransformer) return prev;
+      
+      const updatedTransformer = {
+        ...prev.hvCentralConfig.powerTransformer,
+        [field]: value
+      };
+      
+      // Recalculate the corresponding kW values from percentages
+      if (field === 'copperLossPercent') {
+        updatedTransformer.copperLoss = (value * prev.hvCentralConfig.powerTransformer.powerRating * 1000) / 100;
+      } else if (field === 'ironLossPercent') {
+        updatedTransformer.ironLoss = (value * prev.hvCentralConfig.powerTransformer.powerRating * 1000) / 100;
+      }
+      
+      return {
+        ...prev,
+        hvCentralConfig: {
+          ...prev.hvCentralConfig,
+          powerTransformer: updatedTransformer
+        }
+      };
+    });
+  };
+
+  const handleHVCentralPowerTransformerVectorChange = (value: string) => {
+    setConfig(prev => {
+      if (!prev.hvCentralConfig?.powerTransformer) return prev;
+      
+      return {
+        ...prev,
+        hvCentralConfig: {
+          ...prev.hvCentralConfig,
+          powerTransformer: {
+            ...prev.hvCentralConfig.powerTransformer,
+            vectorGrouping: value
+          }
+        }
+      };
+    });
+  };
+
+  const toggleHVCentralPowerTransformer = (enabled: boolean) => {
+    setConfig(prev => {
+      if (!prev.hvCentralConfig) return prev;
+      
+      if (enabled) {
+        // Create power transformer configuration
+        const powerTransformerConfig = {
+          powerRating: (inverterPower * inverterCount) / 1000, // Total Inverter AC power output
+          primaryVoltage: prev.hvCentralConfig.idts.configurations[0]?.secondaryVoltage || prev.pocVoltage, // IDT secondary voltage
+          secondaryVoltage: prev.pocVoltage, // PoC voltage
+          copperLoss: ((inverterPower * inverterCount) / 1000) * 10, // Will be calculated from percentage
+          ironLoss: ((inverterPower * inverterCount) / 1000) * 1, // Will be calculated from percentage
+          copperLossPercent: 1.0, // 1% default copper loss
+          ironLossPercent: 0.1, // 0.1% default iron loss
+          vectorGrouping: 'Dyn11' // Default vector grouping
+        };
+        
+        return {
+          ...prev,
+          hvCentralConfig: {
+            ...prev.hvCentralConfig,
+            powerTransformer: powerTransformerConfig
+          }
+        };
+      } else {
+        // Remove power transformer configuration
+        const { powerTransformer, ...hvCentralConfigWithoutTransformer } = prev.hvCentralConfig;
+        return {
+          ...prev,
+          hvCentralConfig: hvCentralConfigWithoutTransformer
+        };
+      }
+    });
+  };
+
+  const handleHVCentralIDTCountChange = (count: number) => {
+    setConfig(prev => {
+      if (!prev.hvCentralConfig || count < 1) return prev;
+      
+      // Intelligent inverter distribution algorithm - same as string inverter logic
+      const distributeInverters = (totalInverters: number, idtCount: number) => {
+        const baseInvertersPerIDT = Math.floor(totalInverters / idtCount);
+        const extraInverters = totalInverters % idtCount;
+        
+        // Create distribution array where first IDTs get ceiling division (priority)
+        const distribution = [];
+        for (let i = 0; i < idtCount; i++) {
+          if (i < extraInverters) {
+            distribution.push(baseInvertersPerIDT + 1); // First few IDTs get +1
+          } else {
+            distribution.push(baseInvertersPerIDT); // Remaining IDTs get base amount
+          }
+        }
+        
+        return distribution;
+      };
+      
+      const invertersDistribution = distributeInverters(inverterCount, count);
+      
+      // Create new IDT configurations with intelligent distribution
+      const newIDTConfigurations = [];
+      for (let i = 0; i < count; i++) {
+        const invertersForThisIDT = invertersDistribution[i];
+        newIDTConfigurations.push({
+          powerRating: (inverterPower * invertersForThisIDT) / 1000, // Power rating based on actual inverters assigned
+          primaryVoltage: inverterOutputVoltage, // Inverter AC output voltage
+          secondaryVoltage: config.pocVoltage, // HV PoC voltage
+          copperLoss: ((inverterPower * invertersForThisIDT) / 1000) * 10, // Will be calculated from percentage
+          ironLoss: ((inverterPower * invertersForThisIDT) / 1000) * 1, // Will be calculated from percentage
+          copperLossPercent: 1.0, // 1% default copper loss
+          ironLossPercent: 0.1, // 0.1% default iron loss
+          invertersPerIDT: invertersForThisIDT // Actual inverters assigned to this IDT
+        });
+      }
+      
+      return {
+        ...prev,
+        hvCentralConfig: {
+          ...prev.hvCentralConfig,
+          idts: {
+            count,
+            configurations: newIDTConfigurations
+          }
+        }
+      };
+    });
+  };
+
+  const handleHVCentralIDTUniformChange = (field: keyof HVCentralConfiguration['idts']['configurations'][0], value: number) => {
+    setConfig(prev => {
+      if (!prev.hvCentralConfig) return prev;
+      
+      const newConfigurations = prev.hvCentralConfig.idts.configurations.map(idt => ({
+        ...idt,
+        [field]: value
+      }));
+      
+      return {
+        ...prev,
+        hvCentralConfig: {
+          ...prev.hvCentralConfig,
+          idts: {
+            ...prev.hvCentralConfig.idts,
+            configurations: newConfigurations
+          }
+        }
+      };
+    });
+  };
+
+  const handleHVCentralIDTPercentageChange = (field: 'copperLossPercent' | 'ironLossPercent', value: number) => {
+    setConfig(prev => {
+      if (!prev.hvCentralConfig) return prev;
+      
+      const newConfigurations = prev.hvCentralConfig.idts.configurations.map(idt => {
+        const updatedIdt = {
+          ...idt,
+          [field]: value
+        };
+        
+        // Recalculate the corresponding kW values from percentages
+        if (field === 'copperLossPercent') {
+          updatedIdt.copperLoss = (value * idt.powerRating * 1000) / 100;
+        } else if (field === 'ironLossPercent') {
+          updatedIdt.ironLoss = (value * idt.powerRating * 1000) / 100;
+        }
+        
+        return updatedIdt;
+      });
+      
+      return {
+        ...prev,
+        hvCentralConfig: {
+          ...prev.hvCentralConfig,
+          idts: {
+            ...prev.hvCentralConfig.idts,
+            configurations: newConfigurations
+          }
+        }
+      };
+    });
+  };
+
+  const handleHVCentralIDTVectorChange = (value: string) => {
+    setConfig(prev => {
+      if (!prev.hvCentralConfig) return prev;
+      
+      const newConfigurations = prev.hvCentralConfig.idts.configurations.map(idt => ({
+        ...idt,
+        vectorGrouping: value
+      }));
+      
+      return {
+        ...prev,
+        hvCentralConfig: {
+          ...prev.hvCentralConfig,
+          idts: {
+            ...prev.hvCentralConfig.idts,
+            configurations: newConfigurations
+          }
+        }
+      };
+    });
+  };
+
+  return (
+    <>
+      {/* Simple Hero Header */}
+      <Card className="relative overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 border-2 border-blue-200/50 mb-6 shadow-sm hover:shadow-md transition-shadow duration-300">
+        <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
+        <CardHeader className="pb-4 relative z-10">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg">
+              <Activity className="h-6 w-6" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">AC Side Configuration</h2>
+              <p className="text-muted-foreground mt-1 text-sm">Configure AC distribution, transformers, and grid connection</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-slate-600">Inverter Default Values:</span>
+              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 font-semibold shadow-sm">
+                <Zap className="h-3 w-3 mr-1" />
+                {inverterOutputVoltage}V AC
+              </Badge>
+              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 font-semibold shadow-sm">
+                <Zap className="h-3 w-3 mr-1" />
+                {inverterOutputCurrent.toFixed(1)}A
+              </Badge>
+              {loading && <Badge variant="secondary" className="animate-pulse">Calculating...</Badge>}
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+
+      {/* Main Configuration Card */}
+      <Card className="relative overflow-hidden bg-white border-2 border-slate-200/50 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
+      <CardContent className="pt-6">
+        <div className="grid gap-6">
+          {/* Connection Type */}
+          <div className="space-y-3">
+            <Label htmlFor="connectionType" className="text-sm font-bold text-slate-700 flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500"></div>
+              Connection Type
+            </Label>
+            <ToggleGroup
+              type="single"
+              value={config.connectionType}
+              onValueChange={(value) => {
+                if (value) handleConnectionTypeChange(value as 'LV' | 'HV');
+              }}
+              className="justify-start w-full"
+            >
+              <ToggleGroupItem 
+                value="LV" 
+                variant="outline" 
+                className={`flex-1 border rounded-l-md transition-all duration-300 font-semibold ${
+                  config.connectionType === 'LV' 
+                    ? 'bg-gradient-to-r from-emerald-400 via-emerald-500 to-green-500 !text-white border-emerald-400 shadow-xl ring-2 ring-emerald-300/60 transform scale-105 hover:shadow-2xl' 
+                    : 'bg-white text-gray-600 border-gray-300 hover:bg-emerald-50 hover:border-emerald-400 hover:text-emerald-700'
+                }`}
+                aria-label="Low Voltage"
+              >
+                Low Voltage (LV)
+              </ToggleGroupItem>
+              <ToggleGroupItem 
+                value="HV" 
+                variant="outline" 
+                className={`flex-1 border rounded-r-md transition-all duration-300 font-semibold ${
+                  config.connectionType === 'HV' 
+                    ? 'bg-gradient-to-r from-blue-400 via-blue-500 to-indigo-500 !text-white border-blue-400 shadow-xl ring-2 ring-blue-300/60 transform scale-105 hover:shadow-2xl' 
+                    : 'bg-white text-gray-600 border-gray-300 hover:bg-blue-50 hover:border-blue-400 hover:text-blue-700'
+                }`}
+                aria-label="High Voltage"
+              >
+                High Voltage (HV)
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
+
+          {/* Point of Connection Voltage */}
+          <div className="space-y-3">
+            <Label htmlFor="pocVoltage" className="text-sm font-bold text-slate-700 flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500"></div>
+              Point of Connection Voltage (V)
+            </Label>
+            <Select 
+              value={config.pocVoltage.toString()} 
+              onValueChange={(value) => setConfig(prev => ({ ...prev, pocVoltage: parseInt(value) }))}
+            >
+              <SelectTrigger id="pocVoltage" className="h-11 border-2 border-slate-200/70 bg-white hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 rounded-lg transition-all duration-300 hover:shadow-md font-medium">
+                <SelectValue placeholder="Select voltage" />
+              </SelectTrigger>
+              <SelectContent className="bg-white rounded-lg border-2">
+                {(config.connectionType === 'LV' ? LV_VOLTAGES : HV_VOLTAGES).map(voltage => (
+                  <SelectItem key={voltage} value={voltage.toString()} className="hover:bg-indigo-50 focus:bg-indigo-50">
+                    {voltage} V
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* LV AC Combiner Panel Configuration */}
+          {config.connectionType === 'LV' && (
+            <>
+              <Separator className="my-6" />
+              
+              {/* Enhanced AC Combiner Panel Configuration */}
+              <div className="space-y-6">
+                {/* Header Section with Gradient */}
+                <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 p-6 text-white shadow-lg">
+                  <div className="absolute inset-0 bg-black/10"></div>
+                  <div className="relative flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-lg bg-white/20 p-2 backdrop-blur-sm">
+                        <Server className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold">AC Combiner Panel Configuration</h3>
+                        <p className="text-blue-100 text-sm">Configure your AC distribution system</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      <Badge className="bg-white/20 border-white/30 text-white font-semibold px-3 py-1">
+                        {inverterCount} Inverters Total
+                      </Badge>
+                      <Badge className="bg-white/20 border-white/30 text-white font-semibold px-3 py-1">
+                        {(systemSize / 1000).toFixed(3)} MW System
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Panel Count Selection Card - Modern Design */}
+                <Card className="relative overflow-hidden bg-white border-2 border-slate-200/50 shadow-sm hover:shadow-md transition-shadow duration-300">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-50/20 via-slate-50/10 to-indigo-50/20 pointer-events-none"></div>
+                  <CardContent className="p-6 relative">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 shadow-sm">
+                        <Layers className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <Label className="text-base font-semibold text-gray-800">Number of Combiner Panels</Label>
+                        <p className="text-sm text-gray-600">Select how many AC combiner panels you need</p>
+                      </div>
+                    </div>
+                    <Select 
+                      value={config.acCombinerPanels?.count.toString() || "1"} 
+                      onValueChange={(value) => handleCombinerPanelCountChange(parseInt(value))}
+                    >
+                      <SelectTrigger className="w-48 h-12 border-2 border-blue-200 focus:border-blue-500 bg-white shadow-sm">
+                        <div className="flex items-center gap-2">
+                          <Settings className="h-4 w-4 text-blue-500" />
+                          <SelectValue placeholder="Select count" />
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[1, 2, 3, 4].map(count => (
+                          <SelectItem key={count} value={count.toString()}>
+                            <div className="flex items-center gap-2">
+                              <Server className="h-4 w-4 text-blue-500" />
+                              {count} Panel{count > 1 ? 's' : ''}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </CardContent>
+                </Card>
+
+                {/* Enhanced Inverter Distribution */}
+                <Card className="border-0 shadow-lg bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-lg bg-emerald-100 p-2">
+                        <Target className="h-5 w-5 text-emerald-600" />
+                      </div>
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-800">Inverter Distribution</h4>
+                        <p className="text-sm text-gray-600">Assign inverters to each combiner panel</p>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {config.acCombinerPanels?.configurations.map((panel, index) => (
+                      <div key={index} className="group relative overflow-hidden rounded-xl border-2 border-emerald-200 bg-white p-4 shadow-sm transition-all duration-200 hover:border-emerald-300 hover:shadow-md">
+                        <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-teal-500/5 opacity-0 transition-opacity group-hover:opacity-100"></div>
+                        <div className="relative flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2">
+                              <div className="rounded-full bg-emerald-100 p-1.5">
+                                <Box className="h-4 w-4 text-emerald-600" />
+                              </div>
+                              <Label className="font-semibold text-gray-700">Panel {index + 1}</Label>
+                            </div>
+                            <Select 
+                              value={panel.inputs.toString()} 
+                              onValueChange={(value) => handleCombinerPanelChange(index, parseInt(value))}
+                            >
+                              <SelectTrigger className="w-40 h-10 border-2 border-emerald-200 focus:border-emerald-400 bg-white shadow-sm">
+                                <div className="flex items-center gap-2">
+                                  <Zap className="h-4 w-4 text-emerald-500" />
+                                  <SelectValue placeholder="Select inputs" />
+                                </div>
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Array.from({ length: inverterCount }, (_, i) => i + 1).map(inputs => (
+                                  <SelectItem key={inputs} value={inputs.toString()}>
+                                    <div className="flex items-center gap-2">
+                                      <Users className="h-4 w-4 text-emerald-500" />
+                                      {inputs} Inverter{inputs > 1 ? 's' : ''}
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <Badge className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold px-3 py-1.5 shadow-sm">
+                            <Users className="h-3 w-3 mr-1" />
+                            {panel.inputs} Inverters
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+
+                {/* Enhanced Combiner Panel Details */}
+                <Card className="border-0 shadow-lg bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-50">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-lg bg-violet-100 p-2">
+                        <Zap className="h-5 w-5 text-violet-600" />
+                      </div>
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-800">Combiner Panel Details</h4>
+                        <p className="text-sm text-gray-600">Current specifications for each panel</p>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {config.acCombinerPanels?.configurations.map((panel, index) => (
+                        <div key={index} className="group relative overflow-hidden rounded-2xl border-2 border-violet-200 bg-white p-6 shadow-lg transition-all duration-300 hover:border-violet-300 hover:shadow-xl hover:-translate-y-1">
+                          {/* Gradient overlay */}
+                          <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-purple-500/5 to-indigo-500/5 opacity-0 transition-opacity group-hover:opacity-100"></div>
+                          
+                          {/* Header */}
+                          <div className="relative flex items-center justify-between mb-6">
+                            <div className="flex items-center gap-3">
+                              <div className="rounded-full bg-gradient-to-r from-violet-500 to-purple-500 p-2">
+                                <Server className="h-5 w-5 text-white" />
+                              </div>
+                              <span className="text-xl font-bold text-gray-800">Panel {index + 1}</span>
+                            </div>
+                            <Badge className="bg-gradient-to-r from-violet-500 to-purple-500 text-white font-semibold px-3 py-1.5 shadow-md">
+                              <Users className="h-3 w-3 mr-1" />
+                              {panel.inputs} Inverters
+                            </Badge>
+                          </div>
+                          
+                          {/* Specifications */}
+                          <div className="relative space-y-4">
+                            <div className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200">
+                              <div className="flex items-center gap-2">
+                                <div className="rounded-full bg-blue-100 p-1.5">
+                                  <Zap className="h-4 w-4 text-blue-600" />
+                                </div>
+                                <span className="text-sm font-medium text-blue-800">Input Current per Port</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="text-lg font-bold text-blue-700">
+                                  {(() => {
+                                    // For LV String inverters, recalculate current based on PoC voltage
+                                    // Power = √3 × V × I, so I = P / (√3 × V)
+                                    if (config.connectionType === 'LV' && config.inverterType === 'STRING') {
+                                      const actualCurrent = (inverterPower * 1000) / (Math.sqrt(3) * config.pocVoltage);
+                                      return actualCurrent.toFixed(2);
+                                    }
+                                    return inverterOutputCurrent.toFixed(2);
+                                  })()}
+                                </span>
+                                <span className="text-sm font-medium text-blue-600">A</span>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200">
+                              <div className="flex items-center gap-2">
+                                <div className="rounded-full bg-orange-100 p-1.5">
+                                  <Target className="h-4 w-4 text-orange-600" />
+                                </div>
+                                <span className="text-sm font-medium text-orange-800">Total Output Current</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="text-lg font-bold text-orange-700">
+                                  {(() => {
+                                    // For LV String inverters, recalculate current based on PoC voltage
+                                    if (config.connectionType === 'LV' && config.inverterType === 'STRING') {
+                                      const actualCurrent = (inverterPower * 1000) / (Math.sqrt(3) * config.pocVoltage);
+                                      return (actualCurrent * panel.inputs).toFixed(2);
+                                    }
+                                    return (inverterOutputCurrent * panel.inputs).toFixed(2);
+                                  })()}
+                                </span>
+                                <span className="text-sm font-medium text-orange-600">A</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Enhanced Validation Summary - Modern Design */}
+                {!isValidCombinerConfiguration() && (
+                  <Card className="relative overflow-hidden bg-white border-2 border-red-200/50 shadow-sm hover:shadow-md transition-shadow duration-300">
+                    <div className="absolute inset-0 bg-gradient-to-br from-red-50/30 via-rose-50/20 to-pink-50/30 pointer-events-none"></div>
+                    <CardContent className="p-6 relative">
+                      <div className="flex items-start gap-4">
+                        <div className="p-2 rounded-lg bg-gradient-to-br from-red-500 to-rose-500 shadow-sm">
+                          <AlertTriangle className="h-6 w-6 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="text-lg font-semibold text-red-800 mb-2">Configuration Required</h4>
+                          <p className="text-red-700 font-medium mb-2">
+                            Please assign exactly {inverterCount} inverters to combiner panels
+                          </p>
+                          <div className="flex items-center gap-2 text-sm">
+                            <Badge variant="outline" className="border-red-300 text-red-700 bg-red-50">
+                              Currently assigned: {getTotalAssignedInverters()} / {inverterCount}
+                            </Badge>
+                            <span className="text-red-600 font-medium">
+                              {getTotalAssignedInverters() > inverterCount ? "(too many)" : "(too few)"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+                {isValidCombinerConfiguration() && (
+                  <Card className="relative overflow-hidden bg-white border-2 border-emerald-200/50 shadow-sm hover:shadow-md transition-shadow duration-300">
+                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/30 via-green-50/20 to-teal-50/30 pointer-events-none"></div>
+                    <CardContent className="p-6 relative">
+                      <div className="flex items-center gap-4">
+                        <div className="p-2 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 shadow-sm">
+                          <CheckCircle2 className="h-6 w-6 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="text-lg font-semibold text-green-800 mb-1">Configuration Complete</h4>
+                          <p className="text-green-700 font-medium">
+                            ✓ All {inverterCount} inverters correctly assigned
+                          </p>
+                        </div>
+                        <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white font-semibold px-4 py-2">
+                          <CheckCircle2 className="h-4 w-4 mr-1" />
+                          Ready
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Circuit Breaker Selection Section */}
+                {isValidCombinerConfiguration() && (
+                  <>
+                    <Separator className="my-4" />
+                    <div className="space-y-4">
+                      <h3 className="font-semibold text-lg">Circuit Breaker Selection</h3>
+                      
+                      {/* Circuit breaker selection for each combiner panel */}
+                      <div className="grid gap-6">
+                        {config.acCombinerPanels?.configurations.map((panel, index) => {
+                          // Calculate actual current based on PoC voltage for LV String inverters
+                          const actualInverterCurrent = (config.connectionType === 'LV' && config.inverterType === 'STRING')
+                            ? (inverterPower * 1000) / (Math.sqrt(3) * config.pocVoltage)
+                            : inverterOutputCurrent;
+                          
+                          return (
+                          <div key={index} className="space-y-4">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                              {/* Individual Inverter Breakers */}
+                              <CircuitBreakerSection
+                                combinerPanelIndex={index}
+                                inverterCount={1}
+                                inverterOutputCurrent={actualInverterCurrent}
+                                inverterOutputVoltage={inverterOutputVoltage}
+                                operatingVoltage={config.connectionType === 'LV' && config.inverterType === 'STRING' ? config.pocVoltage : undefined}
+                                sectionType="individual"
+                                sectionTitle="Individual Inverter Breaker"
+                                onBreakerSelect={handleBreakerSelect}
+                                initialSelectedBreaker={getSavedBreaker("individual", "Individual Inverter Breaker")}
+                              />
+                              
+                              {/* AC Combiner Panel Outgoing Breaker */}
+                              <CircuitBreakerSection
+                                combinerPanelIndex={index}
+                                inverterCount={panel.inputs}
+                                inverterOutputCurrent={actualInverterCurrent}
+                                inverterOutputVoltage={inverterOutputVoltage}
+                                operatingVoltage={config.connectionType === 'LV' && config.inverterType === 'STRING' ? config.pocVoltage : undefined}
+                                sectionType="outgoing"
+                                sectionTitle="AC Combiner Panel Outgoing Breaker"
+                                onBreakerSelect={handleBreakerSelect}
+                                initialSelectedBreaker={getSavedBreaker("outgoing", "AC Combiner Panel Outgoing Breaker")}
+                              />
+                            </div>
+                          </div>
+                        );
+                        })}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* LV Cable Sizing Section */}
+                {isValidCombinerConfiguration() && (
+                  <>
+                    <Separator className="my-4" />
+                    <div className="space-y-4">
+                      <h3 className="font-semibold text-lg">Cable Sizing</h3>
+                      
+                      {/* Cable sizing for each combiner panel */}
+                      <div className="grid gap-6">
+                        {config.acCombinerPanels?.configurations.map((panel, index) => {
+                          // Calculate actual current based on PoC voltage for LV String inverters
+                          const actualInverterCurrent = (config.connectionType === 'LV' && config.inverterType === 'STRING')
+                            ? (inverterPower * 1000) / (Math.sqrt(3) * config.pocVoltage)
+                            : inverterOutputCurrent;
+                          
+                          return (
+                          <div key={index} className="space-y-4">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                              {/* Input Cable - Inverter to AC Combiner Panel */}
+                              <CableSizingSection
+                                combinerPanelIndex={index}
+                                inverterCount={panel.inputs}
+                                inverterOutputCurrent={actualInverterCurrent}
+                                inverterOutputVoltage={inverterOutputVoltage}
+                                operatingVoltage={config.connectionType === 'LV' && config.inverterType === 'STRING' ? config.pocVoltage : undefined}
+                                sectionType="input"
+                                sectionTitle="Inverter to AC Combiner Panel"
+                                onLossesChange={handleCableLossesChange}
+                                onCableSelect={handleCableSelect}
+                                initialCableData={getSavedCable("input", "Inverter to AC Combiner Panel")}
+                              />
+                              
+                              {/* Output Cable - AC Combiner Panel to PoC */}
+                              <CableSizingSection
+                                combinerPanelIndex={index}
+                                inverterCount={panel.inputs}
+                                inverterOutputCurrent={actualInverterCurrent * panel.inputs}
+                                inverterOutputVoltage={inverterOutputVoltage}
+                                operatingVoltage={config.connectionType === 'LV' && config.inverterType === 'STRING' ? config.pocVoltage : undefined}
+                                sectionType="output"
+                                sectionTitle="AC Combiner Panel to PoC"
+                                onLossesChange={handleCableLossesChange}
+                                onCableSelect={handleCableSelect}
+                                initialCableData={getSavedCable("output", "AC Combiner Panel to PoC")}
+                              />
+                            </div>
+                          </div>
+                        );
+                        })}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Total AC Cable Losses Section */}
+                {isValidCombinerConfiguration() && Object.keys(cableLosses).length > 0 && (
+                  <>
+                    <Separator className="my-4" />
+                    <div className="space-y-4">
+                      <h3 className="font-semibold text-lg">Total AC Cable Losses</h3>
+                      
+                      {/* Total losses summary card */}
+                      <div className="border rounded-md p-4 bg-gradient-to-r from-red-50 to-orange-50">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="font-medium text-lg">Total System Cable Losses</h4>
+                          <Badge variant="destructive" className="text-sm">
+                            {totalCableLosses.sections} Cable Sections
+                          </Badge>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* Absolute losses */}
+                          <div className="p-3 bg-white rounded-md border border-red-200">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-red-800 font-medium">Total Power Loss:</span>
+                              <Badge variant="outline" className="bg-red-100 text-red-800 border-red-300 text-lg">
+                                {totalCableLosses.kW.toFixed(3)} kW
+                              </Badge>
+                            </div>
+                          </div>
+                          
+                          {/* Percentage losses */}
+                          <div className="p-3 bg-white rounded-md border border-orange-200">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-orange-800 font-medium">System Loss Percentage:</span>
+                              <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300 text-lg">
+                                {totalCableLosses.percentage.toFixed(2)}%
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Detailed breakdown */}
+                        <div className="mt-4 p-3 bg-white rounded-md border border-gray-200">
+                          <h5 className="font-medium text-sm mb-2">Loss Breakdown by Section:</h5>
+                          <div className="grid gap-2 text-xs">
+                            {Object.entries(cableLosses).map(([sectionId, losses]) => (
+                              <div key={sectionId} className="flex justify-between items-center py-1 border-b border-gray-100 last:border-b-0">
+                                <span className="text-gray-600 capitalize">
+                                  {sectionId.replace(/-/g, ' ')}:
+                                </span>
+                                <div className="flex gap-2">
+                                  <span className="font-medium text-red-700">
+                                    {losses.kW.toFixed(3)} kW
+                                  </span>
+                                  <span className="text-gray-500">
+                                    ({losses.percentage.toFixed(2)}%)
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        {/* System impact summary */}
+                        <div className="mt-4 p-2 bg-yellow-50 rounded border border-yellow-200">
+                          <div className="text-xs text-yellow-800">
+                            <strong>System Impact:</strong> Cable losses reduce the effective system output by{' '}
+                            {totalCableLosses.kW.toFixed(3)} kW ({totalCableLosses.percentage.toFixed(2)}%){' '}
+                            from the {systemSize} kW DC system capacity.
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* LV Single Line Diagram */}
+          {config.connectionType === 'LV' && isValidCombinerConfiguration() && (
+            <>
+              <Separator className="my-6" />
+              
+              {/* Enhanced System Workflow Diagram - Professional SLD for LV */}
+              <Card className="border-0 shadow-xl bg-gradient-to-br from-slate-50 via-green-50 to-emerald-50">
+                <CardHeader className="pb-4 bg-gradient-to-r from-green-600 to-emerald-700 text-white rounded-t-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                        <Activity className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-xl font-bold">System Single Line Diagram (SLD)</CardTitle>
+                        <p className="text-green-100 text-sm mt-1">
+                          Professional electrical schematic - LV string inverter configuration
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                    <Button
+                        onClick={async () => {
+                        const element = document.getElementById('lv-sld-diagram');
+                        if (element) {
+                            try {
+                              const html2canvas = await import('html2canvas');
+                              const canvas = await html2canvas.default(element, {
+                              backgroundColor: '#ffffff',
+                              scale: 2,
+                              useCORS: true,
+                              allowTaint: true
+                              });
+                              
+                              const imageDataUrl = canvas.toDataURL('image/png');
+                              
+                              // Capture for reports
+                              if (onSLDImageCaptured) {
+                                onSLDImageCaptured(imageDataUrl, {
+                                  connectionType: 'LV',
+                                  systemSize,
+                                  inverterType: 'String',
+                                  timestamp: new Date()
+                                });
+                              }
+                            } catch (error) {
+                              console.error('Error capturing LV SLD:', error);
+                            }
+                          }
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm"
+                      >
+                        <Camera className="h-4 w-4 mr-2" />
+                        Capture SLD
+                      </Button>
+                      
+                      <Button
+                        onClick={async () => {
+                          const element = document.getElementById('lv-sld-diagram');
+                          if (element) {
+                            try {
+                              const html2canvas = await import('html2canvas');
+                              const canvas = await html2canvas.default(element, {
+                                backgroundColor: '#ffffff',
+                                scale: 2,
+                                useCORS: true,
+                                allowTaint: true
+                              });
+                              
+                              const link = document.createElement('a');
+                              link.download = `Solar_LV_SLD_${systemSize.toFixed(1)}kW_${new Date().toISOString().split('T')[0]}.png`;
+                              link.href = canvas.toDataURL('image/png');
+                              link.click();
+                            } catch (error) {
+                              console.error('Error downloading LV SLD:', error);
+                            }
+                        }
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download SLD
+                    </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-6">
+                  {/* Configuration Header */}
+                  <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-green-100 rounded-lg">
+                        <Zap className="h-5 w-5 text-green-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-green-900 text-lg">
+                          LV String Inverter Configuration {config.useIDT ? 'WITH' : 'WITHOUT'} IDT {config.usePowerTransformer ? 'WITH' : 'WITHOUT'} Power Transformer
+                        </h4>
+                        <p className="text-green-700 text-sm">
+                          {config.useIDT || config.usePowerTransformer ? 
+                            `System voltage step-up: ${inverterOutputVoltage}V → ${config.pocVoltage}V` : 
+                            `Direct LV connection: ${inverterOutputVoltage}V to ${config.pocVoltage}V grid`
+                          } | Total capacity: {systemSize.toFixed(1)}kW
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Professional SLD Diagram */}
+                  <div className="w-full overflow-x-auto">
+                    <div id="lv-sld-diagram" className="min-w-[1000px] p-8 bg-white rounded-xl border-2 border-gray-200 shadow-inner">
+                      <svg width="100%" height={
+                        config.usePowerTransformer ? "920" : 
+                        config.useIDT ? "780" : "650"
+                      } viewBox={`0 0 1000 ${
+                        config.usePowerTransformer ? "920" : 
+                        config.useIDT ? "780" : "650"
+                      }`} className="bg-white">
+                        <defs>
+                          {/* Professional gradients */}
+                          <linearGradient id="lvSolarGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#FEF3C7" />
+                            <stop offset="100%" stopColor="#F59E0B" />
+                          </linearGradient>
+                          <linearGradient id="lvInverterGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#FEE2E2" />
+                            <stop offset="100%" stopColor="#DC2626" />
+                          </linearGradient>
+                          <linearGradient id="lvCombinerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#EBF8FF" />
+                            <stop offset="100%" stopColor="#3B82F6" />
+                          </linearGradient>
+                          <linearGradient id="lvIdtGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#E0E7FF" />
+                            <stop offset="100%" stopColor="#7C3AED" />
+                          </linearGradient>
+                          <linearGradient id="lvTransformerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#ECFDF5" />
+                            <stop offset="100%" stopColor="#059669" />
+                          </linearGradient>
+                          <linearGradient id="lvPocGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#FED7AA" />
+                            <stop offset="100%" stopColor="#EA580C" />
+                          </linearGradient>
+                          
+                          {/* Arrow marker */}
+                          <marker id="lvArrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#1F2937" />
+                          </marker>
+                          
+                          {/* Drop shadow filter */}
+                          <filter id="lvDropshadow" x="-20%" y="-20%" width="140%" height="140%">
+                            <feDropShadow dx="3" dy="3" stdDeviation="3" floodOpacity="0.3"/>
+                          </filter>
+                        </defs>
+
+                        {/* Solar PV Arrays */}
+                        <g>
+                          <rect x="400" y="20" width="200" height="80" rx="12" fill="url(#lvSolarGradient)" stroke="#F59E0B" strokeWidth="3" filter="url(#lvDropshadow)" />
+                          <text x="500" y="45" textAnchor="middle" className="fill-amber-800 text-lg font-bold">Solar PV Arrays</text>
+                          <text x="500" y="65" textAnchor="middle" className="fill-amber-700 text-sm">~{systemSize.toFixed(1)}kW DC Total</text>
+                          <text x="500" y="80" textAnchor="middle" className="fill-amber-600 text-xs">DC Generation</text>
+                        </g>
+
+                        {/* Connection Line: Solar to Inverters - increased distance */}
+                        <line x1="500" y1="100" x2="500" y2="200" stroke="#1F2937" strokeWidth="4" markerEnd="url(#lvArrowhead)" />
+                        {/* DC Power label - moved to right side */}
+                        <rect x="630" y="145" width="100" height="20" rx="4" fill="#F3F4F6" stroke="#374151" strokeWidth="1" />
+                        <text x="680" y="160" textAnchor="middle" className="fill-gray-600 text-xs font-medium">DC Power</text>
+
+                        {/* String Inverters */}
+                        <g>
+                          {Array.from({ length: Math.min(inverterCount, 3) }, (_, i) => {
+                            // Dynamic centering based on actual inverter count
+                            const actualCount = Math.min(inverterCount, 3);
+                            const spacing = 150;
+                            const totalWidth = (actualCount - 1) * spacing;
+                            const startX = 500 - (totalWidth / 2) - 50; // Center around x=500
+                            const x = startX + (i * spacing);
+                            return (
+                              <g key={i}>
+                                <rect x={x} y="210" width="100" height="80" rx="8" fill="url(#lvInverterGradient)" stroke="#DC2626" strokeWidth="2" filter="url(#lvDropshadow)" />
+                                <text x={x + 50} y="235" textAnchor="middle" className="fill-red-800 text-sm font-bold">String Inv {i + 1}</text>
+                                <text x={x + 50} y="250" textAnchor="middle" className="fill-red-700 text-xs">{inverterPower}kW</text>
+                                <text x={x + 50} y="265" textAnchor="middle" className="fill-red-700 text-xs">{inverterOutputVoltage}V</text>
+                                <text x={x + 50} y="280" textAnchor="middle" className="fill-red-600 text-xs">AC Output</text>
+                                
+                                {/* Connection from Solar to each inverter - 90 degree bends */}
+                                <line x1="500" y1="100" x2="500" y2="190" stroke="#1F2937" strokeWidth="2" />
+                                <line x1="500" y1="190" x2={x + 50} y2="190" stroke="#1F2937" strokeWidth="2" />
+                                <line x1={x + 50} y1="190" x2={x + 50} y2="210" stroke="#1F2937" strokeWidth="2" markerEnd="url(#lvArrowhead)" />
+                              </g>
+                            );
+                          })}
+                          {inverterCount > 3 && (
+                            <g>
+                              <rect x="750" y="210" width="100" height="80" rx="8" fill="#F3F4F6" stroke="#9CA3AF" strokeWidth="2" strokeDasharray="5,5" />
+                              <text x="800" y="240" textAnchor="middle" className="fill-gray-600 text-sm font-bold">...</text>
+                              <text x="800" y="255" textAnchor="middle" className="fill-gray-600 text-xs">+{inverterCount - 3} more</text>
+                              <text x="800" y="270" textAnchor="middle" className="fill-gray-500 text-xs">inverters</text>
+                              
+                              {/* Connection to additional inverters - 90 degree bends */}
+                              <line x1="500" y1="100" x2="500" y2="190" stroke="#1F2937" strokeWidth="2" strokeDasharray="3,3" />
+                              <line x1="500" y1="190" x2="800" y2="190" stroke="#1F2937" strokeWidth="2" strokeDasharray="3,3" />
+                              <line x1="800" y1="190" x2="800" y2="210" stroke="#1F2937" strokeWidth="2" markerEnd="url(#lvArrowhead)" strokeDasharray="3,3" />
+                            </g>
+                          )}
+                        </g>
+
+                        {/* AC Combiner Panels */}
+                        <g>
+                          {/* Dynamic Cables from Inverters to Combiner Panels - direct connections to respective panels */}
+                          {(() => {
+                            const panelConfigs = config.acCombinerPanels?.configurations || [{ inputs: inverterCount }];
+                            const actualInverterCount = Math.min(inverterCount, 3);
+                            const spacing = 150;
+                            const totalWidth = (actualInverterCount - 1) * spacing;
+                            const startX = 500 - (totalWidth / 2) - 50;
+                            
+                            // Create connections for each visible inverter
+                            return Array.from({ length: actualInverterCount }, (_, i) => {
+                              const inverterX = startX + (i * spacing) + 50; // +50 for inverter center
+                              
+                              // Determine which panel this inverter connects to
+                              let targetPanelIndex = 0;
+                              const inverterIndex = i;
+                              let accumulatedInputs = 0;
+                              
+                              for (let panelIdx = 0; panelIdx < panelConfigs.length; panelIdx++) {
+                                if (inverterIndex < accumulatedInputs + panelConfigs[panelIdx].inputs) {
+                                  targetPanelIndex = panelIdx;
+                                  break;
+                                }
+                                accumulatedInputs += panelConfigs[panelIdx].inputs;
+                              }
+                              
+                              // Calculate target panel center X position
+                              const panelCount = config.acCombinerPanels?.count || 1;
+                              let targetPanelX;
+                              if (panelCount === 1) {
+                                targetPanelX = 500; // Center
+                              } else {
+                                const panelWidth = 180;
+                                const totalPanelWidth = panelCount * panelWidth + (panelCount - 1) * 20;
+                                const panelStartX = 500 - (totalPanelWidth / 2);
+                                targetPanelX = panelStartX + targetPanelIndex * (panelWidth + 20) + (panelWidth / 2);
+                              }
+                              
+                              return (
+                                <g key={`ac-cable-${i}`}>
+                                  {/* Direct vertical line from inverter down */}
+                                  <line x1={inverterX} y1="290" x2={inverterX} y2="350" stroke="#3B82F6" strokeWidth="3" />
+                                  {/* Horizontal line to target panel position */}
+                                  <line x1={inverterX} y1="350" x2={targetPanelX} y2="350" stroke="#3B82F6" strokeWidth="3" />
+                                  {/* Final vertical line down to panel */}
+                                  <line x1={targetPanelX} y1="350" x2={targetPanelX} y2="390" stroke="#3B82F6" strokeWidth="3" markerEnd="url(#lvArrowhead)" />
+                                </g>
+                              );
+                            });
+                          })()}
+                          
+                          {/* AC Cable label - moved to right side */}
+                          <rect x="630" y="315" width="140" height="25" rx="4" fill="#EBF8FF" stroke="#3B82F6" strokeWidth="1" />
+                          <text x="700" y="332" textAnchor="middle" className="fill-blue-700 text-sm font-medium">AC Cables: XLPE 4-core</text>
+
+                          {/* Dynamic AC Combiner Panels - show individual panels when multiple */}
+                          {(config.acCombinerPanels?.configurations || [{ inputs: inverterCount }]).map((panel, panelIndex) => {
+                            const panelCount = config.acCombinerPanels?.count || 1;
+                            
+                            // Position panels side by side when multiple
+                            let panelX, panelWidth;
+                            if (panelCount === 1) {
+                              panelX = 400;
+                              panelWidth = 200;
+                            } else {
+                              panelWidth = 180; // Slightly narrower for multiple panels
+                              const totalWidth = panelCount * panelWidth + (panelCount - 1) * 20; // 20px spacing
+                              const startX = 500 - (totalWidth / 2);
+                              panelX = startX + panelIndex * (panelWidth + 20);
+                            }
+                            
+                            const panelCenterX = panelX + (panelWidth / 2);
+                            
+                            return (
+                              <g key={`ac-panel-${panelIndex}`}>
+                                {/* AC Combiner Panel - connections handled by individual inverters */}
+                                <rect x={panelX} y="390" width={panelWidth} height="90" rx="10" fill="url(#lvCombinerGradient)" stroke="#3B82F6" strokeWidth="3" filter="url(#lvDropshadow)" />
+                                <text x={panelCenterX} y="415" textAnchor="middle" className="fill-blue-800 text-sm font-bold">AC Panel {panelIndex + 1}</text>
+                                <text x={panelCenterX} y="435" textAnchor="middle" className="fill-blue-700 text-xs">{panel.inputs} Inverter{panel.inputs > 1 ? 's' : ''}</text>
+                                <text x={panelCenterX} y="450" textAnchor="middle" className="fill-blue-700 text-xs">{inverterOutputVoltage}V AC</text>
+                                <text x={panelCenterX} y="465" textAnchor="middle" className="fill-blue-600 text-xs">{panel.inputs}x {inverterPower}kW</text>
+                              </g>
+                            );
+                          })}
+                          
+                          {/* Output connections from AC Panels - converge to center point */}
+                          {(config.acCombinerPanels?.configurations || [{ inputs: inverterCount }]).length > 1 ? (
+                            // Multiple panels - show individual connections converging
+                            <g>
+                              {(config.acCombinerPanels?.configurations || []).map((panel, panelIndex) => {
+                                const panelCount = config.acCombinerPanels?.count || 1;
+                                const panelWidth = 180;
+                                const totalWidth = panelCount * panelWidth + (panelCount - 1) * 20;
+                                const startX = 500 - (totalWidth / 2);
+                                const panelX = startX + panelIndex * (panelWidth + 20);
+                                const panelCenterX = panelX + (panelWidth / 2);
+                                
+                                return (
+                                  <g key={`panel-output-${panelIndex}`}>
+                                    {/* Vertical line from panel */}
+                                    <line x1={panelCenterX} y1="480" x2={panelCenterX} y2="500" stroke="#7C3AED" strokeWidth="3" />
+                                    {/* Horizontal line to center */}
+                                    <line x1={panelCenterX} y1="500" x2="500" y2="500" stroke="#7C3AED" strokeWidth="3" />
+                                  </g>
+                                );
+                              })}
+                              {/* Central output point */}
+                              <circle cx="500" cy="500" r="4" fill="#7C3AED" stroke="#ffffff" strokeWidth="2" />
+                              {/* Continue to next stage */}
+                              <line x1="500" y1="500" x2="500" y2={config.useIDT ? (config.usePowerTransformer ? "530" : "550") : "550"} stroke={config.useIDT ? "#7C3AED" : "#EA580C"} strokeWidth="4" markerEnd="url(#lvArrowhead)" />
+                            </g>
+                          ) : (
+                            // Single panel - direct connection
+                            <line x1="500" y1="480" x2="500" y2={config.useIDT ? (config.usePowerTransformer ? "530" : "550") : "550"} stroke={config.useIDT ? "#7C3AED" : "#EA580C"} strokeWidth="4" markerEnd="url(#lvArrowhead)" />
+                          )}
+                        </g>
+
+                        {config.useIDT ? (
+                          <g>
+                            {/* Connection to IDT - line already handled above */}
+                            {/* LV Cable label */}
+                            <rect x="630" y="500" width="150" height="20" rx="4" fill="#F3E8FF" stroke="#7C3AED" strokeWidth="1" />
+                            <text x="705" y="515" textAnchor="middle" className="fill-purple-700 text-xs font-medium">LV Cables: XLPE 4-core</text>
+
+                            {/* IDT */}
+                            <rect x="420" y={config.usePowerTransformer ? "530" : "550"} width="160" height="100" rx="10" fill="url(#lvIdtGradient)" stroke="#7C3AED" strokeWidth="3" filter="url(#lvDropshadow)" />
+                            <text x="500" y={config.usePowerTransformer ? "555" : "575"} textAnchor="middle" className="fill-purple-800 text-lg font-bold">IDT</text>
+                            <text x="500" y={config.usePowerTransformer ? "575" : "595"} textAnchor="middle" className="fill-purple-700 text-sm">{config.idtConfig?.powerRating.toFixed(1) || '1.0'}MVA</text>
+                            <text x="500" y={config.usePowerTransformer ? "590" : "610"} textAnchor="middle" className="fill-purple-700 text-xs">{config.idtConfig?.primaryVoltage || inverterOutputVoltage}V → {(config.idtConfig?.secondaryVoltage || config.pocVoltage)}V</text>
+                            <text x="500" y={config.usePowerTransformer ? "605" : "625"} textAnchor="middle" className="fill-purple-600 text-xs">Step-up Transformer</text>
+
+                            {config.usePowerTransformer ? (
+                              <g>
+                                {/* Connection to Power Transformer */}
+                                <line x1="500" y1="630" x2="500" y2="680" stroke="#059669" strokeWidth="4" markerEnd="url(#lvArrowhead)" />
+                                {/* HV Cable label */}
+                                <rect x="630" y="650" width="150" height="20" rx="4" fill="#ECFDF5" stroke="#059669" strokeWidth="1" />
+                                <text x="705" y="665" textAnchor="middle" className="fill-green-700 text-xs font-medium">HV Cables: XLPE Single-core</text>
+
+                                {/* Power Transformer */}
+                                <rect x="400" y="680" width="200" height="110" rx="12" fill="url(#lvTransformerGradient)" stroke="#059669" strokeWidth="3" filter="url(#lvDropshadow)" />
+                                <text x="500" y="710" textAnchor="middle" className="fill-green-800 text-xl font-bold">Power Transformer</text>
+                                <text x="500" y="730" textAnchor="middle" className="fill-green-700 text-lg">{config.powerTransformerConfig?.powerRating.toFixed(1) || '1.0'}MVA</text>
+                                <text x="500" y="750" textAnchor="middle" className="fill-green-700 text-sm">{(config.powerTransformerConfig?.primaryVoltage || config.idtConfig?.secondaryVoltage || inverterOutputVoltage)}V → {config.pocVoltage}V</text>
+                                <text x="500" y="765" textAnchor="middle" className="fill-green-600 text-xs">Final Step-up</text>
+                                <text x="500" y="780" textAnchor="middle" className="fill-green-600 text-xs">Grid Connection</text>
+
+                                {/* Final Connection to PoC */}
+                                <line x1="500" y1="790" x2="500" y2="830" stroke="#EA580C" strokeWidth="4" markerEnd="url(#lvArrowhead)" />
+                                {/* Final Cable label */}
+                                <rect x="630" y="805" width="150" height="20" rx="4" fill="#FED7AA" stroke="#EA580C" strokeWidth="1" />
+                                <text x="705" y="820" textAnchor="middle" className="fill-orange-700 text-xs font-medium">HV Cable: Grid Connection</text>
+                              </g>
+                            ) : (
+                              <g>
+                                {/* Direct connection from IDT to PoC */}
+                                <line x1="500" y1="650" x2="500" y2="690" stroke="#EA580C" strokeWidth="4" markerEnd="url(#lvArrowhead)" />
+                                {/* Cable label */}
+                                <rect x="630" y="665" width="150" height="20" rx="4" fill="#FED7AA" stroke="#EA580C" strokeWidth="1" />
+                                <text x="705" y="680" textAnchor="middle" className="fill-orange-700 text-xs font-medium">Grid Connection Cable</text>
+                              </g>
+                            )}
+                          </g>
+                        ) : (
+                          <g>
+                            {/* Direct connection from AC Combiner to PoC - connection already handled above */}
+                            {/* Direct Cable label */}
+                            <rect x="630" y="510" width="150" height="20" rx="4" fill="#FED7AA" stroke="#EA580C" strokeWidth="1" />
+                            <text x="705" y="525" textAnchor="middle" className="fill-orange-700 text-xs font-medium">Direct Grid Connection</text>
+                          </g>
+                        )}
+
+                        {/* Point of Connection */}
+                        <rect x="400" y={
+                          config.usePowerTransformer ? "830" : 
+                          config.useIDT ? "690" : "550"
+                        } width="200" height="80" rx="12" fill="url(#lvPocGradient)" stroke="#EA580C" strokeWidth="3" filter="url(#lvDropshadow)" />
+                        <text x="500" y={
+                          config.usePowerTransformer ? "855" : 
+                          config.useIDT ? "715" : "575"
+                        } textAnchor="middle" className="fill-orange-800 text-lg font-bold">Point of Connection</text>
+                        <text x="500" y={
+                          config.usePowerTransformer ? "875" : 
+                          config.useIDT ? "735" : "595"
+                        } textAnchor="middle" className="fill-orange-700 text-sm">{config.pocVoltage}V Grid</text>
+                        <text x="500" y={
+                          config.usePowerTransformer ? "895" : 
+                          config.useIDT ? "755" : "615"
+                        } textAnchor="middle" className="fill-orange-700 text-sm">~{systemSize.toFixed(1)}kW</text>
+
+                        {/* Technical specifications box */}
+                        <rect x="20" y="20" width="200" height="200" rx="8" fill="#F8FAFC" stroke="#CBD5E1" strokeWidth="2" />
+                        <text x="30" y="40" className="fill-slate-800 text-sm font-bold">System Specifications</text>
+                        <text x="30" y="60" className="fill-slate-700 text-xs">Total DC Capacity: {systemSize.toFixed(1)}kW</text>
+                        <text x="30" y="75" className="fill-slate-700 text-xs">Inverters: {inverterCount} × {inverterPower}kW</text>
+                        <text x="30" y="90" className="fill-slate-700 text-xs">Combiner Panels: {config.acCombinerPanels?.count || 1}</text>
+                        <text x="30" y="105" className="fill-slate-700 text-xs">AC Voltage: {inverterOutputVoltage}V</text>
+                        <text x="30" y="120" className="fill-slate-700 text-xs">Grid Voltage: {config.pocVoltage}V</text>
+                        <text x="30" y="135" className="fill-slate-700 text-xs">Connection: LV String</text>
+                        <text x="30" y="150" className="fill-slate-700 text-xs">IDT: {config.useIDT ? 'Yes' : 'No'}</text>
+                        <text x="30" y="165" className="fill-slate-700 text-xs">Power Transformer: {config.usePowerTransformer ? 'Yes' : 'No'}</text>
+                        <text x="30" y="180" className="fill-slate-700 text-xs">Config: {config.usePowerTransformer ? 'With PT' : config.useIDT ? 'With IDT' : 'Direct'}</text>
+                        <text x="30" y="195" className="fill-slate-700 text-xs">Date: {new Date().toLocaleDateString()}</text>
+                        <text x="30" y="210" className="fill-slate-700 text-xs">Type: {classifyInverterType(inverterPower)}</text>
+
+                        {/* Legend */}
+                        <rect x="780" y="20" width="200" height="180" rx="8" fill="#F8FAFC" stroke="#CBD5E1" strokeWidth="2" />
+                        <text x="790" y="40" className="fill-slate-800 text-sm font-bold">Component Legend</text>
+                        <circle cx="800" cy="55" r="6" fill="#F59E0B" />
+                        <text x="815" y="60" className="fill-slate-700 text-xs">Solar PV Arrays</text>
+                        <circle cx="800" cy="70" r="6" fill="#DC2626" />
+                        <text x="815" y="75" className="fill-slate-700 text-xs">String Inverters</text>
+                        <circle cx="800" cy="85" r="6" fill="#3B82F6" />
+                        <text x="815" y="90" className="fill-slate-700 text-xs">AC Combiner Panels</text>
+                        {config.useIDT && (
+                          <>
+                            <circle cx="800" cy="100" r="6" fill="#7C3AED" />
+                            <text x="815" y="105" className="fill-slate-700 text-xs">IDT (Transformer)</text>
+                          </>
+                        )}
+                        {config.usePowerTransformer && (
+                          <>
+                            <circle cx="800" cy="115" r="6" fill="#059669" />
+                            <text x="815" y="120" className="fill-slate-700 text-xs">Power Transformer</text>
+                          </>
+                        )}
+                        <circle cx="800" cy={config.usePowerTransformer ? 130 : config.useIDT ? 115 : 100} r="6" fill="#EA580C" />
+                        <text x="815" y={config.usePowerTransformer ? 135 : config.useIDT ? 120 : 105} className="fill-slate-700 text-xs">Point of Connection</text>
+                        <line x1="790" y1={config.usePowerTransformer ? 150 : config.useIDT ? 135 : 120} x2="810" y2={config.usePowerTransformer ? 150 : config.useIDT ? 135 : 120} stroke="#3B82F6" strokeWidth="2" />
+                        <text x="815" y={config.usePowerTransformer ? 155 : config.useIDT ? 140 : 125} className="fill-slate-700 text-xs">Cable Connections</text>
+                      </svg>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
+
+          {/* HV Configuration */}
+          {config.connectionType === 'HV' && (
+            <>
+              <Separator className="my-6" />
+              
+              {/* Inverter Type Classification Header - Modern Design */}
+              <Card className="relative overflow-hidden bg-white border-2 border-purple-200/50 shadow-sm hover:shadow-md transition-shadow duration-300">
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-50/30 via-blue-50/20 to-indigo-50/30 pointer-events-none"></div>
+                <CardHeader className="relative pb-4 pt-5 bg-gradient-to-r from-purple-50/60 via-blue-50/50 to-indigo-50/60">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="relative">
+                        <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-lg blur-sm opacity-50"></div>
+                        <div className="relative p-2 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-lg shadow-lg">
+                          {config.inverterType === 'STRING' ? <Cpu className="h-5 w-5 text-white" /> : <Factory className="h-5 w-5 text-white" />}
+                        </div>
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold bg-gradient-to-r from-purple-700 via-blue-700 to-indigo-700 bg-clip-text text-transparent">
+                          HV Configuration - {config.inverterType} Inverters
+                        </h3>
+                        <p className="text-slate-600 text-sm font-medium mt-0.5">
+                          {config.inverterType === 'STRING' ? 
+                            `String inverters (${inverterPower} kW < 500 kW) - Advanced AC workflow` :
+                            `Central inverters (${inverterPower} kW ≥ 500 kW) - Simplified configuration`
+                          }
+                        </p>
+                      </div>
+                    </div>
+                    <Badge className="bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-700 border-purple-300 font-semibold shadow-sm px-3 py-1">
+                      {(systemSize / 1000).toFixed(3)} MW System
+                    </Badge>
+                  </div>
+                </CardHeader>
+              </Card>
+                
+              {/* String Inverter Configuration */}
+              {config.inverterType === 'STRING' && config.hvStringConfig && (
+                <div className="space-y-6">
+                  {/* LV AC Combiner Panels Section - Modern Design */}
+                  <Card className="relative overflow-hidden bg-white border-2 border-emerald-200/50 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 mt-6">
+                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/30 via-green-50/20 to-teal-50/30 pointer-events-none"></div>
+                    <CardHeader className="relative pb-4 pt-5 bg-gradient-to-r from-emerald-50/60 via-green-50/50 to-teal-50/60">
+                      <div className="flex items-center gap-3">
+                        <div className="relative">
+                          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-lg blur-sm opacity-50"></div>
+                          <div className="relative p-2 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-lg shadow-lg">
+                            <Server className="h-5 w-5 text-white" />
+                          </div>
+                        </div>
+                        <div>
+                          <CardTitle className="text-lg font-bold bg-gradient-to-r from-emerald-700 via-green-700 to-teal-700 bg-clip-text text-transparent">
+                            LV AC Combiner Panels Configuration
+                          </CardTitle>
+                          <p className="text-slate-600 text-sm font-medium mt-0.5">
+                            Configure the LV AC combiner panels that collect inverter outputs
+                          </p>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid gap-4">
+                        {/* Panel Selection and Validity in Side-by-Side Layout */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-center">
+                          {/* LV Panel Selection */}
+                          <div className="p-3 bg-green-100 rounded-md">
+                            <div className="flex items-center gap-3">
+                              <span className="text-sm font-medium text-green-800">Total Combiner Panels:</span>
+                            <Input
+                              type="number"
+                              min="1"
+                                max="4"
+                              value={config.hvStringConfig.lvACCombinerPanels.count}
+                              onChange={(e) => handleHVStringCombinerPanelCountChange(parseInt(e.target.value) || 1)}
+                                className="bg-white border-green-300 focus:border-green-500 text-center w-16 h-8"
+                            />
+                              <Badge variant="outline" className="bg-green-200 text-green-800 border-green-300 text-xs px-2 py-1">
+                              Panels
+                            </Badge>
+                          </div>
+                </div>
+                
+                          {/* Configuration Validity */}
+                        {!isValidHVStringCombinerConfiguration() && (
+                            <div className="border border-red-200 rounded-lg p-2 bg-gradient-to-r from-red-50 to-pink-50">
+                              <div className="flex items-center gap-2">
+                                <AlertTriangle className="h-4 w-4 text-red-600" />
+                                <span className="text-sm font-medium text-red-800">Configuration Invalid</span>
+                                <Badge variant="outline" className="border-red-300 text-red-700 bg-red-50 text-xs px-2 py-1">
+                                  {getHVStringTotalAssignedInverters()} / {inverterCount}
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-red-700 mt-1">
+                                {getHVStringTotalAssignedInverters() > inverterCount ? "Too many" : "Too few"} inverters assigned
+                              </p>
+                          </div>
+                        )}
+
+                        {isValidHVStringCombinerConfiguration() && (
+                            <div className="border border-green-200 rounded-lg p-2 bg-gradient-to-r from-green-50 via-emerald-50 to-teal-50">
+                              <div className="flex items-center gap-2">
+                                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                <span className="text-sm font-medium text-green-800">Configuration Valid</span>
+                                <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs px-2 py-1">
+                                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                                  Valid
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-green-700 mt-1">
+                                  ✓ All {inverterCount} inverters correctly assigned to LV AC combiner panels
+                                </p>
+                              </div>
+                          )}
+                            </div>
+
+                        {/* Max Panel Restriction Notice */}
+                        <div className="p-2 bg-blue-50 rounded-md border border-blue-200">
+                          <div className="flex items-center gap-2">
+                            <div className="text-blue-600">
+                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                          </div>
+                            <span className="text-xs text-blue-700">
+                              <strong>Note:</strong> Maximum 4 LV combiner panels allowed per HV connection type configuration
+                            </span>
+                          </div>
+                        </div>
+                        
+                        {/* Intelligent Distribution Configuration */}
+                        <div className="border border-green-200 rounded-lg p-4 bg-white">
+                          <div className="flex items-center gap-3 mb-4">
+                              <div className="rounded-full bg-green-100 p-2">
+                                <Server className="h-4 w-4 text-green-600" />
+                              </div>
+                            <h4 className="font-semibold text-green-800">Inverter Distribution for All {config.hvStringConfig.lvACCombinerPanels.count} Panels</h4>
+                            {isHVStringDistributionUneven() ? (
+                              <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                                Uneven Distribution
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                Even Distribution
+                              </Badge>
+                            )}
+                            </div>
+                            
+                          {/* Caution Message for Uneven Distribution */}
+                          {isHVStringDistributionUneven() && (
+                            <div className="mb-4 p-3 bg-orange-50 rounded-md border border-orange-200">
+                              <div className="flex items-center gap-2 text-orange-800 mb-2">
+                                <AlertTriangle className="h-4 w-4" />
+                                <span className="text-sm font-medium">Design Caution:</span>
+                              </div>
+                              <p className="text-xs text-orange-700">
+                                The breakers, LV cables, and voltage drop/power losses shall be designed and calculated based on the 
+                                <strong> highest number of inverters-connected LV panel ({getHVStringMaxInvertersPerPanel()} inverters)</strong> to ensure 
+                                safe operation across all panels.
+                              </p>
+                            </div>
+                          )}
+                          
+                          {/* Main Content Grid */}
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* Left Column - Distribution and Design Parameters */}
+                            <div className="space-y-4">
+                              {/* Inverter Distribution */}
+                              <div className="space-y-2">
+                                <Label className="text-sm font-medium">Inverter Distribution</Label>
+                                <div className="p-3 bg-gray-50 rounded border">
+                                  <div className="space-y-2">
+                                    {config.hvStringConfig.lvACCombinerPanels.configurations.map((panel, index) => (
+                                      <div key={index} className="flex justify-between text-sm">
+                                        <span className="text-gray-700">Panel {index + 1}:</span>
+                                        <span className="font-medium text-gray-900">{panel.inputs} inverters</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {/* Design Parameters */}
+                              <div className="space-y-2">
+                                <Label className="text-sm font-medium">Design Parameters</Label>
+                                <div className="p-3 bg-gray-50 rounded border">
+                                  <div className="space-y-2">
+                                    <div className="flex justify-between text-sm">
+                                      <span className="text-gray-700">Max per Panel:</span>
+                                      <span className="font-medium text-gray-900">{getHVStringMaxInvertersPerPanel()} inverters</span>
+                                </div>
+                                    <div className="flex justify-between text-sm">
+                                      <span className="text-gray-700">Max Current:</span>
+                                      <span className="font-medium text-gray-900">{(inverterOutputCurrent * getHVStringMaxInvertersPerPanel()).toFixed(2)} A</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                      <span className="text-gray-700">Max Power:</span>
+                                      <span className="font-medium text-gray-900">{(getHVStringMaxInvertersPerPanel() * inverterPower / 1000).toFixed(2)} MW</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-xs text-gray-600">
+                                  Total: {getHVStringTotalAssignedInverters()} inverters distributed
+                              </div>
+                            </div>
+                            
+                              {/* System Summary */}
+                              <div className="p-3 bg-blue-50 rounded text-sm">
+                                <div className="text-blue-800">
+                                  <strong>System Summary:</strong> {config.hvStringConfig.lvACCombinerPanels.count} panels, 
+                                  {getHVStringMinInvertersPerPanel() === getHVStringMaxInvertersPerPanel() ? 
+                                    ` ${getHVStringMaxInvertersPerPanel()} inverters each` :
+                                    ` ${getHVStringMinInvertersPerPanel()}-${getHVStringMaxInvertersPerPanel()} inverters range`
+                                  }
+                                </div>
+                                <div className="text-blue-700 mt-1">
+                                  <strong>Total System:</strong> {(inverterCount * inverterPower / 1000).toFixed(2)} MW
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Right Column - Panel Distribution Summary */}
+                            <div className="space-y-4">
+                              <div className="border border-blue-200 rounded-lg p-4 bg-gradient-to-r from-blue-50 to-cyan-50">
+                                <h5 className="font-semibold text-blue-800 mb-3">Panel Distribution Summary</h5>
+                                <div className="space-y-3">
+                                  {/* Summary Stats */}
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                      <div className="flex justify-between text-sm">
+                                        <span className="text-blue-700">Total Panels:</span>
+                                        <span className="font-medium">{config.hvStringConfig.lvACCombinerPanels.count}</span>
+                                      </div>
+                                      <div className="flex justify-between text-sm">
+                                        <span className="text-blue-700">Inverter Range:</span>
+                                        <span className="font-medium">
+                                          {getHVStringMinInvertersPerPanel() === getHVStringMaxInvertersPerPanel() ? 
+                                            `${getHVStringMaxInvertersPerPanel()} each` :
+                                            `${getHVStringMinInvertersPerPanel()}-${getHVStringMaxInvertersPerPanel()}`
+                                          }
+                              </span>
+                            </div>
+                                      <div className="flex justify-between text-sm">
+                                        <span className="text-blue-700">Total Inverters:</span>
+                                        <span className="font-medium">{getHVStringTotalAssignedInverters()}</span>
+                                      </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                      <div className="flex justify-between text-sm">
+                                        <span className="text-blue-700">Max Panel Power:</span>
+                                        <span className="font-medium">{(getHVStringMaxInvertersPerPanel() * inverterPower / 1000).toFixed(2)} MW</span>
+                                      </div>
+                                      <div className="flex justify-between text-sm">
+                                        <span className="text-blue-700">Max Panel Current:</span>
+                                        <span className="font-medium">{(inverterOutputCurrent * getHVStringMaxInvertersPerPanel()).toFixed(2)} A</span>
+                                      </div>
+                                      <div className="flex justify-between text-sm">
+                                        <span className="text-blue-700">Total System Power:</span>
+                                        <span className="font-medium">{(inverterCount * inverterPower / 1000).toFixed(2)} MW</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Detailed Panel Breakdown */}
+                                  <div className="pt-3 border-t border-blue-200">
+                                    <h6 className="text-sm font-medium text-blue-800 mb-2">Detailed Panel Breakdown:</h6>
+                                    <div className="space-y-2">
+                                      {config.hvStringConfig.lvACCombinerPanels.configurations.map((panel, index) => (
+                                        <div key={index} className="flex justify-between bg-white rounded px-3 py-2 text-sm">
+                                          <span className="text-blue-700 font-medium">Panel {index + 1}:</span>
+                                          <span className="font-medium text-gray-900">
+                                            {panel.inputs} inv. | {(panel.inputs * inverterPower / 1000).toFixed(2)} MW | {panel.outputCurrent.toFixed(0)} A
+                                          </span>
+                          </div>
+                        ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Transformers Configuration - Side by Side Layout */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* IDT Configuration Section */}
+                  <Card className="border-0 shadow-md bg-gradient-to-r from-blue-50 to-cyan-50">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-lg text-blue-800">
+                        <Activity className="h-5 w-5" />
+                        Inverter Duty Transformers (IDT) Configuration
+                      </CardTitle>
+                      <p className="text-sm text-blue-700">
+                        Configure IDTs that step up voltage from LV AC combiner panels to HV
+                      </p>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid gap-4">
+                          <div className="p-3 bg-blue-100 rounded-md">
+                            <div className="flex items-center gap-3">
+                              <span className="text-sm font-medium text-blue-800">Total IDTs Required:</span>
+                      <Input 
+                        type="number" 
+                              min="1"
+                              max="20"
+                              value={config.hvStringConfig.idts.count}
+                              onChange={(e) => handleHVStringIDTCountChange(parseInt(e.target.value) || 1)}
+                                className="bg-white border-blue-300 focus:border-blue-500 text-center w-16 h-8"
+                            />
+                              <Badge variant="outline" className="bg-blue-200 text-blue-800 border-blue-300 text-xs px-2 py-1">
+                              IDTs
+                            </Badge>
+                    </div>
+                        </div>
+                        
+                        {/* Single IDT Configuration (applies to all IDTs) */}
+                        <div className="border border-blue-200 rounded-lg p-4 bg-white">
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="rounded-full bg-blue-100 p-2">
+                              <Activity className="h-4 w-4 text-blue-600" />
+                            </div>
+                              <h4 className="text-sm font-semibold text-blue-800">IDT Configuration (All {config.hvStringConfig.idts.count} IDTs)</h4>
+                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
+                              Same config for all
+                            </Badge>
+                          </div>
+                          
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                                <Label htmlFor="idt-rating" className="text-xs">Power Rating per IDT (MVA)</Label>
+                      <Input 
+                                id="idt-rating"
+                        type="number" 
+                                step="0.1"
+                                value={config.hvStringConfig.idts.configurations[0]?.powerRating || ((inverterPower * inverterCount / 1000) / config.hvStringConfig.idts.count)}
+                                onChange={(e) => handleHVStringIDTUniformChange('powerRating', parseFloat(e.target.value))}
+                                  className="h-8 text-sm"
+                      />
+                              <div className="text-xs text-gray-600">
+                                Auto-calculated: {((inverterPower * inverterCount / 1000) / config.hvStringConfig.idts.count).toFixed(2)} MVA
+                    </div>
+                            </div>
+                            
+                            <div className="space-y-2">
+                                <Label htmlFor="idt-panels" className="text-xs">Combiner Panels per IDT</Label>
+                                <div className="p-2 bg-gray-100 rounded border h-8 flex items-center">
+                                <span className="text-sm font-medium">
+                                  {Math.floor(config.hvStringConfig.lvACCombinerPanels.count / config.hvStringConfig.idts.count)} panels/IDT
+                                </span>
+                                <span className="text-xs text-gray-600 ml-2">
+                                  (Auto-calculated)
+                                </span>
+                              </div>
+                            </div>
+                            
+                            <div className="space-y-2">
+                                <Label htmlFor="idt-primary" className="text-xs">Primary Voltage (V)</Label>
+                      <Input 
+                                id="idt-primary"
+                        type="number" 
+                                value={config.hvStringConfig.idts.configurations[0]?.primaryVoltage || inverterOutputVoltage}
+                                onChange={(e) => handleHVStringIDTUniformChange('primaryVoltage', parseInt(e.target.value))}
+                                  className="h-8 text-sm"
+                      />
+                              <div className="text-xs text-gray-600">
+                                Inverter AC Output: {inverterOutputVoltage}V
+                    </div>
+                            </div>
+                            
+                            <div className="space-y-2">
+                                <Label htmlFor="idt-secondary" className="text-xs">Secondary Voltage (V)</Label>
+                      <Input 
+                                id="idt-secondary"
+                        type="number" 
+                                value={config.hvStringConfig.idts.configurations[0]?.secondaryVoltage || config.pocVoltage}
+                                onChange={(e) => handleHVStringIDTUniformChange('secondaryVoltage', parseInt(e.target.value))}
+                                  className="h-8 text-sm"
+                      />
+                              <div className="text-xs text-gray-600">
+                                PoC Voltage: {config.pocVoltage}V
+                    </div>
+                            </div>
+                            
+                            <div className="space-y-2">
+                                <Label htmlFor="idt-copper" className="text-xs">Copper Loss per IDT (%)</Label>
+                      <Input 
+                                id="idt-copper"
+                        type="number" 
+                                step="0.01"
+                                min="0"
+                                max="10"
+                                value={config.hvStringConfig.idts.configurations[0]?.copperLossPercent || 1.0}
+                                onChange={(e) => handleHVStringIDTPercentageChange('copperLossPercent', parseFloat(e.target.value))}
+                                  className="h-8 text-sm"
+                      />
+                              <div className="text-xs text-gray-600">
+                                = {((config.hvStringConfig.idts.configurations[0]?.copperLossPercent || 1.0) * (config.hvStringConfig.idts.configurations[0]?.powerRating || ((inverterPower * inverterCount / 1000) / config.hvStringConfig.idts.count)) * 1000 / 100).toFixed(2)} kW
+                    </div>
+                            </div>
+                            
+                            <div className="space-y-2">
+                                <Label htmlFor="idt-iron" className="text-xs">Iron Loss per IDT (%)</Label>
+                      <Input 
+                                id="idt-iron"
+                        type="number" 
+                                step="0.01"
+                                min="0"
+                                max="5"
+                                value={config.hvStringConfig.idts.configurations[0]?.ironLossPercent || 0.1}
+                                onChange={(e) => handleHVStringIDTPercentageChange('ironLossPercent', parseFloat(e.target.value))}
+                                  className="h-8 text-sm"
+                      />
+                              <div className="text-xs text-gray-600">
+                                = {((config.hvStringConfig.idts.configurations[0]?.ironLossPercent || 0.1) * (config.hvStringConfig.idts.configurations[0]?.powerRating || ((inverterPower * inverterCount / 1000) / config.hvStringConfig.idts.count)) * 1000 / 100).toFixed(2)} kW
+                    </div>
+                  </div>
+              </div>
+              
+                            <div className="mt-4 p-3 bg-blue-50 rounded border border-blue-200">
+                              <h5 className="text-sm font-medium text-blue-800 mb-2">Total System Summary:</h5>
+                              <div className="grid grid-cols-1 gap-2 text-xs">
+                                <div className="flex justify-between">
+                                  <span className="text-blue-700">Total IDT Capacity:</span>
+                                  <span className="font-medium text-blue-800">
+                                    {((config.hvStringConfig.idts.configurations[0]?.powerRating || 9.6) * config.hvStringConfig.idts.count).toFixed(1)} MVA
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-blue-700">Total IDT Losses:</span>
+                                  <span className="font-medium text-blue-800">
+                                    {(((config.hvStringConfig.idts.configurations[0]?.copperLoss || 67.2) + (config.hvStringConfig.idts.configurations[0]?.ironLoss || 9.6)) * config.hvStringConfig.idts.count).toFixed(2)} kW
+                                  </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Power Transformer Configuration */}
+                  <Card className="border-0 shadow-md bg-gradient-to-r from-purple-50 to-pink-50">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-lg text-purple-800">
+                        <Zap className="h-5 w-5" />
+                        Power Transformer Configuration
+                      </CardTitle>
+                      <p className="text-sm text-purple-700">
+                        Optional power transformer for final voltage step-up to grid level
+                      </p>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="p-3 bg-purple-100 rounded-md">
+                          <div className="flex items-center space-x-3 min-h-[2rem]">
+                  <Checkbox 
+                          id="hvStringPowerTransformer" 
+                          checked={!!config.hvStringConfig.powerTransformer}
+                          onCheckedChange={(checked) => toggleHVStringPowerTransformer(!!checked)}
+                  />
+                            <Label htmlFor="hvStringPowerTransformer" className="text-sm font-medium text-purple-800">
+                          Include Power Transformer
+                        </Label>
+                          </div>
+                </div>
+                
+                      {config.hvStringConfig.powerTransformer && (
+                        <div className="border border-purple-200 rounded-lg p-4 bg-white">
+                            <div className="flex items-center gap-3 mb-3">
+                              <div className="rounded-full bg-purple-100 p-2">
+                                <Zap className="h-4 w-4 text-purple-600" />
+                              </div>
+                              <h4 className="text-sm font-semibold text-purple-800">Power Transformer Configuration</h4>
+                              <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs">
+                                Single unit
+                              </Badge>
+                            </div>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                                <Label htmlFor="pt-rating" className="text-xs">Power Rating (MVA)</Label>
+                      <Input 
+                                id="pt-rating"
+                        type="number" 
+                                step="0.1"
+                                value={config.hvStringConfig.powerTransformer.powerRating}
+                                onChange={(e) => handleHVStringPowerTransformerChange('powerRating', parseFloat(e.target.value))}
+                                  className="h-8 text-sm"
+                      />
+                              <div className="text-xs text-gray-600">
+                                Total AC Power Output: {(inverterPower * inverterCount / 1000).toFixed(2)} MVA
+                    </div>
+                    </div>
+                            
+                            <div className="space-y-2">
+                                <Label htmlFor="pt-primary" className="text-xs">Primary Voltage (V)</Label>
+                      <Input 
+                                id="pt-primary"
+                        type="number" 
+                                value={config.hvStringConfig.powerTransformer.primaryVoltage}
+                                onChange={(e) => handleHVStringPowerTransformerChange('primaryVoltage', parseInt(e.target.value))}
+                                  className="h-8 text-sm"
+                      />
+                              <div className="text-xs text-gray-600">
+                                IDT Secondary: {config.hvStringConfig.idts.configurations[0]?.secondaryVoltage || config.pocVoltage}V
+                    </div>
+                    </div>
+                            
+                            <div className="space-y-2">
+                                <Label htmlFor="pt-secondary" className="text-xs">Secondary Voltage (V)</Label>
+                      <Input 
+                                id="pt-secondary"
+                        type="number" 
+                                value={config.hvStringConfig.powerTransformer.secondaryVoltage}
+                                onChange={(e) => handleHVStringPowerTransformerChange('secondaryVoltage', parseInt(e.target.value))}
+                                  className="h-8 text-sm"
+                      />
+                              <div className="text-xs text-gray-600">
+                                PoC Voltage: {config.pocVoltage}V
+                    </div>
+                    </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="pt-vector" className="text-xs">Vector Grouping</Label>
+                              <Select 
+                                value={config.hvStringConfig.powerTransformer.vectorGrouping} 
+                                onValueChange={handleHVStringPowerTransformerVectorChange}
+                              >
+                                  <SelectTrigger id="pt-vector" className="h-8 text-sm">
+                                  <SelectValue placeholder="Select vector grouping" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {TRANSFORMER_VECTOR_GROUPS.map(group => (
+                                    <SelectItem key={group} value={group}>
+                                      {group}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <div className="text-xs text-gray-600">
+                                Default: Dyn11 (Delta-Wye, 30° lag)
+                              </div>
+                            </div>
+                            
+                            <div className="space-y-2">
+                                <Label htmlFor="pt-copper" className="text-xs">Copper Loss (%)</Label>
+                      <Input 
+                                id="pt-copper"
+                        type="number" 
+                                step="0.01"
+                                min="0"
+                                max="10"
+                                value={config.hvStringConfig.powerTransformer.copperLossPercent || 1.0}
+                                onChange={(e) => handleHVStringPowerTransformerPercentageChange('copperLossPercent', parseFloat(e.target.value))}
+                                  className="h-8 text-sm"
+                      />
+                              <div className="text-xs text-gray-600">
+                                = {((config.hvStringConfig.powerTransformer.copperLossPercent || 1.0) * config.hvStringConfig.powerTransformer.powerRating * 1000 / 100).toFixed(2)} kW
+                    </div>
+                    </div>
+                            
+                            <div className="space-y-2">
+                                <Label htmlFor="pt-iron" className="text-xs">Iron Loss (%)</Label>
+                      <Input 
+                                id="pt-iron"
+                        type="number" 
+                                step="0.01"
+                                min="0"
+                                max="5"
+                                value={config.hvStringConfig.powerTransformer.ironLossPercent || 0.1}
+                                onChange={(e) => handleHVStringPowerTransformerPercentageChange('ironLossPercent', parseFloat(e.target.value))}
+                                  className="h-8 text-sm"
+                      />
+                              <div className="text-xs text-gray-600">
+                                = {((config.hvStringConfig.powerTransformer.ironLossPercent || 0.1) * config.hvStringConfig.powerTransformer.powerRating * 1000 / 100).toFixed(2)} kW
+                    </div>
+                  </div>
+              </div>
+                          
+                          <div className="mt-3 p-2 bg-green-50 rounded text-xs text-green-700">
+                              <div className="grid grid-cols-1 gap-1">
+                                <div>
+                            <strong>Total Transformer Losses:</strong> {(config.hvStringConfig.powerTransformer.copperLoss + config.hvStringConfig.powerTransformer.ironLoss).toFixed(2)} kW
+                            <span className="ml-4">
+                              <strong>Total Percentage:</strong> {((config.hvStringConfig.powerTransformer.copperLossPercent || 1.0) + (config.hvStringConfig.powerTransformer.ironLossPercent || 0.1)).toFixed(2)}%
+                            </span>
+                                </div>
+                                <div>
+                            <strong>Voltage Ratio:</strong> {(config.hvStringConfig.powerTransformer.primaryVoltage / 1000).toFixed(1)}kV / {(config.hvStringConfig.powerTransformer.secondaryVoltage / 1000).toFixed(1)}kV
+                            <span className="ml-4">
+                              <strong>Vector Group:</strong> {config.hvStringConfig.powerTransformer.vectorGrouping}
+                            </span>
+                                </div>
+                              </div>
+                    </div>
+                  </div>
+                )}
+                    </CardContent>
+                  </Card>
+                  </div>
+
+                  {/* Circuit Breaker Configuration */}
+                  <Card className="border-0 shadow-lg bg-gradient-to-r from-orange-50 to-red-50">
+                    <CardHeader className="pb-4">
+                      <CardTitle className="flex items-center gap-2 text-lg text-orange-800">
+                        <Zap className="h-5 w-5" />
+                        Circuit Breaker Configuration
+                      </CardTitle>
+                      <p className="text-sm text-orange-700">
+                        Circuit breaker selection for all connection points in the HV workflow
+                      </p>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                                              {/* LV AC Combiner Panel Breakers - Uniform Configuration */}
+                      <div className="space-y-4">
+                          <h4 className="font-semibold text-orange-800">LV AC Combiner Panel Breakers (Uniform Configuration)</h4>
+                          <div className="p-3 bg-orange-50 rounded-md border border-orange-200 mb-4">
+                            <div className="flex items-center gap-2 text-orange-800">
+                              <AlertTriangle className="h-4 w-4" />
+                              <span className="text-sm font-medium">
+                                {isHVStringDistributionUneven() ? "Design Based on Maximum Load:" : "Uniform Breaker Configuration:"}
+                              </span>
+                            </div>
+                            <p className="text-xs text-orange-700 mt-1">
+                              {isHVStringDistributionUneven() ? (
+                                <>Breakers are sized for the maximum panel load ({getHVStringMaxInvertersPerPanel()} inverters) to ensure safe operation across all panels with uneven distribution ({getHVStringMinInvertersPerPanel()}-{getHVStringMaxInvertersPerPanel()} inverters range).</>
+                              ) : (
+                                <>All {config.hvStringConfig.lvACCombinerPanels.count} combiner panels have identical breaker configurations. Each panel has {getHVStringMaxInvertersPerPanel()} inverters.</>
+                              )}
+                            </p>
+                          </div>
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            {/* Individual Inverter Breakers */}
+                            <CircuitBreakerSection
+                              combinerPanelIndex={0}
+                              inverterCount={1}
+                              inverterOutputCurrent={inverterOutputCurrent}
+                              inverterOutputVoltage={inverterOutputVoltage}
+                              sectionType="individual"
+                              sectionTitle={`Individual Inverter Breaker (Same for all panels)`}
+                              onBreakerSelect={handleBreakerSelect}
+                              initialSelectedBreaker={getSavedBreaker("individual", `Individual Inverter Breaker (Same for all panels)`)}
+                            />
+                            
+                            {/* AC Combiner Panel Output Breaker */}
+                            <CircuitBreakerSection
+                              combinerPanelIndex={0}
+                              inverterCount={getHVStringMaxInvertersPerPanel()}
+                              inverterOutputCurrent={inverterOutputCurrent}
+                              inverterOutputVoltage={inverterOutputVoltage}
+                              sectionType="outgoing"
+                              sectionTitle={`Panel Output Breaker (Sized for max ${getHVStringMaxInvertersPerPanel()} inverters)`}
+                              onBreakerSelect={handleBreakerSelect}
+                              initialSelectedBreaker={getSavedBreaker("outgoing", `Panel Output Breaker (Sized for max ${getHVStringMaxInvertersPerPanel()} inverters)`)}
+                            />
+                      </div>
+                  </div>
+                  
+                                            {/* Circuit Breaker Configurations - Side by Side Layout */}
+                      <Separator />
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        {/* IDT Output Breakers Card */}
+                        <Card className="border-0 shadow-lg bg-gradient-to-r from-orange-50 to-red-50">
+                          <CardHeader className="pb-3">
+                            <CardTitle className="flex items-center gap-2 text-sm text-orange-800">
+                              <Shield className="h-4 w-4" />
+                              IDT Output Breakers (HV Side)
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                        <div className="grid gap-4">
+                          {(() => {
+                            // Calculate single IDT output current: P = √3 × V × I × cos(φ)
+                            // Solar PV operates at unity power factor (cos φ = 1.0)
+                            // Convert MVA to Watts: MVA × 1,000,000
+                            // All IDTs have same rating, so use first configuration
+                            const singleIDTCurrent = (config.hvStringConfig.idts.configurations[0].powerRating * 1000000) / 
+                              (Math.sqrt(3) * config.hvStringConfig.idts.configurations[0].secondaryVoltage * 1.0);
+                            
+                            return (
+                              <CircuitBreakerSection
+                                combinerPanelIndex={0} // Not used for IDT output
+                                inverterCount={0} // Not used for IDT output
+                                inverterOutputCurrent={0} // Not used for IDT output
+                                inverterOutputVoltage={0} // Not used for IDT output
+                                sectionType="idt_output"
+                                sectionTitle={`IDT Output Breaker (Same for all ${config.hvStringConfig.idts.count} IDTs)`}
+                                calculatedCurrent={singleIDTCurrent}
+                                operatingVoltage={config.hvStringConfig.idts.configurations[0].secondaryVoltage}
+                                onBreakerSelect={handleBreakerSelect}
+                                initialSelectedBreaker={getSavedBreaker("idt_output", `IDT Output Breaker (Same for all ${config.hvStringConfig.idts.count} IDTs)`)}
+                              />
+                            );
+                          })()}
+                        </div>
+                          </CardContent>
+                        </Card>
+
+                        {/* Power Transformer Output Breaker Card */}
+                        <Card className="border-0 shadow-lg bg-gradient-to-r from-green-50 to-emerald-50">
+                          <CardHeader className="pb-3">
+                            <CardTitle className="flex items-center gap-2 text-sm text-green-800">
+                              <Zap className="h-4 w-4" />
+                              Power Transformer Output Breaker
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            {config.hvStringConfig.powerTransformer ? (
+                              <div className="grid gap-4">
+                                {(() => {
+                                  // Calculate Power Transformer output current: P = √3 × V × I × cos(φ)
+                                  // Solar PV operates at unity power factor (cos φ = 1.0)
+                                  // Convert MVA to Watts: MVA × 1,000,000
+                                  const ptOutputCurrent = (config.hvStringConfig.powerTransformer!.powerRating * 1000000) / 
+                                    (Math.sqrt(3) * config.hvStringConfig.powerTransformer!.secondaryVoltage * 1.0);
+                                  
+                                  return (
+                                    <CircuitBreakerSection
+                                      combinerPanelIndex={0} // Not used for power transformer
+                                      inverterCount={0} // Not used for power transformer
+                                      inverterOutputCurrent={0} // Not used for power transformer
+                                      inverterOutputVoltage={0} // Not used for power transformer
+                                      sectionType="power_transformer"
+                                      sectionTitle="Power Transformer - Grid Connection Breaker"
+                                      calculatedCurrent={ptOutputCurrent}
+                                      operatingVoltage={config.hvStringConfig.powerTransformer!.secondaryVoltage}
+                                      onBreakerSelect={handleBreakerSelect}
+                                      initialSelectedBreaker={getSavedBreaker("power_transformer", "Power Transformer - Grid Connection Breaker")}
+                                    />
+                                  );
+                                })()}
+                              </div>
+                            ) : (
+                              <div className="text-center py-8 text-gray-500">
+                                <p className="text-sm">No Power Transformer Configured</p>
+                                <p className="text-xs mt-1">Enable power transformer to configure this breaker</p>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </div>
+
+                      {/* IDT to Busbar Individual Breakers (when no Power Transformer) */}
+                      {!config.hvStringConfig.powerTransformer && (
+                        <>
+                          <Separator />
+                          <div className="space-y-4">
+                            <h4 className="font-semibold text-orange-800">IDT to Busbar Individual Breakers</h4>
+                            <div className="p-3 bg-blue-50 rounded-md border border-blue-200 mb-4">
+                              <div className="flex items-center gap-2 text-blue-800">
+                                <AlertTriangle className="h-4 w-4" />
+                                <span className="text-sm font-medium">Individual IDT Breakers:</span>
+                              </div>
+                              <p className="text-xs text-blue-700 mt-1">
+                                Each of the {config.hvStringConfig.idts.count} IDTs has identical breakers (CB-1 to CB-{config.hvStringConfig.idts.count}). 
+                                All breakers have the same rating for individual IDT current.
+                              </p>
+                            </div>
+                            <div className="grid gap-4">
+                              {(() => {
+                                // Calculate individual IDT current: P = √3 × V × I × cos(φ)
+                                // Solar PV operates at unity power factor (cos φ = 1.0)
+                                // Convert MVA to Watts: MVA × 1,000,000
+                                const singleIDTCurrent = (config.hvStringConfig.idts.configurations[0].powerRating * 1000000) / 
+                                  (Math.sqrt(3) * config.hvStringConfig.idts.configurations[0].secondaryVoltage * 1.0);
+                                
+                                return (
+                                  <CircuitBreakerSection
+                                    combinerPanelIndex={0} // Not used for IDT connection
+                                    inverterCount={0} // Not used for IDT connection
+                                    inverterOutputCurrent={0} // Not used for IDT connection
+                                    inverterOutputVoltage={0} // Not used for IDT connection
+                                    sectionType="idt_output"
+                                    sectionTitle={`IDT to Busbar Breaker (Same for all ${config.hvStringConfig.idts.count} IDTs)`}
+                                    calculatedCurrent={singleIDTCurrent}
+                                    operatingVoltage={config.hvStringConfig.idts.configurations[0].secondaryVoltage}
+                                    onBreakerSelect={handleBreakerSelect}
+                                    initialSelectedBreaker={getSavedBreaker("idt_output", `IDT to Busbar Breaker (Same for all ${config.hvStringConfig.idts.count} IDTs)`)}
+                                  />
+                                );
+                              })()}
+                            </div>
+              </div>
+            </>
+          )}
+
+                      {/* Busbar to PoC Connection Breaker (when no Power Transformer and multiple IDTs) */}
+                      {!config.hvStringConfig.powerTransformer && config.hvStringConfig.idts.count > 1 && (
+                        <>
+                          <Separator />
+                          <div className="space-y-4">
+                            <h4 className="font-semibold text-orange-800">Busbar to PoC Connection Breaker</h4>
+                            <div className="p-3 bg-amber-50 rounded-md border border-amber-200 mb-4">
+                              <div className="flex items-center gap-2 text-amber-800">
+                                <AlertTriangle className="h-4 w-4" />
+                                <span className="text-sm font-medium">Combined Current Breaker:</span>
+                              </div>
+                              <p className="text-xs text-amber-700 mt-1">
+                                Single breaker (CB-{config.hvStringConfig.idts.count + 1}) from busbar to PoC, handling the combined current from all {config.hvStringConfig.idts.count} IDTs.
+                              </p>
+                            </div>
+                            <div className="grid gap-4">
+                              {(() => {
+                                // Calculate total current from all IDTs: P = √3 × V × I × cos(φ)
+                                // Solar PV operates at unity power factor (cos φ = 1.0)
+                                // Convert MVA to Watts: MVA × 1,000,000
+                                const totalCurrent = config.hvStringConfig.idts.configurations.reduce((sum, idt) => {
+                                  const idtOutputCurrent = (idt.powerRating * 1000000) / (Math.sqrt(3) * idt.secondaryVoltage * 1.0);
+                                  return sum + idtOutputCurrent;
+                                }, 0);
+                                
+                                return (
+                                  <CircuitBreakerSection
+                                    combinerPanelIndex={0} // Not used for busbar connection
+                                    inverterCount={0} // Not used for busbar connection
+                                    inverterOutputCurrent={0} // Not used for busbar connection
+                                    inverterOutputVoltage={0} // Not used for busbar connection
+                                    sectionType="power_transformer"
+                                    sectionTitle="Busbar to PoC Connection Breaker (Combined Current)"
+                                    calculatedCurrent={totalCurrent}
+                                    operatingVoltage={config.pocVoltage}
+                                    onBreakerSelect={handleBreakerSelect}
+                                    initialSelectedBreaker={getSavedBreaker("power_transformer", "Busbar to PoC Connection Breaker (Combined Current)")}
+                                  />
+                                );
+                              })()}
+                      </div>
+                          </div>
+                        </>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Cable Sizing for HV String Configuration */}
+                  <Card className="border-0 shadow-lg bg-gradient-to-r from-blue-50 to-cyan-50">
+                    <CardHeader className="pb-4">
+                      <CardTitle className="flex items-center gap-2 text-lg text-blue-800">
+                        <Box className="h-5 w-5" />
+                        Cable Sizing
+                      </CardTitle>
+                      <p className="text-sm text-blue-700">
+                        LV and HV cable specifications for all connection segments
+                      </p>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                                              {/* LV Cable Configurations - Side by Side Layout */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                          {/* Inverters to Combiner Panels Card */}
+                          <Card className="border-0 shadow-lg bg-gradient-to-r from-blue-50 to-indigo-50">
+                            <CardHeader className="pb-3">
+                              <CardTitle className="flex items-center gap-2 text-sm text-blue-800">
+                                <Zap className="h-4 w-4" />
+                                Inverters to AC Combiner Panels
+                              </CardTitle>
+                              <p className="text-xs text-blue-700">
+                                LV cables connecting inverters to combiner panels
+                              </p>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                              <div className="p-3 bg-blue-50 rounded-md border border-blue-200">
+                                <div className="flex items-center gap-2 text-blue-800">
+                                  <AlertTriangle className="h-4 w-4" />
+                                  <span className="text-sm font-medium">
+                                    {isHVStringDistributionUneven() ? "Cable Sizing Based on Maximum Load:" : "Uniform Cable Configuration:"}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-blue-700 mt-1">
+                                  {isHVStringDistributionUneven() ? (
+                                    <>Cables are sized for the maximum panel load ({getHVStringMaxInvertersPerPanel()} inverters) to handle peak current and minimize voltage drop across all panels with uneven distribution ({getHVStringMinInvertersPerPanel()}-{getHVStringMaxInvertersPerPanel()} inverters range).</>
+                                  ) : (
+                                    <>All {config.hvStringConfig.lvACCombinerPanels.count} combiner panels have identical cable configurations. Each panel connects {getHVStringMaxInvertersPerPanel()} inverters.</>
+                                  )}
+                                </p>
+                              </div>
+                          <CableSizingSection
+                                combinerPanelIndex={0}
+                                inverterCount={getHVStringMaxInvertersPerPanel()}
+                            inverterOutputCurrent={inverterOutputCurrent}
+                            inverterOutputVoltage={inverterOutputVoltage}
+                            sectionType="input"
+                                sectionTitle={`Inverter Input Cables (Sized for max ${getHVStringMaxInvertersPerPanel()} inverters)`}
+                            onLossesChange={handleCableLossesChange}
+                            onCableSelect={handleCableSelect}
+                            initialCableData={getSavedCable("input", `Inverter Input Cables (Sized for max ${getHVStringMaxInvertersPerPanel()} inverters)`)}
+                          />
+                            </CardContent>
+                          </Card>
+
+                          {/* Combiner Panels to IDTs Card */}
+                          <Card className="border-0 shadow-lg bg-gradient-to-r from-teal-50 to-cyan-50">
+                            <CardHeader className="pb-3">
+                              <CardTitle className="flex items-center gap-2 text-sm text-teal-800">
+                                <Activity className="h-4 w-4" />
+                                AC Combiner Panels to IDTs
+                              </CardTitle>
+                              <p className="text-xs text-teal-700">
+                                LV cables connecting combiner panels to IDTs
+                              </p>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                              <div className="p-3 bg-teal-50 rounded-md border border-teal-200">
+                                <div className="flex items-center gap-2 text-teal-800">
+                                  <AlertTriangle className="h-4 w-4" />
+                                  <span className="text-sm font-medium">
+                                    {isHVStringDistributionUneven() ? "IDT Connection Cables Based on Maximum Load:" : "Uniform IDT Connection Cables:"}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-teal-700 mt-1">
+                                  {isHVStringDistributionUneven() ? (
+                                    <>IDT connection cables are sized for the maximum panel output ({getHVStringMaxInvertersPerPanel()} inverters) to ensure adequate current capacity across all panels with uneven distribution ({getHVStringMinInvertersPerPanel()}-{getHVStringMaxInvertersPerPanel()} inverters range).</>
+                                  ) : (
+                                    <>All {config.hvStringConfig.lvACCombinerPanels.count} combiner panels use identical cables for connecting to IDTs. Each panel carries {getHVStringMaxInvertersPerPanel()} inverters' output.</>
+                                  )}
+                                </p>
+                              </div>
+                          <CableSizingSection
+                                combinerPanelIndex={0}
+                                inverterCount={getHVStringMaxInvertersPerPanel()}
+                                inverterOutputCurrent={inverterOutputCurrent * getHVStringMaxInvertersPerPanel()}
+                            inverterOutputVoltage={inverterOutputVoltage}
+                            sectionType="output"
+                                sectionTitle={`Panel to IDT Connection Cable (Sized for max ${getHVStringMaxInvertersPerPanel()} inverters)`}
+                            onLossesChange={handleCableLossesChange}
+                            onCableSelect={handleCableSelect}
+                            initialCableData={getSavedCable("output", `Panel to IDT Connection Cable (Sized for max ${getHVStringMaxInvertersPerPanel()} inverters)`)}
+                          />
+                            </CardContent>
+                          </Card>
+                      </div>
+
+                                            {/* HV Cable Configurations - Side by Side Layout (when Power Transformer is enabled) */}
+                      {config.hvStringConfig.powerTransformer && (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                          {/* IDTs to Power Transformer Card */}
+                          <Card className="border-0 shadow-lg bg-gradient-to-r from-purple-50 to-violet-50">
+                            <CardHeader className="pb-3">
+                              <CardTitle className="flex items-center gap-2 text-sm text-purple-800">
+                                <Activity className="h-4 w-4" />
+                                IDTs to Power Transformer
+                              </CardTitle>
+                              <p className="text-xs text-purple-700">
+                                HV cables connecting IDTs to power transformer
+                              </p>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                          {(() => {
+                            // Calculate single IDT output current: P = √3 × V × I × cos(φ)
+                            // Solar PV operates at unity power factor (cos φ = 1.0)
+                            // Convert MVA to Watts: MVA × 1,000,000
+                            // All IDTs have same rating, so use first configuration
+                            const singleIDTCurrent = (config.hvStringConfig.idts.configurations[0].powerRating * 1000000) / 
+                              (Math.sqrt(3) * config.hvStringConfig.idts.configurations[0].secondaryVoltage * 1.0);
+                            
+                            return (
+                              <HTCableSizingSection
+                                sectionType="idt_to_transformer"
+                                sectionTitle={`IDT to Power Transformer (Same for all ${config.hvStringConfig.idts.count} IDTs)`}
+                                calculatedCurrent={singleIDTCurrent}
+                                operatingVoltage={config.hvStringConfig.idts.configurations[0].secondaryVoltage}
+                                onLossesChange={handleCableLossesChange}
+                                onCableSelect={handleCableSelect}
+                                initialCableData={getSavedHVCable("idt_to_transformer", `IDT to Power Transformer (Same for all ${config.hvStringConfig.idts.count} IDTs)`)}
+                              />
+                            );
+                          })()}
+                            </CardContent>
+                          </Card>
+
+                          {/* Power Transformer to Point of Connection Card */}
+                          <Card className="border-0 shadow-lg bg-gradient-to-r from-emerald-50 to-green-50">
+                            <CardHeader className="pb-3">
+                              <CardTitle className="flex items-center gap-2 text-sm text-emerald-800">
+                                <Zap className="h-4 w-4" />
+                                Power Transformer to PoC
+                              </CardTitle>
+                              <p className="text-xs text-emerald-700">
+                                HV cables connecting power transformer to point of connection
+                              </p>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                              {(() => {
+                                // Calculate Power Transformer output current: P = √3 × V × I × cos(φ)
+                                // Solar PV operates at unity power factor (cos φ = 1.0)
+                              // Convert MVA to Watts: MVA × 1,000,000
+                              const ptOutputCurrent = (config.hvStringConfig.powerTransformer!.powerRating * 1000000) /
+                                  (Math.sqrt(3) * config.hvStringConfig.powerTransformer!.secondaryVoltage * 1.0);
+                                
+                                return (
+                                  <HTCableSizingSection
+                                    sectionType="transformer_to_poc"
+                                    sectionTitle="Power Transformer to Point of Connection"
+                                    calculatedCurrent={ptOutputCurrent}
+                                    operatingVoltage={config.hvStringConfig.powerTransformer!.secondaryVoltage}
+                                    onLossesChange={handleCableLossesChange}
+                                    onCableSelect={handleCableSelect}
+                                    initialCableData={getSavedHVCable("transformer_to_poc", "Power Transformer to Point of Connection")}
+                                  />
+                                );
+                              })()}
+                            </CardContent>
+                          </Card>
+                        </div>
+                      )}
+
+                      {/* HV Cables - IDTs to Busbar (Individual connections, when no Power Transformer) */}
+                      {!config.hvStringConfig.powerTransformer && (
+                        <div className="space-y-4">
+                          <h4 className="font-semibold text-blue-800">HV Cables (IDTs to Busbar)</h4>
+                          <div className="p-3 bg-blue-50 rounded-md border border-blue-200 mb-4">
+                            <div className="flex items-center gap-2 text-blue-800">
+                              <AlertTriangle className="h-4 w-4" />
+                              <span className="text-sm font-medium">Individual IDT Connections:</span>
+                  </div>
+                            <p className="text-xs text-blue-700 mt-1">
+                              Each of the {config.hvStringConfig.idts.count} IDTs connects to the busbar via identical HT cables. 
+                              Same cable specification for all IDTs, each carrying individual IDT current (not summed).
+                            </p>
+                </div>
+                          {(() => {
+                            // Calculate individual IDT current: P = √3 × V × I × cos(φ)
+                            // Solar PV operates at unity power factor (cos φ = 1.0)
+                              // Convert MVA to Watts: MVA × 1,000,000
+                              const singleIDTCurrent = (config.hvStringConfig.idts.configurations[0].powerRating * 1000000) / 
+                              (Math.sqrt(3) * config.hvStringConfig.idts.configurations[0].secondaryVoltage * 1.0);
+                            
+                            return (
+                              <HTCableSizingSection
+                                sectionType="idt_to_transformer"
+                                sectionTitle={`IDT to Busbar (Individual Connection - Same for all ${config.hvStringConfig.idts.count} IDTs)`}
+                                calculatedCurrent={singleIDTCurrent}
+                                operatingVoltage={config.hvStringConfig.idts.configurations[0].secondaryVoltage}
+                                onLossesChange={handleCableLossesChange}
+                                onCableSelect={handleCableSelect}
+                                initialCableData={getSavedHVCable("idt_to_transformer", `IDT to Busbar (Individual Connection - Same for all ${config.hvStringConfig.idts.count} IDTs)`)}
+                              />
+                            );
+                          })()}
+              </div>
+                      )}
+
+                      {/* HV Cables - Busbar to Point of Connection (Combined connection, when no Power Transformer and multiple IDTs) */}
+                      {!config.hvStringConfig.powerTransformer && config.hvStringConfig.idts.count > 1 && (
+                        <div className="space-y-4">
+                          <h4 className="font-semibold text-blue-800">HV Cables (Busbar to Point of Connection)</h4>
+                          <div className="p-3 bg-amber-50 rounded-md border border-amber-200 mb-4">
+                            <div className="flex items-center gap-2 text-amber-800">
+                              <AlertTriangle className="h-4 w-4" />
+                              <span className="text-sm font-medium">Combined Current from Busbar:</span>
+                            </div>
+                            <p className="text-xs text-amber-700 mt-1">
+                              Single cable from busbar to PoC carrying the combined current from all {config.hvStringConfig.idts.count} IDTs.
+                              Total current = sum of all IDT outputs.
+                            </p>
+                          </div>
+                          {(() => {
+                            // Calculate total current from all IDTs: P = √3 × V × I × cos(φ)
+                            // Solar PV operates at unity power factor (cos φ = 1.0)
+                            const totalCurrent = config.hvStringConfig.idts.configurations.reduce((sum, idt) => {
+                                // Convert MVA to Watts: MVA × 1,000,000
+                                const idtOutputCurrent = (idt.powerRating * 1000000) / (Math.sqrt(3) * idt.secondaryVoltage * 1.0);
+                              return sum + idtOutputCurrent;
+                            }, 0);
+                            
+                            // Use the PoC voltage as operating voltage
+                            const operatingVoltage = config.pocVoltage;
+                            
+                            return (
+                              <HTCableSizingSection
+                                sectionType="transformer_to_poc"
+                                sectionTitle="Busbar to Point of Connection (Combined Current)"
+                                calculatedCurrent={totalCurrent}
+                                operatingVoltage={operatingVoltage}
+                                onLossesChange={handleCableLossesChange}
+                                onCableSelect={handleCableSelect}
+                                initialCableData={getSavedHVCable("transformer_to_poc", "Busbar to Point of Connection (Combined Current)")}
+                              />
+                            );
+                          })()}
+                      </div>
+                      )}
+
+
+                    </CardContent>
+                  </Card>
+
+                  {/* System Workflow Diagram */}
+                  <Card className="border-0 shadow-lg bg-gradient-to-r from-green-50 to-emerald-50">
+                    <CardHeader className="pb-4">
+                      <CardTitle className="flex items-center gap-2 text-lg text-green-800">
+                        <Activity className="h-5 w-5" />
+                        System Workflow Diagram
+                      </CardTitle>
+                      <p className="text-sm text-green-700">
+                        Visual representation of the complete HV string configuration workflow
+                      </p>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Workflow diagram based on power transformer configuration */}
+                      {config.hvStringConfig.powerTransformer ? (
+                        <div className="space-y-4">
+                          <div className="p-3 bg-blue-50 rounded-md border border-blue-200">
+                            <h4 className="font-semibold text-blue-800 mb-2">
+                              HV String Configuration WITH Power Transformer
+                            </h4>
+                            <p className="text-sm text-blue-700">
+                              System includes power transformer for voltage step-up from {(config.hvStringConfig.idts.configurations[0]?.secondaryVoltage / 1000).toFixed(0)}kV to {(config.pocVoltage / 1000).toFixed(0)}kV
+                            </p>
+                          </div>
+                          
+                          {/* Workflow Diagram WITH Power Transformer */}
+                          <div className="w-full overflow-x-auto">
+                            <div className="min-w-[1000px] p-6 bg-white rounded-lg border border-gray-200">
+                              <div className="flex flex-col space-y-8">
+                                
+                                {/* DC Side */}
+                                <div className="flex justify-center">
+                                  <div className="bg-yellow-100 border-2 border-yellow-400 rounded-lg p-4 text-center">
+                                    <h5 className="font-bold text-yellow-800">Solar PV Arrays</h5>
+                                    <p className="text-sm text-yellow-700">~{systemSize.toFixed(1)}MW DC Total</p>
+                                  </div>
+                                </div>
+                                
+                                {/* Arrow */}
+                                <div className="flex justify-center">
+                                  <div className="w-0 h-0 border-l-4 border-r-4 border-t-8 border-transparent border-t-gray-600"></div>
+                                </div>
+                                
+                                {/* String Inverters */}
+                                <div className="flex justify-center space-x-4">
+                                  {Array.from({ length: Math.min(config.hvStringConfig.lvACCombinerPanels.configurations.reduce((sum, panel) => sum + panel.inputs, 0), 4) }, (_, i) => (
+                                    <div key={i} className="bg-blue-100 border-2 border-blue-400 rounded-lg p-3 text-center">
+                                      <h6 className="font-semibold text-blue-800">Inverter {i + 1}</h6>
+                                      <p className="text-xs text-blue-700">{inverterPower}kW</p>
+                                      <p className="text-xs text-blue-700">{inverterOutputVoltage}V</p>
+                                      <p className="text-xs text-blue-700">{inverterOutputCurrent.toFixed(0)}A</p>
+                                    </div>
+                                  ))}
+                                </div>
+                                
+                                {/* Arrow */}
+                                <div className="flex justify-center">
+                                  <div className="w-0 h-0 border-l-4 border-r-4 border-t-8 border-transparent border-t-gray-600"></div>
+                                </div>
+                                
+                                {/* LV AC Combiner Panels */}
+                                <div className="flex justify-center space-x-6">
+                                  {config.hvStringConfig.lvACCombinerPanels.configurations.slice(0, 2).map((panel, i) => (
+                                    <div key={i} className="bg-green-100 border-2 border-green-400 rounded-lg p-3 text-center">
+                                      <h6 className="font-semibold text-green-800">AC Combiner {i + 1}</h6>
+                                      <p className="text-xs text-green-700">{panel.inputs}×{inverterPower}kW</p>
+                                      <p className="text-xs text-green-700">{inverterOutputVoltage}V</p>
+                                    </div>
+                                  ))}
+                                </div>
+                                
+                                {/* LV Cables */}
+                                <div className="flex justify-center">
+                                  <div className="bg-gray-100 border border-gray-300 rounded px-3 py-1 text-xs text-gray-700">
+                                    LV Cables: XLPE 4-core
+                                  </div>
+                                </div>
+                                
+                                {/* IDTs */}
+                                <div className="flex justify-center space-x-6">
+                                  {config.hvStringConfig.idts.configurations.slice(0, 2).map((idt, i) => (
+                                    <div key={i} className="bg-purple-100 border-2 border-purple-400 rounded-lg p-3 text-center">
+                                      <h6 className="font-semibold text-purple-800">IDT {i + 1}</h6>
+                                      <p className="text-xs text-purple-700">{idt.powerRating.toFixed(1)}MVA</p>
+                                      <p className="text-xs text-purple-700">{idt.primaryVoltage}V → {(idt.secondaryVoltage / 1000).toFixed(0)}kV</p>
+                                    </div>
+                                  ))}
+                                </div>
+                                
+                                {/* HT Cables to Power Transformer */}
+                                <div className="flex justify-center">
+                                  <div className="bg-gray-100 border border-gray-300 rounded px-3 py-1 text-xs text-gray-700">
+                                    HT Cables: XLPE Single-core
+                                  </div>
+                                </div>
+                                
+                                {/* Power Transformer */}
+                                <div className="flex justify-center">
+                                  <div className="bg-red-100 border-2 border-red-400 rounded-lg p-4 text-center">
+                                    <h6 className="font-semibold text-red-800">Power Transformer</h6>
+                                    <p className="text-sm text-red-700">{config.hvStringConfig.powerTransformer.powerRating.toFixed(1)}MVA</p>
+                                    <p className="text-sm text-red-700">{(config.hvStringConfig.powerTransformer.primaryVoltage / 1000).toFixed(0)}kV → {(config.hvStringConfig.powerTransformer.secondaryVoltage / 1000).toFixed(0)}kV</p>
+                                    <p className="text-xs text-red-700">Vector: {config.hvStringConfig.powerTransformer.vectorGrouping}</p>
+                                  </div>
+                                </div>
+                                
+                                {/* Final HT Cable */}
+                                <div className="flex justify-center">
+                                  <div className="bg-gray-100 border border-gray-300 rounded px-3 py-1 text-xs text-gray-700">
+                                    HT Cable: XLPE Single-core
+                                  </div>
+                                </div>
+                                
+                                {/* Point of Connection */}
+                                <div className="flex justify-center">
+                                  <div className="bg-orange-100 border-2 border-orange-400 rounded-lg p-4 text-center">
+                                    <h6 className="font-semibold text-orange-800">Point of Connection</h6>
+                                    <p className="text-sm text-orange-700">{(config.pocVoltage / 1000).toFixed(0)}kV Grid</p>
+                                    <p className="text-sm text-orange-700">~{systemSize.toFixed(1)}MW</p>
+                                  </div>
+                                </div>
+                                
+                              </div>
+                            </div>
+                          </div>
+                      </div>
+                    ) : (
+                        <div className="space-y-4">
+                          <div className="p-3 bg-amber-50 rounded-md border border-amber-200">
+                            <h4 className="font-semibold text-amber-800 mb-2">
+                              HV String Configuration WITHOUT Power Transformer
+                            </h4>
+                            <p className="text-sm text-amber-700">
+                              Direct connection from IDTs to {(config.pocVoltage / 1000).toFixed(0)}kV grid via HV busbar
+                            </p>
+                  </div>
+                          
+                          {/* Professional SLD Diagram for HV String Configuration */}
+                          <div className="w-full overflow-x-auto">
+                            <div id="sld-diagram" className="min-w-[1000px] p-8 bg-white rounded-xl border-2 border-gray-200 shadow-inner">
+                              <svg width="100%" height="750" viewBox="0 0 1000 750" className="bg-white">
+                                <defs>
+                                  {/* Professional gradients */}
+                                  <linearGradient id="hvStringSolarGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stopColor="#FEF3C7" />
+                                    <stop offset="100%" stopColor="#F59E0B" />
+                                  </linearGradient>
+                                  <linearGradient id="hvStringInverterGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stopColor="#FEE2E2" />
+                                    <stop offset="100%" stopColor="#DC2626" />
+                                  </linearGradient>
+                                  <linearGradient id="hvStringCombinerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stopColor="#DBEAFE" />
+                                    <stop offset="100%" stopColor="#3B82F6" />
+                                  </linearGradient>
+                                  <linearGradient id="hvStringIdtGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stopColor="#E0E7FF" />
+                                    <stop offset="100%" stopColor="#7C3AED" />
+                                  </linearGradient>
+                                  <linearGradient id="hvStringBusbarGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stopColor="#E0F2FE" />
+                                    <stop offset="100%" stopColor="#0EA5E9" />
+                                  </linearGradient>
+                                  <linearGradient id="hvStringPocGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stopColor="#FED7AA" />
+                                    <stop offset="100%" stopColor="#EA580C" />
+                                  </linearGradient>
+
+                                  {/* Arrow markers */}
+                                  <marker id="hvStringArrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                                    <polygon points="0 0, 10 3.5, 0 7" fill="#1F2937" />
+                                  </marker>
+
+                                  {/* Drop shadow filter */}
+                                  <filter id="hvStringDropshadow" x="-20%" y="-20%" width="140%" height="140%">
+                                    <feDropShadow dx="2" dy="4" stdDeviation="3" floodOpacity="0.15"/>
+                                  </filter>
+                                </defs>
+
+                                {/* Solar PV Arrays */}
+                                <g>
+                                  <rect x="400" y="20" width="200" height="80" rx="12" fill="url(#hvStringSolarGradient)" stroke="#F59E0B" strokeWidth="3" filter="url(#hvStringDropshadow)" />
+                                  <text x="500" y="45" textAnchor="middle" className="fill-amber-800 text-lg font-bold">Solar PV Arrays</text>
+                                  <text x="500" y="65" textAnchor="middle" className="fill-amber-700 text-sm">~{systemSize.toFixed(1)}kW DC Total</text>
+                                  <text x="500" y="80" textAnchor="middle" className="fill-amber-600 text-xs">DC Generation</text>
+                                </g>
+
+                                {/* System Information */}
+                                <text x="30" y="30" className="fill-slate-800 text-lg font-bold">HV String Configuration SLD</text>
+                                <text x="30" y="50" className="fill-slate-700 text-sm">Single Line Diagram</text>
+                                <text x="30" y="75" className="fill-slate-700 text-xs">Inverters: {config.hvStringConfig.lvACCombinerPanels.configurations.reduce((sum, panel) => sum + panel.inputs, 0)} × {inverterPower}kW</text>
+                                <text x="30" y="90" className="fill-slate-700 text-xs">AC Panels: {config.hvStringConfig.lvACCombinerPanels.count} units</text>
+                                <text x="30" y="105" className="fill-slate-700 text-xs">IDTs: {config.hvStringConfig.idts.count} units</text>
+                                <text x="30" y="120" className="fill-slate-700 text-xs">Grid Voltage: {(config.pocVoltage / 1000).toFixed(0)}kV</text>
+                                <text x="30" y="135" className="fill-slate-700 text-xs">Date: {new Date().toLocaleDateString()}</text>
+
+                                {/* Point of Connection */}
+                                <g>
+                                  <line x1="500" y1="100" x2="500" y2="700" stroke="#EA580C" strokeWidth="4" markerEnd="url(#hvStringArrowhead)" />
+                                  <rect x="400" y="700" width="200" height="40" rx="8" fill="url(#hvStringPocGradient)" stroke="#EA580C" strokeWidth="2" />
+                                  <text x="500" y="720" textAnchor="middle" className="fill-orange-800 text-sm font-bold">Point of Connection</text>
+                                  <text x="500" y="735" textAnchor="middle" className="fill-orange-700 text-xs">{(config.pocVoltage / 1000).toFixed(0)}kV Grid</text>
+                                </g>
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+              </div>
+              )}
+
+              {/* Central Inverter Configuration */}
+              {config.inverterType === 'CENTRAL' && config.hvCentralConfig && (
+                <div className="space-y-6">
+                  {/* Central Inverter IDT Configuration Section */}
+                  <Card className="border-0 shadow-md bg-gradient-to-r from-orange-50 to-amber-50">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-lg text-orange-800">
+                        <Factory className="h-5 w-5" />
+                        Central Inverter to IDT Configuration
+                      </CardTitle>
+                      <p className="text-sm text-orange-700">
+                        Configure central inverters connected directly to IDTs (max 4 per IDT)
+                      </p>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid gap-4">
+                        {/* IDT Count Selection and Validity in Side-by-Side Layout */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-center">
+                          {/* IDT Selection */}
+                          <div className="p-3 bg-orange-100 rounded-md">
+                            <div className="flex items-center gap-3">
+                              <span className="text-sm font-medium text-orange-800">Total IDTs:</span>
+                              <Input
+                                type="number"
+                                min="1"
+                                value={config.hvCentralConfig.idts.count}
+                                onChange={(e) => handleHVCentralIDTCountChange(parseInt(e.target.value) || 1)}
+                                className="bg-white border-orange-300 focus:border-orange-500 text-center w-16 h-8"
+                              />
+                              <Badge variant="outline" className="bg-orange-200 text-orange-800 border-orange-300 text-xs px-2 py-1">
+                                IDTs
+                              </Badge>
+                            </div>
+                          </div>
+
+                          {/* Configuration Validity */}
+                          {!isValidHVCentralConfiguration() && (
+                            <div className="border border-red-200 rounded-lg p-2 bg-gradient-to-r from-red-50 to-pink-50">
+                              <div className="flex items-center gap-2">
+                                <AlertTriangle className="h-4 w-4 text-red-600" />
+                                <span className="text-sm font-medium text-red-800">Configuration Invalid</span>
+                                <Badge variant="outline" className="border-red-300 text-red-700 bg-red-50 text-xs px-2 py-1">
+                                  {getHVCentralTotalAssignedInverters()} / {inverterCount}
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-red-700 mt-1">
+                                {getHVCentralTotalAssignedInverters() > inverterCount ? "Too many" : "Too few"} inverters assigned
+                              </p>
+                            </div>
+                          )}
+
+                          {isValidHVCentralConfiguration() && (
+                            <div className="border border-green-200 rounded-lg p-2 bg-gradient-to-r from-green-50 via-emerald-50 to-teal-50">
+                              <div className="flex items-center gap-2">
+                                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                <span className="text-sm font-medium text-green-800">Configuration Valid</span>
+                                <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs px-2 py-1">
+                                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                                  Valid
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-green-700 mt-1">
+                                ✓ All {inverterCount} central inverters correctly assigned to IDTs
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Max IDT Distribution Notice */}
+                        <div className="p-2 bg-blue-50 rounded-md border border-blue-200">
+                          <div className="flex items-center gap-2">
+                            <div className="text-blue-600">
+                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            </div>
+                            <span className="text-xs text-blue-700">
+                              <strong>Note:</strong> Maximum 4 central inverters per IDT for optimal configuration
+                            </span>
+                          </div>
+                        </div>
+                        
+                        {/* Intelligent Distribution Configuration */}
+                        <div className="border border-orange-200 rounded-lg p-4 bg-white">
+                          <div className="flex items-center gap-3 mb-4">
+                            <div className="rounded-full bg-orange-100 p-2">
+                              <Factory className="h-4 w-4 text-orange-600" />
+                            </div>
+                            <h4 className="font-semibold text-orange-800">Central Inverter Distribution for All {config.hvCentralConfig.idts.count} IDTs</h4>
+                            {isHVCentralDistributionUneven() ? (
+                              <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                                Uneven Distribution
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                Even Distribution
+                              </Badge>
+                            )}
+                          </div>
+                          
+                          {/* Caution Message for Uneven Distribution */}
+                          {isHVCentralDistributionUneven() && (
+                            <div className="mb-4 p-3 bg-orange-50 rounded-md border border-orange-200">
+                              <div className="flex items-center gap-2 text-orange-800 mb-2">
+                                <AlertTriangle className="h-4 w-4" />
+                                <span className="text-sm font-medium">Design Caution:</span>
+                              </div>
+                              <p className="text-xs text-orange-700">
+                                The breakers, LV cables, and voltage drop/power losses shall be designed and calculated based on the 
+                                <strong> highest number of inverters-connected IDT ({getHVCentralMaxInvertersPerIDT()} inverters)</strong> to ensure 
+                                safe operation across all IDTs.
+                              </p>
+                            </div>
+                          )}
+                          
+                          {/* Main Content Grid */}
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* Left Column - Distribution and Design Parameters */}
+                            <div className="space-y-4">
+                              {/* Inverter Distribution */}
+                              <div className="space-y-2">
+                                <Label className="text-sm font-medium">Central Inverter Distribution</Label>
+                                <div className="p-3 bg-gray-50 rounded border">
+                                  <div className="space-y-2">
+                                    {config.hvCentralConfig.idts.configurations.map((idt, index) => (
+                                      <div key={index} className="flex justify-between text-sm">
+                                        <span className="text-gray-700">IDT {index + 1}:</span>
+                                        <span className="font-medium text-gray-900">{idt.invertersPerIDT} inverters</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {/* Design Parameters */}
+                              <div className="space-y-2">
+                                <Label className="text-sm font-medium">Design Parameters</Label>
+                                <div className="p-3 bg-gray-50 rounded border">
+                                  <div className="space-y-2">
+                                    <div className="flex justify-between text-sm">
+                                      <span className="text-gray-700">Max per IDT:</span>
+                                      <span className="font-medium text-gray-900">{getHVCentralMaxInvertersPerIDT()} inverters</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                      <span className="text-gray-700">Max Current:</span>
+                                      <span className="font-medium text-gray-900">{(inverterOutputCurrent * getHVCentralMaxInvertersPerIDT()).toFixed(2)} A</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                      <span className="text-gray-700">Max Power:</span>
+                                      <span className="font-medium text-gray-900">{(getHVCentralMaxInvertersPerIDT() * inverterPower / 1000).toFixed(2)} MW</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-xs text-gray-600">
+                                  Total: {getHVCentralTotalAssignedInverters()} central inverters distributed
+                                </div>
+                              </div>
+                              
+                              {/* System Summary */}
+                              <div className="p-3 bg-blue-50 rounded text-sm">
+                                <div className="text-blue-800">
+                                  <strong>System Summary:</strong> {config.hvCentralConfig.idts.count} IDTs, 
+                                  {getHVCentralMinInvertersPerIDT() === getHVCentralMaxInvertersPerIDT() ? 
+                                    ` ${getHVCentralMaxInvertersPerIDT()} inverters each` :
+                                    ` ${getHVCentralMinInvertersPerIDT()}-${getHVCentralMaxInvertersPerIDT()} inverters range`
+                                  }
+                                </div>
+                                <div className="text-blue-700 mt-1">
+                                  <strong>Total System:</strong> {(inverterCount * inverterPower / 1000).toFixed(2)} MW
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Right Column - IDT Distribution Summary */}
+                            <div className="space-y-4">
+                              <Label className="text-sm font-medium">IDT Distribution Summary</Label>
+                              
+                              {/* IDT Cards */}
+                              <div className="space-y-3 max-h-64 overflow-y-auto">
+                                {config.hvCentralConfig.idts.configurations.map((idt, index) => {
+                                  const isMaxLoaded = idt.invertersPerIDT === getHVCentralMaxInvertersPerIDT();
+                                  return (
+                                    <div 
+                                      key={index} 
+                                      className={`p-3 rounded-lg border-2 ${
+                                        isMaxLoaded 
+                                          ? 'bg-gradient-to-r from-orange-50 to-red-50 border-orange-300' 
+                                          : 'bg-gray-50 border-gray-200'
+                                      }`}
+                                    >
+                                      <div className="flex items-center justify-between mb-2">
+                                        <h5 className={`font-medium ${isMaxLoaded ? 'text-orange-800' : 'text-gray-800'}`}>
+                                          IDT {index + 1}
+                                        </h5>
+                                        {isMaxLoaded && (
+                                          <Badge className="bg-orange-500 text-white text-xs px-2 py-1">
+                                            Max Load
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <div className="grid grid-cols-2 gap-2 text-xs">
+                                        <div>
+                                          <span className="text-gray-600">Inverters:</span>
+                                          <div className="font-medium">{idt.invertersPerIDT}</div>
+                                        </div>
+                                        <div>
+                                          <span className="text-gray-600">Power:</span>
+                                          <div className="font-medium">{(idt.invertersPerIDT * inverterPower / 1000).toFixed(2)} MW</div>
+                                        </div>
+                                        <div>
+                                          <span className="text-gray-600">Current:</span>
+                                          <div className="font-medium">{(idt.invertersPerIDT * inverterOutputCurrent).toFixed(1)} A</div>
+                                        </div>
+                                        <div>
+                                          <span className="text-gray-600">Voltage:</span>
+                                          <div className="font-medium">{inverterOutputVoltage} V</div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              
+                              {/* Design Guidelines */}
+                              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Target className="h-4 w-4 text-amber-600" />
+                                  <span className="text-sm font-medium text-amber-800">Design Guidelines</span>
+                                </div>
+                                <ul className="text-xs text-amber-700 space-y-1">
+                                  <li>• All components sized for maximum loaded IDT</li>
+                                  <li>• Cable ratings based on highest current</li>
+                                  <li>• Safety factors applied to peak load conditions</li>
+                                  <li>• Future expansion capability considered</li>
+                                </ul>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* IDT and Power Transformer Configuration - Side by Side */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* IDT Detailed Configuration Section */}
+                    <Card className="border-0 shadow-md bg-gradient-to-r from-purple-50 to-violet-50">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="flex items-center gap-2 text-lg text-purple-800">
+                          <Settings className="h-5 w-5" />
+                          IDT Detailed Configuration
+                        </CardTitle>
+                        <p className="text-sm text-purple-700">
+                          Configure individual IDT parameters and loss calculations
+                        </p>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        {/* Uniform IDT Configuration Controls */}
+                        <div className="p-4 bg-white rounded-lg border border-purple-200">
+                          <div className="flex items-center gap-3 mb-4">
+                            <Server className="h-4 w-4 text-purple-600" />
+                            <h4 className="font-semibold text-purple-800">Uniform IDT Configuration</h4>
+                            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                              All {config.hvCentralConfig.idts.count} IDTs
+                            </Badge>
+                          </div>
+
+                          {/* Configuration Information */}
+                          <div className="p-3 bg-blue-50 rounded-md border border-blue-200 mb-4">
+                            <div className="text-sm text-blue-800 mb-2">
+                              <strong>Calculated from Distribution:</strong>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-blue-700">
+                              <div>
+                                <span>IDT Capacity: </span>
+                                <span className="font-medium">
+                                  {((getHVCentralMaxInvertersPerIDT() * inverterPower) / 1000).toFixed(2)} MVA
+                                </span>
+                                <span className="text-gray-500"> (max loaded)</span>
+                              </div>
+                              <div>
+                                <span>Inverters per IDT: </span>
+                                <span className="font-medium">{getHVCentralMaxInvertersPerIDT()}</span>
+                                <span className="text-gray-500"> (max assigned)</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* IDT Basic Parameters */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium text-purple-700">Primary Voltage (V)</Label>
+                              <Input
+                                type="number"
+                                value={config.hvCentralConfig.idts.configurations[0]?.primaryVoltage || inverterOutputVoltage}
+                                onChange={(e) => handleHVCentralIDTUniformChange('primaryVoltage', parseInt(e.target.value) || 0)}
+                                className="h-8 border-purple-300 focus:border-purple-500"
+                                placeholder="Inverter AC output voltage"
+                              />
+                              <p className="text-xs text-gray-500">From inverter AC output</p>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium text-purple-700">Secondary Voltage (V)</Label>
+                              <Input
+                                type="number"
+                                value={config.hvCentralConfig.idts.configurations[0]?.secondaryVoltage || config.pocVoltage}
+                                onChange={(e) => handleHVCentralIDTUniformChange('secondaryVoltage', parseInt(e.target.value) || 0)}
+                                className="h-8 border-purple-300 focus:border-purple-500"
+                                placeholder="HV connection voltage"
+                              />
+                              <p className="text-xs text-gray-500">From HV connection type</p>
+                            </div>
+                          </div>
+
+                          {/* IDT Loss Configuration and Vector Grouping */}
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium text-purple-700">Copper Loss (%)</Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={config.hvCentralConfig.idts.configurations[0]?.copperLossPercent || 1.0}
+                                onChange={(e) => handleHVCentralIDTPercentageChange('copperLossPercent', parseFloat(e.target.value) || 0)}
+                                className="h-8 border-purple-300 focus:border-purple-500"
+                              />
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium text-purple-700">Iron Loss (%)</Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={config.hvCentralConfig.idts.configurations[0]?.ironLossPercent || 0.1}
+                                onChange={(e) => handleHVCentralIDTPercentageChange('ironLossPercent', parseFloat(e.target.value) || 0)}
+                                className="h-8 border-purple-300 focus:border-purple-500"
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium text-purple-700">Vector Grouping</Label>
+                              <Select 
+                                value={config.hvCentralConfig.idts.configurations[0]?.vectorGrouping || 'Dyn11'} 
+                                onValueChange={handleHVCentralIDTVectorChange}
+                              >
+                                <SelectTrigger className="h-8 border-purple-300 focus:border-purple-500">
+                                  <SelectValue placeholder="Select vector grouping" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {TRANSFORMER_VECTOR_GROUPS.map(group => (
+                                    <SelectItem key={group} value={group}>{group}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+
+                          {/* IDT Summary Information */}
+                          <div className="mt-4 p-3 bg-purple-50 rounded border border-purple-200">
+                            <div className="text-sm text-purple-800">
+                              <strong>Configuration Summary:</strong> Settings applied to all {config.hvCentralConfig.idts.count} IDTs uniformly
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 mt-2 text-xs text-purple-700">
+                              <div>
+                                <span>Max Copper Loss: </span>
+                                <span className="font-medium">
+                                  {((config.hvCentralConfig.idts.configurations[0]?.copperLossPercent || 1.0) * 
+                                    getHVCentralMaxInvertersPerIDT() * inverterPower / 100).toFixed(2)} kW
+                                </span>
+                              </div>
+                              <div>
+                                <span>Max Iron Loss: </span>
+                                <span className="font-medium">
+                                  {((config.hvCentralConfig.idts.configurations[0]?.ironLossPercent || 0.1) * 
+                                    getHVCentralMaxInvertersPerIDT() * inverterPower / 100).toFixed(2)} kW
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Power Transformer Configuration */}
+                    <Card className="border-0 shadow-md bg-gradient-to-r from-emerald-50 to-teal-50">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="flex items-center gap-2 text-lg text-emerald-800">
+                          <Zap className="h-5 w-5" />
+                          Power Transformer Configuration
+                          <Badge variant="outline" className="ml-auto">
+                            {config.hvCentralConfig.powerTransformer ? 'Enabled' : 'Disabled'}
+                          </Badge>
+                        </CardTitle>
+                        <p className="text-sm text-emerald-700">
+                          Optional power transformer for voltage step-up before grid connection
+                        </p>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        {/* Power Transformer Toggle */}
+                        <div className="flex items-center justify-between p-3 bg-emerald-50 rounded-md border border-emerald-200">
+                          <div className="flex items-center gap-3">
+                            <Checkbox
+                              id="hvCentralPowerTransformer"
+                              checked={!!config.hvCentralConfig.powerTransformer}
+                              onCheckedChange={(checked) => toggleHVCentralPowerTransformer(!!checked)}
+                            />
+                            <Label htmlFor="hvCentralPowerTransformer" className="text-sm font-medium text-emerald-800">
+                              Enable Power Transformer
+                            </Label>
+                          </div>
+                          <Badge variant="outline" className="bg-emerald-100 text-emerald-700 border-emerald-300">
+                            {config.hvCentralConfig.powerTransformer ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </div>
+
+                        {/* Power Transformer Settings */}
+                        {config.hvCentralConfig.powerTransformer && (
+                          <div className="grid gap-4 p-4 bg-white rounded-lg border border-emerald-200">
+                            {/* Basic Settings Row - 2 columns */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label className="text-sm font-medium text-emerald-700">Power Rating (MVA)</Label>
+                                <Input
+                                  type="number"
+                                  step="0.1"
+                                  value={config.hvCentralConfig.powerTransformer.powerRating}
+                                  onChange={(e) => handleHVCentralPowerTransformerChange('powerRating', parseFloat(e.target.value) || 0)}
+                                  className="h-8 border-emerald-300 focus:border-emerald-500"
+                                />
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <Label className="text-sm font-medium text-emerald-700">Vector Grouping</Label>
+                                <Select 
+                                  value={config.hvCentralConfig.powerTransformer.vectorGrouping} 
+                                  onValueChange={handleHVCentralPowerTransformerVectorChange}
+                                >
+                                  <SelectTrigger className="h-8 border-emerald-300 focus:border-emerald-500">
+                                    <SelectValue placeholder="Select vector grouping" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {TRANSFORMER_VECTOR_GROUPS.map(group => (
+                                      <SelectItem key={group} value={group}>{group}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+
+                            {/* Voltage Settings Row - 2 columns */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label className="text-sm font-medium text-emerald-700">Primary Voltage (V)</Label>
+                                <Input
+                                  type="number"
+                                  value={config.hvCentralConfig.powerTransformer.primaryVoltage}
+                                  onChange={(e) => handleHVCentralPowerTransformerChange('primaryVoltage', parseInt(e.target.value) || 0)}
+                                  className="h-8 border-emerald-300 focus:border-emerald-500"
+                                />
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <Label className="text-sm font-medium text-emerald-700">Secondary Voltage (V)</Label>
+                                <Input
+                                  type="number"
+                                  value={config.hvCentralConfig.powerTransformer.secondaryVoltage}
+                                  onChange={(e) => handleHVCentralPowerTransformerChange('secondaryVoltage', parseInt(e.target.value) || 0)}
+                                  className="h-8 border-emerald-300 focus:border-emerald-500"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Loss Configuration Row - 2 columns */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label className="text-sm font-medium text-emerald-700">Copper Loss (%)</Label>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  value={config.hvCentralConfig.powerTransformer.copperLossPercent}
+                                  onChange={(e) => handleHVCentralPowerTransformerPercentageChange('copperLossPercent', parseFloat(e.target.value) || 0)}
+                                  className="h-8 border-emerald-300 focus:border-emerald-500"
+                                />
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <Label className="text-sm font-medium text-emerald-700">Iron Loss (%)</Label>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  value={config.hvCentralConfig.powerTransformer.ironLossPercent}
+                                  onChange={(e) => handleHVCentralPowerTransformerPercentageChange('ironLossPercent', parseFloat(e.target.value) || 0)}
+                                  className="h-8 border-emerald-300 focus:border-emerald-500"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Calculated Values */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-3 bg-emerald-50 rounded border border-emerald-200">
+                              <div className="text-sm">
+                                <span className="text-emerald-600">Calculated Copper Loss: </span>
+                                <span className="font-medium">{config.hvCentralConfig.powerTransformer.copperLoss.toFixed(2)} kW</span>
+                              </div>
+                              <div className="text-sm">
+                                <span className="text-emerald-600">Calculated Iron Loss: </span>
+                                <span className="font-medium">{config.hvCentralConfig.powerTransformer.ironLoss.toFixed(2)} kW</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Circuit Breakers Configuration Section */}
+                  {/* Circuit Breaker Section - Unified 3-Column Layout */}
+                  <Card className="border-0 shadow-lg bg-gradient-to-r from-slate-50 to-gray-50">
+                    <CardHeader className="pb-4">
+                      <CardTitle className="flex items-center gap-2 text-xl text-slate-800">
+                        <Shield className="h-6 w-6" />
+                        Circuit Breaker Section
+                      </CardTitle>
+                      <p className="text-sm text-slate-700">
+                        Complete circuit protection for central inverter system: inverter connections, IDT outputs, and grid connection
+                      </p>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      {/* Three-Column Circuit Breaker Layout */}
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                        
+                        {/* Left Column: Central Inverter to IDT Breakers */}
+                        <Card className="border-0 shadow-md bg-gradient-to-r from-orange-50 to-amber-50">
+                          <CardHeader className="pb-3">
+                            <CardTitle className="flex items-center gap-2 text-sm text-orange-800">
+                              <Shield className="h-4 w-4" />
+                              INV → IDT Breakers
+                            </CardTitle>
+                            <p className="text-xs text-orange-700">
+                              Central inverter connections to IDTs
+                            </p>
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                            <div className="p-2 bg-orange-50 rounded-md border border-orange-200">
+                              <div className="flex items-center gap-2 text-orange-800">
+                                <AlertTriangle className="h-3 w-3" />
+                                <span className="text-xs font-medium">
+                                  {isHVCentralDistributionUneven() ? "Max Load Design:" : "Uniform Config:"}
+                                </span>
+                              </div>
+                              <p className="text-xs text-orange-700 mt-1">
+                                {isHVCentralDistributionUneven() ? (
+                                  <>Sized for max {getHVCentralMaxInvertersPerIDT()} inverters per IDT</>
+                                ) : (
+                                  <>Each IDT: {getHVCentralMaxInvertersPerIDT()} inverters</>
+                                )}
+                              </p>
+                            </div>
+                            <CircuitBreakerSection
+                              combinerPanelIndex={0}
+                              inverterCount={1}
+                              inverterOutputCurrent={inverterOutputCurrent}
+                              inverterOutputVoltage={inverterOutputVoltage}
+                              sectionType="individual"
+                              sectionTitle={`Inv (X1)→ IDT`}
+                              calculatedCurrent={inverterOutputCurrent}
+                              operatingVoltage={inverterOutputVoltage}
+                              onBreakerSelect={handleBreakerSelect}
+                              initialSelectedBreaker={getSavedBreaker("individual", `Inv (X1)→ IDT`)}
+                            />
+                          </CardContent>
+                        </Card>
+
+                        {/* Middle Column: IDT Output Breakers */}
+                        <Card className="border-0 shadow-md bg-gradient-to-r from-green-50 to-emerald-50">
+                          <CardHeader className="pb-3">
+                            <CardTitle className="flex items-center gap-2 text-sm text-green-800">
+                              <Zap className="h-4 w-4" />
+                              IDT Output Breakers
+                            </CardTitle>
+                            <p className="text-xs text-green-700">
+                              IDT high voltage output protection
+                            </p>
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                            <div className="p-2 bg-green-50 rounded-md border border-green-200">
+                              <div className="flex items-center gap-2 text-green-800">
+                                <AlertTriangle className="h-3 w-3" />
+                                <span className="text-xs font-medium">HV Protection:</span>
+                              </div>
+                              <p className="text-xs text-green-700 mt-1">
+                                IDT secondary side breaker protection
+                              </p>
+                            </div>
+                            {(() => {
+                              // Calculate IDT output current for maximum loaded IDT
+                              const maxIDTCurrent = (getHVCentralMaxInvertersPerIDT() * inverterPower * 1000) / 
+                                (Math.sqrt(3) * (config.hvCentralConfig.idts.configurations[0]?.secondaryVoltage || config.pocVoltage) * 1.0);
+                              
+                              return (
+                                <CircuitBreakerSection
+                                  combinerPanelIndex={0}
+                                  inverterCount={getHVCentralMaxInvertersPerIDT()}
+                                  inverterOutputCurrent={inverterOutputCurrent}
+                                  inverterOutputVoltage={inverterOutputVoltage}
+                                  sectionType="idt_output"
+                                  sectionTitle={`IDT → ${config.hvCentralConfig.powerTransformer ? 'PT' : 'PoC'}`}
+                                  calculatedCurrent={maxIDTCurrent}
+                                  operatingVoltage={config.hvCentralConfig.idts.configurations[0]?.secondaryVoltage || config.pocVoltage}
+                                  onBreakerSelect={handleBreakerSelect}
+                                  initialSelectedBreaker={getSavedBreaker("idt_output", `IDT → ${config.hvCentralConfig.powerTransformer ? 'PT' : 'PoC'}`)}
+                                />
+                              );
+                            })()}
+                          </CardContent>
+                        </Card>
+
+                        {/* Right Column: Power Transformer Output Breaker */}
+                        <Card className="border-0 shadow-md bg-gradient-to-r from-teal-50 to-cyan-50">
+                          <CardHeader className="pb-3">
+                            <CardTitle className="flex items-center gap-2 text-sm text-teal-800">
+                              <Zap className="h-4 w-4" />
+                              {config.hvCentralConfig.powerTransformer ? 'PT → PoC Breakers' : 'Direct Connection'}
+                            </CardTitle>
+                            <p className="text-xs text-teal-700">
+                              {config.hvCentralConfig.powerTransformer 
+                                ? 'Power transformer to grid connection' 
+                                : 'No additional breaker needed'}
+                            </p>
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                            {config.hvCentralConfig.powerTransformer ? (
+                              <>
+                                <div className="p-2 bg-teal-50 rounded-md border border-teal-200">
+                                  <div className="flex items-center gap-2 text-teal-800">
+                                    <AlertTriangle className="h-3 w-3" />
+                                    <span className="text-xs font-medium">Output Protection:</span>
+                                  </div>
+                                  <p className="text-xs text-teal-700 mt-1">
+                                    Full system capacity with safety factor
+                                  </p>
+                                </div>
+                                {(() => {
+                                  // Calculate Power Transformer output current with safety factor
+                                  // Convert MVA to Watts: MVA × 1,000,000
+                                  const ptCapacityMVA = config.hvCentralConfig.powerTransformer!.powerRating;
+                                  const ptSecondaryVoltageKV = config.hvCentralConfig.powerTransformer!.secondaryVoltage / 1000; // Convert V to kV
+                                  const ptOutputCurrent = (ptCapacityMVA * 1000) / (1.732 * ptSecondaryVoltageKV);
+                                  
+                                  return (
+                                    <CircuitBreakerSection
+                                      combinerPanelIndex={0}
+                                      inverterCount={1}
+                                      inverterOutputCurrent={inverterOutputCurrent}
+                                      inverterOutputVoltage={inverterOutputVoltage}
+                                      sectionType="power_transformer"
+                                      sectionTitle={`PT → PoC (${(config.hvCentralConfig.powerTransformer!.powerRating).toFixed(2)} MVA)`}
+                                      calculatedCurrent={ptOutputCurrent}
+                                      operatingVoltage={config.hvCentralConfig.powerTransformer!.secondaryVoltage}
+                                      onBreakerSelect={handleBreakerSelect}
+                                      initialSelectedBreaker={getSavedBreaker("power_transformer", `PT → PoC (${(config.hvCentralConfig.powerTransformer!.powerRating).toFixed(2)} MVA)`)}
+                                    />
+                                  );
+                                })()}
+                              </>
+                            ) : (
+                              // Without Power Transformer: Show info about direct connection
+                              <div className="p-4 bg-gray-50 rounded-md border border-gray-200 text-center">
+                                <div className="text-xs text-gray-600">
+                                  <AlertTriangle className="h-4 w-4 mx-auto mb-2 text-gray-500" />
+                                  <span className="font-medium">Direct Connection</span>
+                                  <p className="mt-1">IDT connects directly to PoC</p>
+                                  <p className="mt-1 text-gray-500">No additional breaker required</p>
+                                </div>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Cable Sizing Section - Unified 3-Column Layout */}
+                  <Card className="border-0 shadow-lg bg-gradient-to-r from-slate-50 to-gray-50">
+                    <CardHeader className="pb-4">
+                      <CardTitle className="flex items-center gap-2 text-xl text-slate-800">
+                        <Cable className="h-6 w-6" />
+                        Cable Sizing Section
+                      </CardTitle>
+                      <p className="text-sm text-slate-700">
+                        Complete cable configuration for central inverter system: LV connections, HV distribution, and grid connection
+                      </p>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      {/* Three-Column Cable Layout */}
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                        
+                        {/* Left Column: LV Cable Configuration (Inverters to IDTs) */}
+                        <Card className="border-0 shadow-md bg-gradient-to-r from-blue-50 to-indigo-50">
+                          <CardHeader className="pb-3">
+                            <CardTitle className="flex items-center gap-2 text-sm text-blue-800">
+                              <Activity className="h-4 w-4" />
+                              LV Cables (Inv → IDT)
+                            </CardTitle>
+                            <p className="text-xs text-blue-700">
+                              Central inverters to IDT primary terminals
+                            </p>
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                            <div className="p-2 bg-blue-50 rounded-md border border-blue-200">
+                              <div className="flex items-center gap-2 text-blue-800">
+                                <AlertTriangle className="h-3 w-3" />
+                                <span className="text-xs font-medium">
+                                  {isHVCentralDistributionUneven() ? "Max Load Design:" : "Uniform Config:"}
+                                </span>
+                              </div>
+                              <p className="text-xs text-blue-700 mt-1">
+                                {isHVCentralDistributionUneven() ? (
+                                  <>Sized for max {getHVCentralMaxInvertersPerIDT()} inverters per IDT</>
+                                ) : (
+                                  <>Each IDT: {getHVCentralMaxInvertersPerIDT()} inverters</>
+                                )}
+                              </p>
+                            </div>
+                            <CableSizingSection
+                              combinerPanelIndex={0}
+                              inverterCount={getHVCentralMaxInvertersPerIDT()}
+                              inverterOutputCurrent={inverterOutputCurrent}
+                              inverterOutputVoltage={inverterOutputVoltage}
+                              sectionType="output"
+                              sectionTitle={`Inv to IDT (Max ${getHVCentralMaxInvertersPerIDT()})`}
+                              operatingVoltage={inverterOutputVoltage}
+                              onLossesChange={handleCableLossesChange}
+                              onCableSelect={handleCableSelect}
+                              initialCableData={getSavedCable("output", `Inv to IDT (Max ${getHVCentralMaxInvertersPerIDT()})`)}
+                            />
+                          </CardContent>
+                        </Card>
+
+                        {/* Middle Column: HV Cable Configuration (IDTs to Power Transformer or Busbar) */}
+                        <Card className="border-0 shadow-md bg-gradient-to-r from-purple-50 to-violet-50">
+                          <CardHeader className="pb-3">
+                            <CardTitle className="flex items-center gap-2 text-sm text-purple-800">
+                              <Activity className="h-4 w-4" />
+                              HV Cables (IDT → {config.hvCentralConfig.powerTransformer ? 'PT' : 'Busbar'})
+                            </CardTitle>
+                            <p className="text-xs text-purple-700">
+                              {config.hvCentralConfig.powerTransformer 
+                                ? 'IDTs to power transformer primary' 
+                                : 'IDTs to HV busbar connection'}
+                            </p>
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                            <div className="p-2 bg-blue-50 rounded-md border border-blue-200">
+                              <div className="flex items-center gap-2 text-blue-800">
+                                <AlertTriangle className="h-3 w-3" />
+                                <span className="text-xs font-medium">Average Design:</span>
+                              </div>
+                              <p className="text-xs text-blue-700 mt-1">
+                                Representative sizing × {config.hvCentralConfig.idts.count} IDTs
+                              </p>
+                            </div>
+                            {(() => {
+                              // Calculate representative IDT output current
+                              const maxLoadedIDT = config.hvCentralConfig.idts.configurations[0];
+                              // Convert MVA to Watts: MVA × 1,000,000
+                              const representativeIDTCurrent = (maxLoadedIDT.powerRating * 1000000) / (Math.sqrt(3) * maxLoadedIDT.secondaryVoltage * 1.0);
+                              
+                              // Create special callback that multiplies power losses by number of IDTs
+                              const handleIDTCableLossesChange = (losses: { kW: number; percentage: number }, sectionId: string) => {
+                                const multipliedLosses = {
+                                  kW: losses.kW * config.hvCentralConfig.idts.count,
+                                  percentage: losses.percentage
+                                };
+                                handleCableLossesChange(multipliedLosses, sectionId);
+                              };
+                              
+                              return (
+                                <HTCableSizingSection
+                                  sectionType="idt_to_transformer"
+                                  sectionTitle={config.hvCentralConfig.powerTransformer 
+                                    ? `IDT → PT (×${config.hvCentralConfig.idts.count})` 
+                                    : `IDT → Busbar (×${config.hvCentralConfig.idts.count})`}
+                                  calculatedCurrent={representativeIDTCurrent}
+                                  operatingVoltage={maxLoadedIDT.secondaryVoltage}
+                                  onLossesChange={handleIDTCableLossesChange}
+                                  onCableSelect={handleCableSelect}
+                                  initialCableData={getSavedHVCable("idt_to_transformer", config.hvCentralConfig.powerTransformer 
+                                    ? `IDT → PT (×${config.hvCentralConfig.idts.count})` 
+                                    : `IDT → Busbar (×${config.hvCentralConfig.idts.count})`)}
+                                />
+                              );
+                            })()}
+                          </CardContent>
+                        </Card>
+
+                        {/* Right Column: HV Cable Configuration (Power Transformer to PoC or Busbar to PoC) */}
+                        <Card className="border-0 shadow-md bg-gradient-to-r from-orange-50 to-amber-50">
+                          <CardHeader className="pb-3">
+                            <CardTitle className="flex items-center gap-2 text-sm text-orange-800">
+                              <Zap className="h-4 w-4" />
+                              HV Cables ({config.hvCentralConfig.powerTransformer ? 'PT' : 'Busbar'} → PoC)
+                            </CardTitle>
+                            <p className="text-xs text-orange-700">
+                              {config.hvCentralConfig.powerTransformer 
+                                ? 'Power transformer to grid connection' 
+                                : 'Busbar to grid connection'}
+                            </p>
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                            {config.hvCentralConfig.powerTransformer ? (
+                              // With Power Transformer: PT to PoC
+                              <>
+                                <div className="p-2 bg-orange-50 rounded-md border border-orange-200">
+                                  <div className="flex items-center gap-2 text-orange-800">
+                                    <Zap className="h-3 w-3" />
+                                    <span className="text-xs font-medium">Single Connection:</span>
+                                  </div>
+                                  <p className="text-xs text-orange-700 mt-1">
+                                    Combined power via transformer
+                                  </p>
+                                </div>
+                                {(() => {
+                                  // Calculate Power Transformer output current
+                                  // Convert MVA to Watts: MVA × 1,000,000
+                                  const ptOutputCurrent = (config.hvCentralConfig.powerTransformer!.powerRating * 1000000) / 
+                                    (Math.sqrt(3) * config.hvCentralConfig.powerTransformer!.secondaryVoltage * 1.0);
+                                  
+                                  return (
+                                    <HTCableSizingSection
+                                      sectionType="transformer_to_poc"
+                                      sectionTitle="PT → PoC"
+                                      calculatedCurrent={ptOutputCurrent}
+                                      operatingVoltage={config.hvCentralConfig.powerTransformer!.secondaryVoltage}
+                                      onLossesChange={handleCableLossesChange}
+                                      onCableSelect={handleCableSelect}
+                                      initialCableData={getSavedHVCable("transformer_to_poc", "PT → PoC")}
+                                    />
+                                  );
+                                })()}
+                              </>
+                            ) : (
+                              // Without Power Transformer: Busbar to PoC (only if multiple IDTs)
+                              config.hvCentralConfig.idts.count > 1 ? (
+                                <>
+                                  <div className="p-2 bg-amber-50 rounded-md border border-amber-200">
+                                    <div className="flex items-center gap-2 text-amber-800">
+                                      <AlertTriangle className="h-3 w-3" />
+                                      <span className="text-xs font-medium">Combined Current:</span>
+                                    </div>
+                                    <p className="text-xs text-amber-700 mt-1">
+                                      Sum of all {config.hvCentralConfig.idts.count} IDT outputs
+                                    </p>
+                                  </div>
+                                  {(() => {
+                                    // Calculate total current from all IDTs
+                                    const totalCurrent = config.hvCentralConfig.idts.configurations.reduce((sum, idt) => {
+                                      // Convert MVA to Watts: MVA × 1,000,000
+                                      const idtOutputCurrent = (idt.powerRating * 1000000) / (Math.sqrt(3) * idt.secondaryVoltage * 1.0);
+                                      return sum + idtOutputCurrent;
+                                    }, 0);
+                                    
+                                    return (
+                                      <HTCableSizingSection
+                                        sectionType="transformer_to_poc"
+                                        sectionTitle="Busbar → PoC"
+                                        calculatedCurrent={totalCurrent}
+                                        operatingVoltage={config.pocVoltage}
+                                        onLossesChange={handleCableLossesChange}
+                                        onCableSelect={handleCableSelect}
+                                        initialCableData={getSavedHVCable("transformer_to_poc", "Busbar → PoC")}
+                                      />
+                                    );
+                                  })()}
+                                </>
+                              ) : (
+                                // Single IDT case: Direct connection, no additional cable needed
+                                <div className="p-4 bg-gray-50 rounded-md border border-gray-200 text-center">
+                                  <div className="text-xs text-gray-600">
+                                    <AlertTriangle className="h-4 w-4 mx-auto mb-2 text-gray-500" />
+                                    <span className="font-medium">Direct Connection</span>
+                                    <p className="mt-1">Single IDT connects directly to PoC</p>
+                                  </div>
+                                </div>
+                              )
+                            )}
+                          </CardContent>
+                        </Card>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Enhanced System Workflow Diagram - Professional SLD */}
+                  <Card className="border-0 shadow-xl bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+                    <CardHeader className="pb-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-t-lg">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                            <Activity className="h-6 w-6" />
+                          </div>
+                          <div>
+                            <CardTitle className="text-xl font-bold">System Single Line Diagram (SLD)</CardTitle>
+                            <p className="text-blue-100 text-sm mt-1">
+                              Professional electrical schematic - HV central inverter configuration
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                        <Button
+                            onClick={async () => {
+                            const element = document.getElementById('sld-diagram');
+                            if (element) {
+                                try {
+                                  const html2canvas = await import('html2canvas');
+                                  const canvas = await html2canvas.default(element, {
+                                  backgroundColor: '#ffffff',
+                                  scale: 2,
+                                  useCORS: true,
+                                  allowTaint: true
+                                  });
+                                  
+                                  const imageDataUrl = canvas.toDataURL('image/png');
+                                  
+                                  // Capture for reports
+                                  if (onSLDImageCaptured) {
+                                    onSLDImageCaptured(imageDataUrl, {
+                                      connectionType: 'HV',
+                                      systemSize,
+                                      inverterType: config.inverterType,
+                                      timestamp: new Date()
+                                    });
+                                  }
+                                } catch (error) {
+                                  console.error('Error capturing HV SLD:', error);
+                                }
+                              }
+                            }}
+                            variant="outline"
+                            size="sm"
+                            className="bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm"
+                          >
+                            <Camera className="h-4 w-4 mr-2" />
+                            Capture SLD
+                          </Button>
+                          
+                          <Button
+                            onClick={async () => {
+                              const element = document.getElementById('sld-diagram');
+                              if (element) {
+                                try {
+                                  const html2canvas = await import('html2canvas');
+                                  const canvas = await html2canvas.default(element, {
+                                    backgroundColor: '#ffffff',
+                                    scale: 2,
+                                    useCORS: true,
+                                    allowTaint: true
+                                  });
+                                  
+                                  const link = document.createElement('a');
+                                  link.download = `Solar_SLD_${systemSize.toFixed(1)}MW_${new Date().toISOString().split('T')[0]}.png`;
+                                  link.href = canvas.toDataURL('image/png');
+                                  link.click();
+                                } catch (error) {
+                                  console.error('Error downloading HV SLD:', error);
+                                }
+                            }
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm"
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Download SLD
+                        </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                  <CardContent className="p-6">
+                      {/* Configuration Header */}
+                      {config.hvCentralConfig.powerTransformer ? (
+                        <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-blue-100 rounded-lg">
+                              <Zap className="h-5 w-5 text-blue-600" />
+              </div>
+                      <div>
+                              <h4 className="font-bold text-blue-900 text-lg">
+                                Central Inverter Configuration WITH Power Transformer
+                              </h4>
+                              <p className="text-blue-700 text-sm">
+                                System voltage step-up: {(config.hvCentralConfig.idts.configurations[0]?.secondaryVoltage / 1000).toFixed(0)}kV → {(config.pocVoltage / 1000).toFixed(0)}kV | Total capacity: {systemSize.toFixed(1)}kW
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mb-6 p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-200">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-amber-100 rounded-lg">
+                              <Zap className="h-5 w-5 text-amber-600" />
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-amber-900 text-lg">
+                                Central Inverter Configuration WITHOUT Power Transformer
+                              </h4>
+                              <p className="text-amber-700 text-sm">
+                                Direct connection to {(config.pocVoltage / 1000).toFixed(0)}kV grid via HV busbar | Total capacity: {systemSize.toFixed(1)}kW
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Professional SLD Diagram */}
+                      <div className="w-full overflow-x-auto">
+                                                    <div id="sld-diagram" className="min-w-[1000px] p-8 bg-white rounded-xl border-2 border-gray-200 shadow-inner">
+
+                              <svg width="100%" height={(() => {
+                                const idtCount = config.hvCentralConfig.idts.count;
+                                const totalInverters = inverterCount;
+                                const shouldUseLandscape = idtCount > 2 || totalInverters > 6;
+                                return shouldUseLandscape ? 950 : (config.hvCentralConfig.powerTransformer ? 1050 : 1000);
+                              })()} viewBox={(() => {
+                                const idtCount = config.hvCentralConfig.idts.count;
+                                const totalInverters = inverterCount;
+                                const shouldUseLandscape = idtCount > 2 || totalInverters > 6;
+                                const svgWidth = shouldUseLandscape ? 1400 : 1000;
+                                const svgHeight = shouldUseLandscape ? 950 : (config.hvCentralConfig.powerTransformer ? 1050 : 1000);
+                                return `0 0 ${svgWidth} ${svgHeight}`;
+                              })()} className="bg-white">
+                            <defs>
+                              {/* Professional gradients */}
+                              <linearGradient id="solarGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stopColor="#FEF3C7" />
+                                <stop offset="100%" stopColor="#F59E0B" />
+                              </linearGradient>
+                              <linearGradient id="inverterGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stopColor="#FEE2E2" />
+                                <stop offset="100%" stopColor="#DC2626" />
+                              </linearGradient>
+                              <linearGradient id="idtGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stopColor="#E0E7FF" />
+                                <stop offset="100%" stopColor="#7C3AED" />
+                              </linearGradient>
+                              <linearGradient id="transformerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stopColor="#ECFDF5" />
+                                <stop offset="100%" stopColor="#059669" />
+                              </linearGradient>
+                              <linearGradient id="pocGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stopColor="#FED7AA" />
+                                <stop offset="100%" stopColor="#EA580C" />
+                              </linearGradient>
+                              
+                              {/* Arrow marker */}
+                              <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                                <polygon points="0 0, 10 3.5, 0 7" fill="#1F2937" />
+                              </marker>
+                              
+                              {/* Drop shadow filter */}
+                              <filter id="dropshadow" x="-20%" y="-20%" width="140%" height="140%">
+                                <feDropShadow dx="3" dy="3" stdDeviation="3" floodOpacity="0.3"/>
+                              </filter>
+                            </defs>
+
+                            {/* Solar PV Arrays */}
+                            <g>
+                              <rect x="400" y="20" width="200" height="80" rx="12" fill="url(#solarGradient)" stroke="#F59E0B" strokeWidth="3" filter="url(#dropshadow)" />
+                              <text x="500" y="45" textAnchor="middle" className="fill-amber-800 text-lg font-bold">Solar PV Arrays</text>
+                              <text x="500" y="65" textAnchor="middle" className="fill-amber-700 text-sm">~{systemSize.toFixed(1)}kW DC Total</text>
+                              <text x="500" y="80" textAnchor="middle" className="fill-amber-600 text-xs">DC Generation</text>
+                            </g>
+
+                            {/* Connection Line: Solar to Inverters - increased distance */}
+                            <line x1="500" y1="100" x2="500" y2="170" stroke="#1F2937" strokeWidth="4" markerEnd="url(#arrowhead)" />
+                            {/* DC Power label - moved to right side */}
+                            <rect x="630" y="130" width="100" height="20" rx="4" fill="#F3F4F6" stroke="#374151" strokeWidth="1" />
+                            <text x="680" y="145" textAnchor="middle" className="fill-gray-600 text-xs font-medium">DC Power</text>
+
+                            {/* Central Inverters */}
+                            <g>
+                              {(() => {
+                                // Smart per-IDT distribution algorithm with landscape switching support
+                                const idtCount = config.hvCentralConfig.idts.count;
+                                const idtConfigs = config.hvCentralConfig.idts.configurations;
+                                const maxInvertersPerIdtToShow = 3; // Max 3 inverters per IDT in SLD
+                                
+                                // Calculate how many inverters to show per IDT
+                                const invertersToShowPerIdt = idtConfigs.map(idt => 
+                                  Math.min(idt.invertersPerIDT, maxInvertersPerIdtToShow)
+                                );
+                                const totalToShow = invertersToShowPerIdt.reduce((sum, count) => sum + count, 0);
+                                
+                                // Landscape switching decision - simplified to match connection logic
+                                const shouldUseLandscape = (
+                                  idtCount > 2 || 
+                                  inverterCount > 6
+                                );
+                                
+                                const actualCount = totalToShow;
+                                
+                                return Array.from({ length: actualCount }, (_, i) => {
+                                  // Adaptive spacing with landscape support - increased spacing for better separation
+                                  const baseSpacing = shouldUseLandscape ? 180 : 170; // More space in landscape
+                                  const spacing = actualCount <= 2 ? (shouldUseLandscape ? 250 : 220) : 
+                                                 actualCount <= 4 ? baseSpacing : 
+                                                 (shouldUseLandscape ? 140 : 130);
+                                  
+                                  const totalWidth = (actualCount - 1) * spacing;
+                                  const centerX = shouldUseLandscape ? 700 : 500; // Landscape center is different
+                                  const startX = centerX - (totalWidth / 2) - 60; 
+                                  const x = startX + (i * spacing);
+                                return (
+                                  <g key={i}>
+                                    <rect x={x} y="180" width="120" height="90" rx="8" fill="url(#inverterGradient)" stroke="#DC2626" strokeWidth="2" filter="url(#dropshadow)" />
+                                    <text x={x + 60} y="205" textAnchor="middle" className="fill-red-800 text-sm font-bold">Central Inv {i + 1}</text>
+                                    <text x={x + 60} y="220" textAnchor="middle" className="fill-red-700 text-xs">{inverterPower}kW</text>
+                                    <text x={x + 60} y="235" textAnchor="middle" className="fill-red-700 text-xs">{inverterOutputVoltage}V</text>
+                                    <text x={x + 60} y="250" textAnchor="middle" className="fill-red-700 text-xs">{inverterOutputCurrent.toFixed(0)}A</text>
+                                    <text x={x + 60} y="265" textAnchor="middle" className="fill-red-600 text-xs">AC Output</text>
+                                    
+                                    {/* Connection from Solar to each inverter - 90 degree bends */}
+                                    <line x1="500" y1="100" x2="500" y2="160" stroke="#1F2937" strokeWidth="2" />
+                                    <line x1="500" y1="160" x2={x + 60} y2="160" stroke="#1F2937" strokeWidth="2" />
+                                    <line x1={x + 60} y1="160" x2={x + 60} y2="180" stroke="#1F2937" strokeWidth="2" markerEnd="url(#arrowhead)" />
+                                  </g>
+                                );
+                              });
+                              })()}
+                              {/* +X more inverters indicators for IDTs with more than 3 inverters */}
+                              {(() => {
+                                const idtConfigs = config.hvCentralConfig.idts.configurations;
+                                const shouldUseLandscape = (
+                                  config.hvCentralConfig.idts.count > 2 || 
+                                  inverterCount > 6
+                                );
+                                
+                                return idtConfigs.map((idt, idtIndex) => {
+                                  const moreInverters = idt.invertersPerIDT - 3;
+                                  if (moreInverters <= 0) return null;
+                                  
+                                  // Calculate position to the right of the last inverter for this IDT
+                                  const centerX = shouldUseLandscape ? 700 : 500;
+                                  const lastInverterX = centerX + 200; // Positioned to the right
+                                  
+                                  return (
+                                    <g key={`more-inv-${idtIndex}`}>
+                                      <rect x={lastInverterX} y="180" width="100" height="90" rx="8" fill="#F3F4F6" stroke="#9CA3AF" strokeWidth="2" strokeDasharray="5,5" />
+                                      <text x={lastInverterX + 50} y="205" textAnchor="middle" className="fill-gray-600 text-sm font-bold">...</text>
+                                      <text x={lastInverterX + 50} y="220" textAnchor="middle" className="fill-gray-600 text-xs">+{moreInverters} more</text>
+                                      <text x={lastInverterX + 50} y="235" textAnchor="middle" className="fill-gray-500 text-xs">inverters</text>
+                                      <text x={lastInverterX + 50} y="250" textAnchor="middle" className="fill-gray-500 text-xs">→ IDT {idtIndex + 1}</text>
+                                      
+                                      {/* Connection to IDT group convergence point */}
+                                      <line x1={lastInverterX + 50} y1="270" x2={lastInverterX + 50} y2="310" stroke="#059669" strokeWidth="3" strokeDasharray="5,5" />
+                                    </g>
+                                  );
+                                }).filter(Boolean);
+                              })()}
+                            </g>
+
+                            {/* LV Cable Connections - Direct inverter to IDT connections */}
+                            <g>
+                              {/* Cable description - moved to right side */}
+                              <rect x="630" y="350" width="140" height="25" rx="4" fill="#ECFEF5" stroke="#059669" strokeWidth="1" />
+                              <text x="700" y="367" textAnchor="middle" className="fill-green-700 text-sm font-medium">LV Cables: XLPE 4-core</text>
+                              
+                              {/* Dynamic connections from inverters to their respective IDTs */}
+                              {(() => {
+                                // Use same per-IDT distribution algorithm as inverter rendering
+                                const idtCount = config.hvCentralConfig.idts.count;
+                                const idtConfigs = config.hvCentralConfig.idts.configurations;
+                                const maxInvertersPerIdtToShow = 3;
+                                
+                                const invertersToShowPerIdt = idtConfigs.map(idt => 
+                                  Math.min(idt.invertersPerIDT, maxInvertersPerIdtToShow)
+                                );
+                                const actualCount = invertersToShowPerIdt.reduce((sum, count) => sum + count, 0);
+                                
+                                const shouldUseLandscape = (
+                                  idtCount > 2 || 
+                                  inverterCount > 6
+                                );
+                                
+                                return Array.from({ length: actualCount }, (_, i) => {
+                                // Determine which IDT this inverter connects to - simple sequential distribution
+                                let targetIdtIndex = 0;
+                                let accumulatedInvertersShown = 0;
+                                
+                                // Simple distribution: first N inverters go to IDT 0, next N to IDT 1, etc.
+                                for (let idtIdx = 0; idtIdx < idtConfigs.length; idtIdx++) {
+                                  const invertersForThisIdt = Math.min(idtConfigs[idtIdx].invertersPerIDT, maxInvertersPerIdtToShow);
+                                  if (i < accumulatedInvertersShown + invertersForThisIdt) {
+                                    targetIdtIndex = idtIdx;
+                                    break;
+                                  }
+                                  accumulatedInvertersShown += invertersForThisIdt;
+                                }
+                                
+                                // Calculate inverter position - must match inverter rendering logic exactly
+                                const baseSpacing = shouldUseLandscape ? 180 : 170;
+                                const spacing = actualCount <= 2 ? (shouldUseLandscape ? 250 : 220) : 
+                                               actualCount <= 4 ? baseSpacing : 
+                                               (shouldUseLandscape ? 140 : 130);
+                                
+                                const totalWidth = (actualCount - 1) * spacing;
+                                const centerX = shouldUseLandscape ? 700 : 500;
+                                const startX = centerX - (totalWidth / 2) - 60;
+                                const inverterX = startX + (i * spacing) + 60; // +60 for inverter center
+                                
+                                // Calculate target IDT position with landscape support
+                                let targetIdtX;
+                                if (idtCount === 1) {
+                                  targetIdtX = shouldUseLandscape ? 700 : 500; // Center
+                                } else {
+                                  const idtWidth = 160;
+                                  const idtSpacing = 20;
+                                  const totalIdtWidth = idtCount * idtWidth + (idtCount - 1) * idtSpacing;
+                                  const idtCenterX = shouldUseLandscape ? 700 : 500;
+                                  const idtStartX = idtCenterX - (totalIdtWidth / 2);
+                                  targetIdtX = idtStartX + targetIdtIndex * (idtWidth + idtSpacing) + (idtWidth / 2);
+                                }
+                                
+                                return (
+                                  <g key={`hv-cable-${i}`}>
+                                    {/* Vertical line from inverter down */}
+                                    <line x1={inverterX} y1="270" x2={inverterX} y2="310" stroke="#059669" strokeWidth="3" />
+                                    {/* Horizontal line to IDT group convergence point */}
+                                    <line x1={inverterX} y1="310" x2={targetIdtX} y2="310" stroke="#059669" strokeWidth="3" />
+                                  </g>
+                                );
+                              });
+                              })()}
+                              
+                              {/* IDT Group Convergence Points and Final Connections */}
+                              {config.hvCentralConfig.idts.configurations.map((idt, idtIndex) => {
+                                const idtCount = config.hvCentralConfig.idts.count;
+                                const shouldUseLandscape = (
+                                  idtCount > 2 || 
+                                  inverterCount > 6
+                                );
+                                let targetIdtX;
+                                if (idtCount === 1) {
+                                  targetIdtX = shouldUseLandscape ? 700 : 500;
+                                } else {
+                                  const idtWidth = 160;
+                                  const idtSpacing = 20;
+                                  const totalIdtWidth = idtCount * idtWidth + (idtCount - 1) * idtSpacing;
+                                  const idtCenterX = shouldUseLandscape ? 700 : 500;
+                                  const idtStartX = idtCenterX - (totalIdtWidth / 2);
+                                  targetIdtX = idtStartX + idtIndex * (idtWidth + idtSpacing) + (idtWidth / 2);
+                                }
+                                
+                                return (
+                                  <g key={`idt-convergence-${idtIndex}`}>
+                                    {/* Convergence point for this IDT group */}
+                                    <circle cx={targetIdtX} cy="310" r="4" fill="#059669" stroke="#ffffff" strokeWidth="2" />
+                                    {/* Final vertical line from convergence to IDT */}
+                                    <line x1={targetIdtX} y1="310" x2={targetIdtX} y2="390" stroke="#059669" strokeWidth="4" markerEnd="url(#arrowhead)" />
+                                  </g>
+                                );
+                              })}
+                            </g>
+
+                            {/* Dynamic IDTs - show individual IDTs when multiple */}
+                            <g>
+                              {config.hvCentralConfig.idts.configurations.map((idt, idtIndex) => {
+                                const idtCount = config.hvCentralConfig.idts.count;
+                                const shouldUseLandscape = (
+                                  idtCount > 2 || 
+                                  inverterCount > 6
+                                );
+                                
+                                // Position IDTs side by side when multiple
+                                let idtX, idtWidth;
+                                if (idtCount === 1) {
+                                  const centerX = shouldUseLandscape ? 700 : 500;
+                                  idtX = centerX - 80; // Center the IDT
+                                  idtWidth = 160;
+                                } else {
+                                  idtWidth = 160;
+                                  const idtSpacing = 20;
+                                  const totalWidth = idtCount * idtWidth + (idtCount - 1) * idtSpacing;
+                                  const centerX = shouldUseLandscape ? 700 : 500;
+                                  const startX = centerX - (totalWidth / 2);
+                                  idtX = startX + idtIndex * (idtWidth + idtSpacing);
+                                }
+                                
+                                const idtCenterX = idtX + (idtWidth / 2);
+                                
+                                return (
+                                  <g key={`idt-${idtIndex}`}>
+                                    {/* IDT Box */}
+                                    <rect x={idtX} y="390" width={idtWidth} height="100" rx="10" fill="url(#idtGradient)" stroke="#7C3AED" strokeWidth="3" filter="url(#dropshadow)" />
+                                    <text x={idtCenterX} y="415" textAnchor="middle" className="fill-purple-800 text-lg font-bold">IDT {idtIndex + 1}</text>
+                                    <text x={idtCenterX} y="435" textAnchor="middle" className="fill-purple-700 text-sm">{idt.powerRating.toFixed(1)}MVA</text>
+                                    <text x={idtCenterX} y="450" textAnchor="middle" className="fill-purple-700 text-xs">{idt.primaryVoltage}V → {(idt.secondaryVoltage / 1000).toFixed(0)}kV</text>
+                                    <text x={idtCenterX} y="465" textAnchor="middle" className="fill-purple-700 text-xs">{idt.invertersPerIDT} inverter{idt.invertersPerIDT > 1 ? 's' : ''}</text>
+                                    <text x={idtCenterX} y="480" textAnchor="middle" className="fill-purple-600 text-xs">Vector: {idt.vectorGrouping}</text>
+                                  </g>
+                                );
+                              })}
+                            </g>
+
+                            {/* Output connections from IDTs */}
+                            {config.hvCentralConfig.idts.configurations.length > 1 ? (
+                              // Multiple IDTs - show individual connections converging
+                              <g>
+                                {config.hvCentralConfig.idts.configurations.map((idt, idtIndex) => {
+                                  const idtCount = config.hvCentralConfig.idts.count;
+                                  const idtWidth = 160;
+                                  const idtSpacing = 20;
+                                  const totalWidth = idtCount * idtWidth + (idtCount - 1) * idtSpacing;
+                                  const startX = 500 - (totalWidth / 2);
+                                  const idtX = startX + idtIndex * (idtWidth + idtSpacing);
+                                  const idtCenterX = idtX + (idtWidth / 2);
+                                  
+                                  return (
+                                    <g key={`idt-output-${idtIndex}`}>
+                                      {/* Vertical line from IDT */}
+                                      <line x1={idtCenterX} y1="490" x2={idtCenterX} y2="510" stroke="#7C3AED" strokeWidth="3" />
+                                      {/* Horizontal line to center */}
+                                      <line x1={idtCenterX} y1="510" x2="500" y2="510" stroke="#7C3AED" strokeWidth="3" />
+                                    </g>
+                                  );
+                                })}
+                                {/* Central convergence point */}
+                                <circle cx="500" cy="510" r="4" fill="#7C3AED" stroke="#ffffff" strokeWidth="2" />
+                                {/* Continue to next stage - extended line for better visibility */}
+                                <line x1="500" y1="510" x2="500" y2={config.hvCentralConfig.powerTransformer ? "570" : "550"} stroke="#7C3AED" strokeWidth="4" markerEnd="url(#arrowhead)" />
+                              </g>
+                            ) : (
+                              // Single IDT - direct connection - extended line for better visibility
+                              <line x1="500" y1="490" x2="500" y2={config.hvCentralConfig.powerTransformer ? "570" : "550"} stroke="#7C3AED" strokeWidth="4" markerEnd="url(#arrowhead)" />
+                            )}
+
+                            {config.hvCentralConfig.powerTransformer ? (
+                              <g>
+                                {/* HV Cable from IDTs to Power Transformer - connection handled above */}
+                                {/* HT Cable label - moved to right side */}
+                                <rect x="630" y="510" width="150" height="20" rx="4" fill="#F3E8FF" stroke="#7C3AED" strokeWidth="1" />
+                                <text x="705" y="525" textAnchor="middle" className="fill-purple-700 text-xs font-medium">HT Cables: XLPE Single-core</text>
+
+                                {/* Power Transformer - moved down to accommodate extended IDT connection line */}
+                                <rect x="400" y="570" width="200" height="110" rx="12" fill="url(#transformerGradient)" stroke="#059669" strokeWidth="3" filter="url(#dropshadow)" />
+                                <text x="500" y="600" textAnchor="middle" className="fill-green-800 text-xl font-bold">Power Transformer</text>
+                                <text x="500" y="620" textAnchor="middle" className="fill-green-700 text-lg">{config.hvCentralConfig.powerTransformer.powerRating.toFixed(1)}MVA</text>
+                                <text x="500" y="640" textAnchor="middle" className="fill-green-700 text-sm">{(config.hvCentralConfig.powerTransformer.primaryVoltage / 1000).toFixed(0)}kV → {(config.hvCentralConfig.powerTransformer.secondaryVoltage / 1000).toFixed(0)}kV</text>
+                                <text x="500" y="655" textAnchor="middle" className="fill-green-600 text-xs">Vector: {config.hvCentralConfig.powerTransformer.vectorGrouping}</text>
+                                <text x="500" y="670" textAnchor="middle" className="fill-green-600 text-xs">Step-up Transformer</text>
+
+                                {/* Final HV Cable from Power Transformer to PoC */}
+                                <line x1="500" y1="680" x2="500" y2="730" stroke="#EA580C" strokeWidth="4" markerEnd="url(#arrowhead)" />
+                                {/* Final HT Cable label - moved to right side */}
+                                <rect x="630" y="700" width="150" height="20" rx="4" fill="#FED7AA" stroke="#EA580C" strokeWidth="1" />
+                                <text x="705" y="715" textAnchor="middle" className="fill-orange-700 text-xs font-medium">HT Cable: XLPE Single-core</text>
+                              </g>
+                            ) : (
+                              <g>
+                                {/* HV Cable from IDT to Busbar */}
+                                <line x1="500" y1="490" x2="500" y2="520" stroke="#7C3AED" strokeWidth="4" markerEnd="url(#arrowhead)" />
+                                {/* HT Cable label - moved to right side */}
+                                <rect x="630" y="500" width="150" height="20" rx="4" fill="#F3E8FF" stroke="#7C3AED" strokeWidth="1" />
+                                <text x="705" y="515" textAnchor="middle" className="fill-purple-700 text-xs font-medium">HT Cables: XLPE Single-core</text>
+                                
+                                {/* HV Busbar */}
+                                <rect x="350" y="520" width="300" height="70" rx="10" fill="#EEF2FF" stroke="#6366F1" strokeWidth="3" filter="url(#dropshadow)" />
+                                <text x="500" y="545" textAnchor="middle" className="fill-indigo-800 text-lg font-bold">HV Busbar</text>
+                                <text x="500" y="565" textAnchor="middle" className="fill-indigo-700 text-sm">{(config.hvCentralConfig.idts.configurations[0]?.secondaryVoltage / 1000).toFixed(0)}kV</text>
+                                <text x="500" y="580" textAnchor="middle" className="fill-indigo-600 text-xs">Combined Current from All IDTs</text>
+
+                                {/* Combined HV Cable from Busbar to PoC */}
+                                <line x1="500" y1="590" x2="500" y2="630" stroke="#EA580C" strokeWidth="4" markerEnd="url(#arrowhead)" />
+                                {/* Combined HT Cable label - moved to right side */}
+                                <rect x="630" y="605" width="150" height="20" rx="4" fill="#FED7AA" stroke="#EA580C" strokeWidth="1" />
+                                <text x="705" y="620" textAnchor="middle" className="fill-orange-700 text-xs font-medium">HT Cable: Combined Current</text>
+                              </g>
+                            )}
+
+                            {/* Point of Connection */}
+                            <rect x="400" y={config.hvCentralConfig.powerTransformer ? "730" : "630"} width="200" height="80" rx="12" fill="url(#pocGradient)" stroke="#EA580C" strokeWidth="3" filter="url(#dropshadow)" />
+                            <text x="500" y={config.hvCentralConfig.powerTransformer ? "755" : "655"} textAnchor="middle" className="fill-orange-800 text-lg font-bold">Point of Connection</text>
+                            <text x="500" y={config.hvCentralConfig.powerTransformer ? "775" : "675"} textAnchor="middle" className="fill-orange-700 text-sm">{(config.pocVoltage / 1000).toFixed(0)}kV Grid</text>
+                            <text x="500" y={config.hvCentralConfig.powerTransformer ? "795" : "695"} textAnchor="middle" className="fill-orange-700 text-sm">~{systemSize.toFixed(1)}kW</text>
+
+                            {/* Technical specifications box - moved to bottom left corner */}
+                            <rect x="10" y="600" width="200" height="180" rx="8" fill="#F8FAFC" stroke="#CBD5E1" strokeWidth="2" />
+                            <text x="20" y="620" className="fill-slate-800 text-sm font-bold">System Specifications</text>
+                            <text x="20" y="640" className="fill-slate-700 text-xs">Total DC Capacity: {systemSize.toFixed(1)}kW</text>
+                            <text x="20" y="655" className="fill-slate-700 text-xs">Inverters: {inverterCount} × {inverterPower}kW</text>
+                            <text x="20" y="670" className="fill-slate-700 text-xs">IDTs: {config.hvCentralConfig.idts.count} units</text>
+                            <text x="20" y="685" className="fill-slate-700 text-xs">AC Voltage: {inverterOutputVoltage}V</text>
+                            <text x="20" y="700" className="fill-slate-700 text-xs">Grid Voltage: {(config.pocVoltage / 1000).toFixed(0)}kV</text>
+                            <text x="20" y="715" className="fill-slate-700 text-xs">Connection: HV Central</text>
+                            {config.hvCentralConfig.powerTransformer ? (
+                              <text x="20" y="730" className="fill-slate-700 text-xs">Power Transformer: Yes</text>
+                            ) : (
+                              <text x="20" y="730" className="fill-slate-700 text-xs">Power Transformer: No</text>
+                            )}
+                            <text x="20" y="745" className="fill-slate-700 text-xs">Config: {config.hvCentralConfig.powerTransformer ? 'With PT' : 'Direct'}</text>
+                            <text x="20" y="760" className="fill-slate-700 text-xs">Date: {new Date().toLocaleDateString()}</text>
+
+                            {/* Legend - moved to bottom left corner below System Specifications */}
+                            <rect x="10" y="800" width="200" height="160" rx="8" fill="#F8FAFC" stroke="#CBD5E1" strokeWidth="2" />
+                            <text x="20" y="820" className="fill-slate-800 text-sm font-bold">Component Legend</text>
+                            <circle cx="30" cy="835" r="6" fill="#F59E0B" />
+                            <text x="45" y="840" className="fill-slate-700 text-xs">Solar PV Arrays</text>
+                            <circle cx="30" cy="850" r="6" fill="#DC2626" />
+                            <text x="45" y="855" className="fill-slate-700 text-xs">Central Inverters</text>
+                            <circle cx="30" cy="865" r="6" fill="#7C3AED" />
+                            <text x="45" y="870" className="fill-slate-700 text-xs">IDTs (Transformers)</text>
+                            <circle cx="30" cy="880" r="6" fill="#059669" />
+                            <text x="45" y="885" className="fill-slate-700 text-xs">Power Transformer</text>
+                            <circle cx="30" cy="895" r="6" fill="#EA580C" />
+                            <text x="45" y="900" className="fill-slate-700 text-xs">Point of Connection</text>
+                            <line x1="20" y1="915" x2="40" y2="915" stroke="#059669" strokeWidth="2" />
+                            <text x="45" y="920" className="fill-slate-700 text-xs">Cable Connections</text>
+                          </svg>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+    </>
+  );
+});
+
+// Set display name for better debugging
+ACSideConfiguration.displayName = 'ACSideConfiguration';

@@ -6,374 +6,711 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export type Database = {
+export interface Database {
   public: {
     Tables: {
       profiles: {
         Row: {
-          avatar_url: string | null
-          company: string | null
-          created_at: string | null
-          email: string | null
+          avatar_url: string
+          company: string
+          created_at: string
+          email: string
           id: string
-          name: string | null
-          phone: string | null
-          preferred_currency: string | null
-          updated_at: string | null
+          name: string
+          phone: string
+          preferred_currency: string
+          updated_at: string
+          subscription_tier: string
+          ai_credits_remaining: number
+          ai_credits_monthly_limit: number
+          subscription_start_date: string
+          next_credit_reset_date: string
+          is_super_admin: boolean
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          subscription_status: string
         }
         Insert: {
-          avatar_url?: string | null
-          company?: string | null
-          created_at?: string | null
-          email?: string | null
+          avatar_url?: string
+          company?: string
+          created_at?: string
+          email: string
           id: string
-          name?: string | null
-          phone?: string | null
-          preferred_currency?: string | null
-          updated_at?: string | null
+          name?: string
+          phone?: string
+          preferred_currency?: string
+          updated_at?: string
+          subscription_tier?: string
+          ai_credits_remaining?: number
+          ai_credits_monthly_limit?: number
+          subscription_start_date?: string
+          next_credit_reset_date?: string
+          is_super_admin?: boolean
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string
         }
         Update: {
-          avatar_url?: string | null
-          company?: string | null
-          created_at?: string | null
-          email?: string | null
+          avatar_url?: string
+          company?: string
+          created_at?: string
+          email?: string
           id?: string
-          name?: string | null
-          phone?: string | null
-          preferred_currency?: string | null
-          updated_at?: string | null
+          name?: string
+          phone?: string
+          preferred_currency?: string
+          updated_at?: string
+          subscription_tier?: string
+          ai_credits_remaining?: number
+          ai_credits_monthly_limit?: number
+          subscription_start_date?: string
+          next_credit_reset_date?: string
+          is_super_admin?: boolean
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string
         }
         Relationships: []
       }
       projects: {
         Row: {
-          annual_cost: number | null
-          annual_energy: number | null
-          annual_revenue: number | null
-          city: string | null
-          client_address: string | null
-          client_email: string | null
           client_name: string
-          client_phone: string | null
-          co2_reduction: number | null
-          company_contact: string | null
-          company_email: string | null
-          company_name: string | null
-          company_phone: string | null
-          country: string | null
-          created_at: string | null
-          cumulative_cash_flow: Json | null
-          currency: string | null
-          degradation_rate: number | null
-          discount_rate: number | null
-          electricity_escalation_rate: number | null
-          electricity_rate: number
-          financing_option: string | null
+          created_at: string
           id: string
-          incentives: number | null
-          interest_rate: number | null
-          inverter_efficiency: number | null
-          inverter_type: string | null
-          irr: number | null
-          knows_annual_energy: boolean
-          lcoe: number | null
-          loan_term: number | null
-          location: Json | null
-          maintenance_cost: number | null
-          maintenance_escalation_rate: number | null
-          manual_annual_energy: number | null
+          location: string
           name: string
-          net_present_value: number | null
-          orientation: string | null
-          panel_efficiency: number | null
-          panel_type: string | null
-          payback_period: Json | null
-          roof_angle: number | null
-          roof_type: string | null
-          shading_factor: number | null
-          solar_irradiance: number | null
-          system_cost: number
-          system_size: number
-          timezone: string | null
-          trees_equivalent: number | null
-          updated_at: string | null
-          user_id: string
-          vehicle_miles_offset: number | null
-          yearly_cash_flow: Json | null
-          yearly_production: Json | null
+          owner_id: string
+          status: string
+          updated_at: string
         }
         Insert: {
-          annual_cost?: number | null
-          annual_energy?: number | null
-          annual_revenue?: number | null
-          city?: string | null
-          client_address?: string | null
-          client_email?: string | null
-          client_name: string
-          client_phone?: string | null
-          co2_reduction?: number | null
-          company_contact?: string | null
-          company_email?: string | null
-          company_name?: string | null
-          company_phone?: string | null
-          country?: string | null
-          created_at?: string | null
-          cumulative_cash_flow?: Json | null
-          currency?: string | null
-          degradation_rate?: number | null
-          discount_rate?: number | null
-          electricity_escalation_rate?: number | null
-          electricity_rate: number
-          financing_option?: string | null
+          client_name?: string
+          created_at?: string
           id?: string
-          incentives?: number | null
-          interest_rate?: number | null
-          inverter_efficiency?: number | null
-          inverter_type?: string | null
-          irr?: number | null
-          knows_annual_energy?: boolean
-          lcoe?: number | null
-          loan_term?: number | null
-          location?: Json | null
-          maintenance_cost?: number | null
-          maintenance_escalation_rate?: number | null
-          manual_annual_energy?: number | null
+          location?: string
           name: string
-          net_present_value?: number | null
-          orientation?: string | null
-          panel_efficiency?: number | null
-          panel_type?: string | null
-          payback_period?: Json | null
-          roof_angle?: number | null
-          roof_type?: string | null
-          shading_factor?: number | null
-          solar_irradiance?: number | null
-          system_cost: number
-          system_size: number
-          timezone?: string | null
-          trees_equivalent?: number | null
-          updated_at?: string | null
-          user_id: string
-          vehicle_miles_offset?: number | null
-          yearly_cash_flow?: Json | null
-          yearly_production?: Json | null
+          owner_id: string
+          status?: string
+          updated_at?: string
         }
         Update: {
-          annual_cost?: number | null
-          annual_energy?: number | null
-          annual_revenue?: number | null
-          city?: string | null
-          client_address?: string | null
-          client_email?: string | null
           client_name?: string
-          client_phone?: string | null
-          co2_reduction?: number | null
-          company_contact?: string | null
-          company_email?: string | null
-          company_name?: string | null
-          company_phone?: string | null
-          country?: string | null
-          created_at?: string | null
-          cumulative_cash_flow?: Json | null
-          currency?: string | null
-          degradation_rate?: number | null
-          discount_rate?: number | null
-          electricity_escalation_rate?: number | null
-          electricity_rate?: number
-          financing_option?: string | null
+          created_at?: string
           id?: string
-          incentives?: number | null
-          interest_rate?: number | null
-          inverter_efficiency?: number | null
-          inverter_type?: string | null
-          irr?: number | null
-          knows_annual_energy?: boolean
-          lcoe?: number | null
-          loan_term?: number | null
-          location?: Json | null
-          maintenance_cost?: number | null
-          maintenance_escalation_rate?: number | null
-          manual_annual_energy?: number | null
+          location?: string
           name?: string
-          net_present_value?: number | null
-          orientation?: string | null
-          panel_efficiency?: number | null
-          panel_type?: string | null
-          payback_period?: Json | null
-          roof_angle?: number | null
-          roof_type?: string | null
-          shading_factor?: number | null
-          solar_irradiance?: number | null
-          system_cost?: number
-          system_size?: number
-          timezone?: string | null
-          trees_equivalent?: number | null
-          updated_at?: string | null
+          owner_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      advanced_calculator_projects: {
+        Row: {
+          id: string
+          user_id: string
+          project_name: string
+          status: string
+          location: Json | null
+          system_params: Json | null
+          selected_panel: Json | null
+          selected_inverter: Json | null
+          polygon_configs: Json | null
+          dc_config: Json | null
+          ac_configuration: Json | null
+          detailed_losses: Json | null
+          solar_results: Json | null
+          consolidated_boq: Json | null
+          boq_cost_summary: Json | null
+          financial_params: Json | null
+          financial_results: Json | null
+          ai_report_form: Json | null
+          ai_executive_summary: string | null
+          captured_map_image: string | null
+          captured_sld_image: string | null
+          sld_metadata: Json | null
+          created_at: string
+          updated_at: string
+          last_saved_tab: string | null
+          progress_percentage: number | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          project_name: string
+          status?: string
+          location?: Json | null
+          system_params?: Json | null
+          selected_panel?: Json | null
+          selected_inverter?: Json | null
+          polygon_configs?: Json | null
+          dc_config?: Json | null
+          ac_configuration?: Json | null
+          detailed_losses?: Json | null
+          solar_results?: Json | null
+          consolidated_boq?: Json | null
+          boq_cost_summary?: Json | null
+          financial_params?: Json | null
+          financial_results?: Json | null
+          ai_report_form?: Json | null
+          ai_executive_summary?: string | null
+          captured_map_image?: string | null
+          captured_sld_image?: string | null
+          sld_metadata?: Json | null
+          created_at?: string
+          updated_at?: string
+          last_saved_tab?: string | null
+          progress_percentage?: number | null
+        }
+        Update: {
+          id?: string
           user_id?: string
-          vehicle_miles_offset?: number | null
-          yearly_cash_flow?: Json | null
-          yearly_production?: Json | null
+          project_name?: string
+          status?: string
+          location?: Json | null
+          system_params?: Json | null
+          selected_panel?: Json | null
+          selected_inverter?: Json | null
+          polygon_configs?: Json | null
+          dc_config?: Json | null
+          ac_configuration?: Json | null
+          detailed_losses?: Json | null
+          solar_results?: Json | null
+          consolidated_boq?: Json | null
+          boq_cost_summary?: Json | null
+          financial_params?: Json | null
+          financial_results?: Json | null
+          ai_report_form?: Json | null
+          ai_executive_summary?: string | null
+          captured_map_image?: string | null
+          captured_sld_image?: string | null
+          sld_metadata?: Json | null
+          created_at?: string
+          updated_at?: string
+          last_saved_tab?: string | null
+          progress_percentage?: number | null
+        }
+        Relationships: []
+      }
+      lv_cables: {
+        Row: {
+          id: string
+          cross_section_mm2: number
+          material: string
+          type: string
+          current_in_air: number | null
+          current_in_conduit: number | null
+          buried_conduit_ampacity: number | null
+          direct_burial_ampacity: number | null
+          voltage_rating: string | null
+          conductor_material: string | null
+          insulation_type: string | null
+          num_cores: number | null
+          created_at: string | null
+          updated_at: string | null
+          max_temperature: number | null
+          voltage_rating_numeric: number | null
+        }
+        Insert: {
+          id?: string
+          cross_section_mm2: number
+          material: string
+          type: string
+          current_in_air?: number | null
+          current_in_conduit?: number | null
+          buried_conduit_ampacity?: number | null
+          direct_burial_ampacity?: number | null
+          voltage_rating?: string | null
+          conductor_material?: string | null
+          insulation_type?: string | null
+          num_cores?: number | null
+          created_at?: string | null
+          updated_at?: string | null
+          max_temperature?: number | null
+          voltage_rating_numeric?: number | null
+        }
+        Update: {
+          id?: string
+          cross_section_mm2?: number
+          material?: string
+          type?: string
+          current_in_air?: number | null
+          current_in_conduit?: number | null
+          buried_conduit_ampacity?: number | null
+          direct_burial_ampacity?: number | null
+          voltage_rating?: string | null
+          conductor_material?: string | null
+          insulation_type?: string | null
+          num_cores?: number | null
+          created_at?: string | null
+          updated_at?: string | null
+          max_temperature?: number | null
+          voltage_rating_numeric?: number | null
+        }
+        Relationships: []
+      }
+      hv_cables: {
+        Row: {
+          id: string
+          cross_section_mm2: number
+          voltage_rating: number
+          current_in_air: number
+          current_in_ground: number
+          conductor_material: string
+          insulation_type: string
+          core_type: string | null
+          max_temperature: number
+          ac_resistance: number | null
+          reactance: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          cross_section_mm2: number
+          voltage_rating: number
+          current_in_air: number
+          current_in_ground: number
+          conductor_material: string
+          insulation_type: string
+          core_type?: string | null
+          max_temperature: number
+          ac_resistance?: number | null
+          reactance?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          cross_section_mm2?: number
+          voltage_rating?: number
+          current_in_air?: number
+          current_in_ground?: number
+          conductor_material?: string
+          insulation_type?: string
+          core_type?: string | null
+          max_temperature?: number
+          ac_resistance?: number | null
+          reactance?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      lv_derating_factors: {
+        Row: {
+          id: string
+          factor_type: string
+          cable_type: string
+          value_key: string
+          value_numeric: number | null
+          derating_factor: number
+          description: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          factor_type: string
+          cable_type: string
+          value_key: string
+          value_numeric?: number | null
+          derating_factor: number
+          description?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          factor_type?: string
+          cable_type?: string
+          value_key?: string
+          value_numeric?: number | null
+          derating_factor?: number
+          description?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      hv_derating_factors: {
+        Row: {
+          id: string
+          factor_type: string
+          cable_type: string
+          value_key: string
+          value_numeric: number | null
+          derating_factor: number
+          description: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          factor_type: string
+          cable_type: string
+          value_key: string
+          value_numeric?: number | null
+          derating_factor: number
+          description?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          factor_type?: string
+          cable_type?: string
+          value_key?: string
+          value_numeric?: number | null
+          derating_factor?: number
+          description?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      derating_factors: {
+        Row: {
+          id: string
+          factor_type: string
+          cable_type: string
+          value_key: string
+          value_numeric: number | null
+          derating_factor: number
+          description: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          factor_type: string
+          cable_type: string
+          value_key: string
+          value_numeric?: number | null
+          derating_factor: number
+          description?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          factor_type?: string
+          cable_type?: string
+          value_key?: string
+          value_numeric?: number | null
+          derating_factor?: number
+          description?: string | null
+          created_at?: string
+          updated_at?: string
         }
         Relationships: []
       }
       solar_inverters: {
         Row: {
-          created_at: string | null
-          data_source: string | null
-          file_name: string | null
-          frequency_hz: number | null
           id: string
           manufacturer: string
-          max_dc_current_a: number | null
-          max_dc_voltage_v: number | null
-          maximum_ac_current_a: number | null
-          maximum_ac_power_kw: number | null
-          min_mpp_voltage_v: number | null
           model: string
-          night_consumption_w: number | null
-          nominal_ac_current_a: number | null
+          file_name: string | null
+          data_source: string | null
           nominal_ac_power_kw: number | null
+          maximum_ac_power_kw: number | null
+          nominal_ac_current_a: number | null
+          maximum_ac_current_a: number | null
           nominal_ac_voltage_v: number | null
-          nominal_mpp_voltage_v: number | null
           phase: string | null
+          frequency_hz: number | null
           power_threshold_w: number | null
-          topology: string | null
-          total_mppt: number | null
+          nominal_mpp_voltage_v: number | null
+          min_mpp_voltage_v: number | null
+          max_dc_voltage_v: number | null
+          max_dc_current_a: number | null
           total_string_inputs: number | null
+          total_mppt: number | null
+          night_consumption_w: number | null
+          topology: string | null
+          created_at: string | null
           updated_at: string | null
         }
         Insert: {
-          created_at?: string | null
-          data_source?: string | null
-          file_name?: string | null
-          frequency_hz?: number | null
           id?: string
           manufacturer: string
-          max_dc_current_a?: number | null
-          max_dc_voltage_v?: number | null
-          maximum_ac_current_a?: number | null
-          maximum_ac_power_kw?: number | null
-          min_mpp_voltage_v?: number | null
           model: string
-          night_consumption_w?: number | null
-          nominal_ac_current_a?: number | null
+          file_name?: string | null
+          data_source?: string | null
           nominal_ac_power_kw?: number | null
+          maximum_ac_power_kw?: number | null
+          nominal_ac_current_a?: number | null
+          maximum_ac_current_a?: number | null
           nominal_ac_voltage_v?: number | null
-          nominal_mpp_voltage_v?: number | null
           phase?: string | null
+          frequency_hz?: number | null
           power_threshold_w?: number | null
-          topology?: string | null
-          total_mppt?: number | null
+          nominal_mpp_voltage_v?: number | null
+          min_mpp_voltage_v?: number | null
+          max_dc_voltage_v?: number | null
+          max_dc_current_a?: number | null
           total_string_inputs?: number | null
+          total_mppt?: number | null
+          night_consumption_w?: number | null
+          topology?: string | null
+          created_at?: string | null
           updated_at?: string | null
         }
         Update: {
-          created_at?: string | null
-          data_source?: string | null
-          file_name?: string | null
-          frequency_hz?: number | null
           id?: string
           manufacturer?: string
-          max_dc_current_a?: number | null
-          max_dc_voltage_v?: number | null
-          maximum_ac_current_a?: number | null
-          maximum_ac_power_kw?: number | null
-          min_mpp_voltage_v?: number | null
           model?: string
-          night_consumption_w?: number | null
-          nominal_ac_current_a?: number | null
+          file_name?: string | null
+          data_source?: string | null
           nominal_ac_power_kw?: number | null
+          maximum_ac_power_kw?: number | null
+          nominal_ac_current_a?: number | null
+          maximum_ac_current_a?: number | null
           nominal_ac_voltage_v?: number | null
-          nominal_mpp_voltage_v?: number | null
           phase?: string | null
+          frequency_hz?: number | null
           power_threshold_w?: number | null
-          topology?: string | null
-          total_mppt?: number | null
+          nominal_mpp_voltage_v?: number | null
+          min_mpp_voltage_v?: number | null
+          max_dc_voltage_v?: number | null
+          max_dc_current_a?: number | null
           total_string_inputs?: number | null
+          total_mppt?: number | null
+          night_consumption_w?: number | null
+          topology?: string | null
+          created_at?: string | null
           updated_at?: string | null
         }
         Relationships: []
       }
       solar_panels: {
         Row: {
-          cells_in_parallel: number | null
-          cells_in_series: number | null
-          created_at: string | null
-          current_temp_coeff: number | null
-          data_source: string | null
-          efficiency_percent: number | null
-          file_name: string | null
           id: string
-          imp_a: number | null
-          isc_a: number | null
           manufacturer: string
-          maximum_voltage_iec: number | null
           model: string
-          module_length: number | null
-          module_weight: number | null
-          module_width: number | null
-          noct_c: number | null
+          file_name: string | null
+          data_source: string | null
           nominal_power_w: number | null
-          panel_area_m2: number | null
-          power_temp_coeff: number | null
           technology: string | null
-          updated_at: string | null
+          cells_in_series: number | null
+          cells_in_parallel: number | null
+          maximum_voltage_iec: number | null
+          noct_c: number | null
           vmp_v: number | null
+          imp_a: number | null
           voc_v: number | null
+          isc_a: number | null
+          current_temp_coeff: number | null
+          power_temp_coeff: number | null
+          module_length: number | null
+          module_width: number | null
+          module_weight: number | null
+          panel_area_m2: number | null
+          efficiency_percent: number | null
+          bifaciality: number | null
+          created_at: string | null
+          updated_at: string | null
         }
         Insert: {
-          cells_in_parallel?: number | null
-          cells_in_series?: number | null
-          created_at?: string | null
-          current_temp_coeff?: number | null
-          data_source?: string | null
-          efficiency_percent?: number | null
-          file_name?: string | null
           id?: string
-          imp_a?: number | null
-          isc_a?: number | null
           manufacturer: string
-          maximum_voltage_iec?: number | null
           model: string
-          module_length?: number | null
-          module_weight?: number | null
-          module_width?: number | null
-          noct_c?: number | null
+          file_name?: string | null
+          data_source?: string | null
           nominal_power_w?: number | null
-          panel_area_m2?: number | null
-          power_temp_coeff?: number | null
           technology?: string | null
-          updated_at?: string | null
+          cells_in_series?: number | null
+          cells_in_parallel?: number | null
+          maximum_voltage_iec?: number | null
+          noct_c?: number | null
           vmp_v?: number | null
+          imp_a?: number | null
           voc_v?: number | null
+          isc_a?: number | null
+          current_temp_coeff?: number | null
+          power_temp_coeff?: number | null
+          module_length?: number | null
+          module_width?: number | null
+          module_weight?: number | null
+          panel_area_m2?: number | null
+          efficiency_percent?: number | null
+          bifaciality?: number | null
+          created_at?: string | null
+          updated_at?: string | null
         }
         Update: {
-          cells_in_parallel?: number | null
-          cells_in_series?: number | null
-          created_at?: string | null
-          current_temp_coeff?: number | null
-          data_source?: string | null
-          efficiency_percent?: number | null
-          file_name?: string | null
           id?: string
-          imp_a?: number | null
-          isc_a?: number | null
           manufacturer?: string
-          maximum_voltage_iec?: number | null
           model?: string
-          module_length?: number | null
-          module_weight?: number | null
-          module_width?: number | null
-          noct_c?: number | null
+          file_name?: string | null
+          data_source?: string | null
           nominal_power_w?: number | null
-          panel_area_m2?: number | null
-          power_temp_coeff?: number | null
           technology?: string | null
-          updated_at?: string | null
+          cells_in_series?: number | null
+          cells_in_parallel?: number | null
+          maximum_voltage_iec?: number | null
+          noct_c?: number | null
           vmp_v?: number | null
+          imp_a?: number | null
           voc_v?: number | null
+          isc_a?: number | null
+          current_temp_coeff?: number | null
+          power_temp_coeff?: number | null
+          module_length?: number | null
+          module_width?: number | null
+          module_weight?: number | null
+          panel_area_m2?: number | null
+          efficiency_percent?: number | null
+          bifaciality?: number | null
+          created_at?: string | null
+          updated_at?: string | null
         }
         Relationships: []
+      }
+      circuit_breaker_types: {
+        Row: {
+          id: string
+          breaker_type: string
+          abbreviation: string
+          governing_standard: string
+          description: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          breaker_type: string
+          abbreviation: string
+          governing_standard: string
+          description?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          breaker_type?: string
+          abbreviation?: string
+          governing_standard?: string
+          description?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      circuit_breaker_ratings: {
+        Row: {
+          id: string
+          breaker_type_id: string
+          ampere_rating: number
+          voltage_rating: number | null
+          breaking_capacity_ka: number | null
+          is_standard: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          breaker_type_id: string
+          ampere_rating: number
+          voltage_rating?: number | null
+          breaking_capacity_ka?: number | null
+          is_standard?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          breaker_type_id?: string
+          ampere_rating?: number
+          voltage_rating?: number | null
+          breaking_capacity_ka?: number | null
+          is_standard?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "circuit_breaker_ratings_breaker_type_id_fkey"
+            columns: ["breaker_type_id"]
+            isOneToOne: false
+            referencedRelation: "circuit_breaker_types"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      circuit_breakers: {
+        Row: {
+          id: string
+          breaker_type: string
+          ampacity: number
+          rated_voltage: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          breaker_type: string
+          ampacity: number
+          rated_voltage: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          breaker_type?: string
+          ampacity?: number
+          rated_voltage?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      albedo_values: {
+        Row: {
+          id: string;
+          surface_type: string;
+          albedo_value: number;
+          albedo_range_min?: number;
+          albedo_range_max?: number;
+          description?: string;
+          category?: string;
+          is_default?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Insert: {
+          id?: string;
+          surface_type: string;
+          albedo_value: number;
+          albedo_range_min?: number;
+          albedo_range_max?: number;
+          description?: string;
+          category?: string;
+          is_default?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          surface_type?: string;
+          albedo_value?: number;
+          albedo_range_min?: number;
+          albedo_range_max?: number;
+          description?: string;
+          category?: string;
+          is_default?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
       }
     }
     Views: {
@@ -501,3 +838,16 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
+export type AlbedoValue = {
+  id: string;
+  surface_type: string;
+  albedo_value: number;
+  albedo_range_min?: number;
+  albedo_range_max?: number;
+  description?: string;
+  category?: string;
+  is_default?: boolean;
+  created_at?: string;
+  updated_at?: string;
+};

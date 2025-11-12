@@ -1,11 +1,14 @@
 
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import SolarCalculator from "@/components/SolarCalculator";
 import { SolarProject } from "@/types/solarProject";
 import ReturnToDashboardButton from "@/components/ui/ReturnToDashboardButton";
 
 export function SolarDesignerPage() {
+  const navigate = useNavigate();
+  
   // Store location details as they're updated
   const [locationDetails, setLocationDetails] = useState({
     latitude: 40.7128,
@@ -88,7 +91,17 @@ export function SolarDesignerPage() {
   return (
     <div className="container mx-auto py-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Solar Financial Tool</h1>
+        <div 
+          className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity" 
+          onClick={() => navigate('/dashboard')}
+          title="Return to Dashboard"
+        >
+          <img src="/baess-logo.PNG" alt="BAESS Labs" className="h-10 w-auto" onError={(e) => e.currentTarget.style.display = 'none'} />
+          <div className="flex flex-col">
+            <h1 className="text-3xl font-bold leading-none">BAESS Labs</h1>
+            <p className="text-xs text-gray-600">Solar Intelligence Delivered</p>
+          </div>
+        </div>
         <ReturnToDashboardButton />
       </div>
       

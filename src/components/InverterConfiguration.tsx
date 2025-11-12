@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,10 +29,10 @@ const COMMON_INVERTERS = [
 const InverterConfiguration: React.FC<InverterConfigurationProps> = ({ onConfigChange, initialConfig }) => {
   const [useInverter, setUseInverter] = useState(!!initialConfig);
   const [selectedInverter, setSelectedInverter] = useState(initialConfig ? "Custom" : COMMON_INVERTERS[0].name);
-  const [acPower, setAcPower] = useState(initialConfig?.specifications?.nominal_ac_power || COMMON_INVERTERS[0].ac_power);
-  const [efficiency, setEfficiency] = useState(initialConfig?.specifications?.max_efficiency || COMMON_INVERTERS[0].max_efficiency);
-  const [numInverters, setNumInverters] = useState(initialConfig?.configuration?.num_inverters || 1);
-  const [dcAcRatio, setDcAcRatio] = useState(initialConfig?.configuration?.dc_ac_ratio || 1.2);
+  const [acPower, setAcPower] = useState(Number(initialConfig?.specifications?.nominal_ac_power) || COMMON_INVERTERS[0].ac_power);
+  const [efficiency, setEfficiency] = useState(Number(initialConfig?.specifications?.max_efficiency) || COMMON_INVERTERS[0].max_efficiency);
+  const [numInverters, setNumInverters] = useState(Number(initialConfig?.configuration?.num_inverters) || 1);
+  const [dcAcRatio, setDcAcRatio] = useState(Number(initialConfig?.configuration?.dc_ac_ratio) || 1.2);
 
   const handleInverterChange = (value: string) => {
     setSelectedInverter(value);
@@ -56,7 +56,7 @@ const InverterConfiguration: React.FC<InverterConfigurationProps> = ({ onConfigC
     }
   };
 
-  const updateInverterConfig = () => {
+  const updateInverterConfig = useCallback(() => {
     if (!useInverter) return;
     
     const config: InverterParams = {
@@ -76,13 +76,13 @@ const InverterConfiguration: React.FC<InverterConfigurationProps> = ({ onConfigC
     };
     
     onConfigChange(config);
-  };
+  }, [useInverter, selectedInverter, numInverters, dcAcRatio, acPower, efficiency, onConfigChange]);
 
   useEffect(() => {
     if (useInverter) {
       updateInverterConfig();
     }
-  }, [acPower, efficiency, numInverters, dcAcRatio, useInverter]);
+  }, [useInverter, updateInverterConfig]);
 
   return (
     <Card className="bg-gradient-to-b from-white to-purple-50 shadow-sm hover:shadow-md transition-all duration-300 w-full animate-fade-in" style={{animationDelay: "150ms"}}>

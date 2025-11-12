@@ -1,4 +1,3 @@
-
 /**
  * Utility functions for the area calculator drawing operations
  */
@@ -46,13 +45,12 @@ export const getAzimuthDirectionName = (azimuth: number): string => {
 export const getArrayTypeForStructure = (structureId: string): number => {
   switch (structureId) {
     case 'ballasted':
-      return 1; // Fixed (roof mount) for ballasted flat roof
     case 'fixed_tilt':
+      return 1; // Fixed (roof mount) for ballasted flat roof and fixed tilt elevated
     case 'ground_mount_tables':
     case 'carport':
-      return 0; // Fixed (open rack) for fixed tilt, ground mount tables, and carport
-    case 'tracker':
-      return 2; // 1-Axis Tracking for tracker
+    case 'pv_table_free_form':
+      return 0; // Fixed (open rack) for ground mount tables, carport, and PV table free form
     default:
       return 0; // Default to Fixed (open rack)
   }
@@ -62,6 +60,7 @@ export const getArrayTypeForStructure = (structureId: string): number => {
  * Safely get a module dimension with fallback
  */
 export const getModuleDimension = (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   panel: any, 
   dimension: 'length' | 'width', 
   defaultValue: number
@@ -84,6 +83,7 @@ export const getModuleDimension = (
 /**
  * Debounce function for throttling events
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
   let timeout: ReturnType<typeof setTimeout> | null = null;
 

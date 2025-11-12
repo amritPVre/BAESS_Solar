@@ -1,7 +1,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Sun, Info } from "lucide-react";
+import { Info } from "lucide-react";
 
 const AuthInfoPanel: React.FC = () => {
   return (
@@ -9,16 +9,15 @@ const AuthInfoPanel: React.FC = () => {
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.5 }}
-      className="flex flex-col justify-center p-6 hidden md:flex"
+      className="hidden md:flex flex-col justify-center p-6"
     >
-      <div className="flex items-center mb-6">
-        <Sun className="h-10 w-10 text-solar mr-4" />
-        <h1 className="text-3xl font-bold">Solar Financial Calculator</h1>
+      <div className="flex justify-center mb-6">
+        <img src="/BAESS_logo_v02.png" alt="BAESS Labs" className="h-20 w-auto" onError={(e) => e.currentTarget.style.display = 'none'} />
       </div>
       
       <h2 className="text-2xl font-semibold mb-4">Welcome to our platform!</h2>
       <p className="text-lg text-gray-600 mb-6">
-        Sign in to save your projects, track your calculations, and generate professional reports for your solar investments.
+        Advanced solar PV design and financial analysis platform. Sign in to save your projects, track your calculations, and generate professional reports.
       </p>
       
       <div className="bg-solar-light rounded-lg p-4 mb-6 border border-solar/20">

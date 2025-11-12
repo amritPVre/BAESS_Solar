@@ -8,6 +8,8 @@ export const calculatePVWatts = async (params: Omit<PVWattsRequest, 'api_key'>):
   try {
     console.log('Calling PVWatts API with URL:', PVWATTS_BASE_URL);
     console.log('Using parameters:', params);
+    console.log('🌍 Ground reflectance (albedo):', params.albedo || 'Not specified (PVWatts will use default)');
+    console.log('📏 Ground coverage ratio (GCR):', params.gcr || 'Not specified (PVWatts will use default 0.4)');
     
     const response = await axios.get(PVWATTS_BASE_URL, {
       params: {

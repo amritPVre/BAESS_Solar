@@ -72,8 +72,9 @@ export const usePolygonManager = ({ onPolygonChange }: UsePolygonManagerProps) =
       const options = {...polygonDrawOptions};
       if (idx === index) {
         options.fillColor = "#FF6600";
+        options.fillOpacity = 0.0;  // Keep transparent even when selected
         options.strokeColor = "#FF6600";
-        options.strokeWeight = 2;
+        options.strokeWeight = 3;   // Make border thicker to show selection
       }
       poly.polygon.setOptions(options);
     });

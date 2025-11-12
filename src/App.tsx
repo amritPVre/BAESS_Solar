@@ -19,6 +19,24 @@ import { SolarProjectsProvider } from "@/hooks/useSolarProjects";
 import AuthGuard from "./components/AuthGuard";
 import SolarDesignerPage from "./pages/SolarDesignerPage";
 import AdvancedSolarCalculatorPage from "./pages/AdvancedSolarCalculatorPage";
+import { UserAccount } from "./pages/UserAccount";
+import Integrations from "./pages/Integrations";
+import Changelog from "./pages/Changelog";
+import AboutUs from "./pages/AboutUs";
+import Careers from "./pages/Careers";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
+import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
+import BlogAdmin from "./pages/BlogAdmin";
+import BlogPostEditor from "./pages/BlogPostEditor";
+import Forum from "./pages/Forum";
+import ForumTopic from "./pages/ForumTopic";
+import ForumNewTopic from "./pages/ForumNewTopic";
+import FAQ from "./pages/FAQ";
+import ContactUs from "./pages/ContactUs";
+import Documentation from "./pages/Documentation";
+import BESSDesigner from "./pages/BESSDesigner";
 
 const queryClient = new QueryClient();
 
@@ -27,7 +45,7 @@ const App = () => (
     <AuthProvider>
       <SolarProjectsProvider>
         <TooltipProvider>
-          <Helmet titleTemplate="%s | Solar Financial Tool" defaultTitle="Solar Financial Tool" />
+          <Helmet titleTemplate="%s | BAESS Labs" defaultTitle="BAESS Labs - Solar Intelligence Delivered" />
           <Toaster />
           <Sonner />
           <BrowserRouter>
@@ -56,6 +74,14 @@ const App = () => (
                   <AdvancedSolarCalculatorPage />
                 </AuthGuard>
               } />
+              
+              {/* BESS Designer Route */}
+              <Route path="/bess-designer" element={
+                <AuthGuard>
+                  <BESSDesigner />
+                </AuthGuard>
+              } />
+              
               {/* For backward compatibility - maintain both routes */}
               <Route path="/calculator" element={
                 <AuthGuard>
@@ -81,6 +107,52 @@ const App = () => (
               <Route path="/admin" element={
                 <AuthGuard>
                   <AdminDashboard />
+                </AuthGuard>
+              } />
+              
+              {/* User Account Route */}
+              <Route path="/account" element={
+                <AuthGuard>
+                  <UserAccount />
+                </AuthGuard>
+              } />
+              
+              {/* Public Pages */}
+              <Route path="/integrations" element={<Integrations />} />
+              <Route path="/changelog" element={<Changelog />} />
+              <Route path="/about" element={<AboutUs />} />
+              <Route path="/careers" element={<Careers />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/terms" element={<TermsOfService />} />
+              <Route path="/faq" element={<FAQ />} />
+              <Route path="/contact" element={<ContactUs />} />
+              <Route path="/documentation" element={<Documentation />} />
+              
+              {/* Blog Routes */}
+              <Route path="/blog" element={<Blog />} />
+              <Route path="/blog/:slug" element={<BlogPost />} />
+              <Route path="/blog/admin" element={
+                <AuthGuard>
+                  <BlogAdmin />
+                </AuthGuard>
+              } />
+              <Route path="/blog/admin/create" element={
+                <AuthGuard>
+                  <BlogPostEditor />
+                </AuthGuard>
+              } />
+              <Route path="/blog/admin/edit/:id" element={
+                <AuthGuard>
+                  <BlogPostEditor />
+                </AuthGuard>
+              } />
+              
+              {/* Forum Routes */}
+              <Route path="/forum" element={<Forum />} />
+              <Route path="/forum/topic/:slug" element={<ForumTopic />} />
+              <Route path="/forum/new" element={
+                <AuthGuard>
+                  <ForumNewTopic />
                 </AuthGuard>
               } />
               

@@ -13,9 +13,12 @@ const Header = () => {
   return (
     <header className="border-b">
       <div className="container flex h-16 items-center px-4">
-        <Link to="/" className="flex items-center gap-2">
-          <Sun className="h-6 w-6 text-solar" />
-          <span className="text-lg font-semibold">Solar Financial</span>
+        <Link to="/" className="flex items-center gap-3">
+          <img src="/baess-logo.PNG" alt="BAESS Labs" className="h-8 w-auto" onError={(e) => e.currentTarget.style.display = 'none'} />
+          <div className="flex flex-col">
+            <span className="text-lg font-bold leading-none">BAESS</span>
+            <span className="text-[9px] text-gray-500 uppercase tracking-wider leading-none">Solar Intelligence</span>
+          </div>
         </Link>
         <nav className="hidden md:flex items-center justify-between gap-6 mx-6">
           {isAuthenticated ? (

@@ -1,8 +1,8 @@
-
 import React, { useState, useRef, useMemo, useCallback } from 'react';
 import { Loader2 } from 'lucide-react';
 import { GoogleMap } from '@react-google-maps/api';
 import { useGoogleMapsScript } from './hooks/useGoogleMapsScript';
+import { DistanceMeasurementTool } from './components/DistanceMeasurementTool';
 
 interface AreaMapContainerProps {
   drawingManagerRef: React.MutableRefObject<google.maps.drawing.DrawingManager | null>;
@@ -27,12 +27,14 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
   
   // Track map initialization to prevent duplicate rendering
   const mapInitializedRef = useRef(false);
+  // Store map instance for distance measurement tool
+  const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(null);
   
   // Load Google Maps script
   const scriptStatus = useGoogleMapsScript(apiKey);
   
   const mapContainerStyle = useMemo(() => ({
-    height: "500px",
+    height: "550px",
     width: "100%",
     borderRadius: "0.5rem"
   }), []);
@@ -68,6 +70,7 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
     
     console.log(`Map loaded successfully with Map ID: ${mapId}`);
     mapInitializedRef.current = true;
+    setMapInstance(map); // Store map instance for distance tool
     
     // Call onMapLoaded after a short delay to ensure map is fully loaded
     setTimeout(() => {
@@ -78,7 +81,7 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
   // Show error if API key is missing
   if (!apiKey) {
     return (
-      <div className="border rounded-md bg-gray-100 h-[500px] flex items-center justify-center">
+      <div className="border rounded-md bg-gray-100 h-[550px] flex items-center justify-center">
         <p className="text-red-500">Google Maps API key is missing. Please add VITE_GOOGLE_MAPS_API_KEY to your .env file.</p>
       </div>
     );
@@ -87,7 +90,7 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
   // Show loading state while script is loading
   if (scriptStatus === 'loading') {
     return (
-      <div className="border rounded-md bg-gray-100 h-[500px] flex flex-col items-center justify-center">
+      <div className="border rounded-md bg-gray-100 h-[550px] flex flex-col items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-blue-500 mb-2" />
         <p className="text-gray-600">Loading Google Maps...</p>
       </div>
@@ -97,7 +100,7 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
   // Show error if script failed to load
   if (scriptStatus === 'error') {
     return (
-      <div className="border rounded-md bg-red-50 h-[500px] flex items-center justify-center">
+      <div className="border rounded-md bg-red-50 h-[550px] flex items-center justify-center">
         <p className="text-red-500">Failed to load Google Maps. Please check your API key and try again.</p>
       </div>
     );
@@ -105,7 +108,7 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
 
   // Only render the map when the script is ready
   return (
-    <div className="h-[500px] w-full relative">
+    <div className="h-[550px] w-full relative">
       {scriptStatus === 'ready' && (
         <GoogleMap
           mapContainerStyle={mapContainerStyle}
@@ -117,6 +120,12 @@ export const AreaMapContainer: React.FC<AreaMapContainerProps> = ({
           {/* Drawing manager and polygons are handled by parent component */}
         </GoogleMap>
       )}
+      
+      {/* Distance measurement tool */}
+      <DistanceMeasurementTool 
+        map={mapInstance} 
+        drawingManagerRef={drawingManagerRef}
+      />
     </div>
   );
 };

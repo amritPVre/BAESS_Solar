@@ -9,12 +9,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Trash2, Edit, Plus, Users, Database, BarChart3, Shield } from "lucide-react";
+import { Trash2, Edit, Plus, Users, Database, BarChart3, Shield, Coins, Bell } from "lucide-react";
 import { SolarPanel, SolarInverter } from "@/services/solarComponentsService";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useForm } from "react-hook-form";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { AdminCreditAllocation } from "@/components/ai-credits/AdminCreditAllocation";
+import { AdminNoticeManager } from "@/components/dashboard/AdminNoticeManager";
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -23,6 +25,7 @@ const AdminDashboard = () => {
   const [panels, setPanels] = useState<SolarPanel[]>([]);
   const [inverters, setInverters] = useState<SolarInverter[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalPanels: 0,
@@ -31,14 +34,40 @@ const AdminDashboard = () => {
   });
 
   useEffect(() => {
-    // Check admin access - updated to use your email
-    if (user?.email !== "amrit.mandal0191@gmail.com") {
-      toast.error("Access denied: Admin privileges required");
-      navigate("/dashboard");
-    } else {
-      loadData();
-    }
+    checkAdminStatus();
   }, [user, navigate]);
+
+  const checkAdminStatus = async () => {
+    if (!user?.id) {
+      toast.error("Please log in to continue");
+      navigate("/auth");
+      return;
+    }
+
+    try {
+      // Check if user is super admin from database
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('is_super_admin')
+        .eq('id', user.id)
+        .single();
+
+      if (error) throw error;
+
+      if (!data?.is_super_admin) {
+        toast.error("Access denied: Admin privileges required");
+        navigate("/dashboard");
+        return;
+      }
+
+      setIsAdmin(true);
+      loadData();
+    } catch (error) {
+      console.error("Error checking admin status:", error);
+      toast.error("Failed to verify admin access");
+      navigate("/dashboard");
+    }
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -128,7 +157,7 @@ const AdminDashboard = () => {
   return (
     <>
       <Helmet>
-        <title>Admin Dashboard | Solar Financial Tool</title>
+        <title>Admin Dashboard | BAESS Labs</title>
       </Helmet>
       <Header />
       
@@ -208,6 +237,14 @@ const AdminDashboard = () => {
             <TabsTrigger value="inverters" className="flex items-center">
               <Database className="mr-2 h-4 w-4" />
               Inverters
+            </TabsTrigger>
+            <TabsTrigger value="ai-credits" className="flex items-center">
+              <Coins className="mr-2 h-4 w-4" />
+              AI Credits
+            </TabsTrigger>
+            <TabsTrigger value="notices" className="flex items-center">
+              <Bell className="mr-2 h-4 w-4" />
+              Notices
             </TabsTrigger>
             <TabsTrigger value="analytics" className="flex items-center">
               <BarChart3 className="mr-2 h-4 w-4" />
@@ -366,6 +403,16 @@ const AdminDashboard = () => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+          
+          {/* AI Credits Tab */}
+          <TabsContent value="ai-credits">
+            <AdminCreditAllocation />
+          </TabsContent>
+          
+          {/* Notices Tab */}
+          <TabsContent value="notices">
+            <AdminNoticeManager />
           </TabsContent>
           
           {/* Analytics Tab */}

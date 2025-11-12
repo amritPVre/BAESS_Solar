@@ -294,3 +294,73 @@ input:focus-visible, select:focus-visible {
 .tooltip:hover .tooltip-text {
   @apply visible opacity-100;
 }
+
+/* BESS Designer Project Dropdown Styling */
+/* Custom dropdown with scroll - works with standard select */
+select.project-dropdown {
+  @apply block w-full;
+}
+
+/* Style the dropdown options list (when expanded) */
+select option {
+  @apply py-3 px-2;
+  line-height: 1.5;
+}
+
+select option:hover {
+  @apply bg-blue-50 dark:bg-gray-700;
+}
+
+select option:checked,
+select option:focus {
+  @apply bg-blue-100 dark:bg-blue-900 font-semibold;
+}
+
+/* Dropdown arrow icon styling */
+select::-ms-expand {
+  display: none; /* Hide default arrow in IE */
+}
+
+/* Enhanced scrollbar for select dropdown options */
+select {
+  scrollbar-width: thin;
+  scrollbar-color: #3b82f6 #f3f4f6;
+}
+
+select::-webkit-scrollbar {
+  width: 8px;
+}
+
+select::-webkit-scrollbar-track {
+  @apply bg-gray-100 dark:bg-gray-800;
+}
+
+select::-webkit-scrollbar-thumb {
+  @apply bg-blue-500 rounded-full;
+}
+
+select::-webkit-scrollbar-thumb:hover {
+  @apply bg-blue-600;
+}
+
+/* Custom Scrollbar for Load Profile Hourly Data */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #3b82f6 #f3f4f6;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  @apply bg-gray-100 dark:bg-gray-800 rounded-lg;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-blue-500 rounded-full;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  @apply bg-blue-600;
+}

@@ -1,4 +1,3 @@
-
 // Simplified energy production calculation utility
 
 interface EnergyMonthData {
@@ -51,7 +50,6 @@ export function calculateEnergyProduction(
     switch (pvWattsParams.arrayType) {
       case 0: arrayTypeFactor = 1.0; break;    // Fixed (open rack)
       case 1: arrayTypeFactor = 0.95; break;   // Fixed (roof mount)
-      case 2: arrayTypeFactor = 1.2; break;    // 1-Axis Tracking
       case 3: arrayTypeFactor = 1.3; break;    // 2-Axis Tracking
       default: arrayTypeFactor = 1.0;
     }

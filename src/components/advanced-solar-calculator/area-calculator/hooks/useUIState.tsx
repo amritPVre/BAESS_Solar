@@ -7,7 +7,7 @@ interface UseUIStateProps {
 }
 
 export const useUIState = ({ 
-  showInstructionsDefault = true 
+  showInstructionsDefault = false 
 }: UseUIStateProps = {}) => {
   const [instructionsVisible, setInstructionsVisible] = useState(showInstructionsDefault);
   const [layoutAzimuth, setLayoutAzimuth] = useState<number>(180);
