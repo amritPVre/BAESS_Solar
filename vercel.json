@@ -18,15 +18,6 @@
       "src": "/(.*)",
       "dest": "/index.html"
     }
-  ],
-  "env": {
-    "VITE_SUPABASE_URL": "@vite-supabase-url",
-    "VITE_SUPABASE_ANON_KEY": "@vite-supabase-anon-key",
-    "DODO_PAYMENTS_API_KEY": "@dodo-payments-api-key",
-    "DODO_WEBHOOK_SECRET": "@dodo-webhook-secret",
-    "VITE_DODO_PRODUCT_ID_PRO": "@vite-dodo-product-id-pro",
-    "VITE_DODO_PRODUCT_ID_ADVANCED": "@vite-dodo-product-id-advanced",
-    "VITE_DODO_PRODUCT_ID_ENTERPRISE": "@vite-dodo-product-id-enterprise"
-  }
+  ]
 }
 
