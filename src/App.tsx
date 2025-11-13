@@ -20,6 +20,7 @@ import AuthGuard from "./components/AuthGuard";
 import SolarDesignerPage from "./pages/SolarDesignerPage";
 import AdvancedSolarCalculatorPage from "./pages/AdvancedSolarCalculatorPage";
 import { UserAccount } from "./pages/UserAccount";
+import SubscriptionSuccess from "./pages/SubscriptionSuccess";
 import Integrations from "./pages/Integrations";
 import Changelog from "./pages/Changelog";
 import AboutUs from "./pages/AboutUs";
@@ -114,6 +115,13 @@ const App = () => (
               <Route path="/account" element={
                 <AuthGuard>
                   <UserAccount />
+                </AuthGuard>
+              } />
+              
+              {/* Subscription Success Route */}
+              <Route path="/subscription/success" element={
+                <AuthGuard>
+                  <SubscriptionSuccess />
                 </AuthGuard>
               } />
               
