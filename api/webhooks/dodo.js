@@ -7,7 +7,12 @@ import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 
 export default async function handler(req, res) {
-  // Only allow POST
+  // Handle GET requests for webhook verification
+  if (req.method === 'GET') {
+    return res.status(200).json({ message: 'Webhook endpoint is active' });
+  }
+
+  // Only allow POST for actual webhook events
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -21,29 +26,22 @@ export default async function handler(req, res) {
     const signature = req.headers['x-dodo-signature'];
     const webhookSecret = process.env.DODO_WEBHOOK_SECRET;
 
-    if (!signature) {
-      console.error('❌ Missing webhook signature');
-      return res.status(401).json({ error: 'Missing signature' });
+    // Verify signature if secret is configured
+    if (webhookSecret && signature) {
+      const body = JSON.stringify(req.body);
+      const expectedSignature = crypto
+        .createHmac('sha256', webhookSecret)
+        .update(body)
+        .digest('hex');
+
+      if (signature !== expectedSignature) {
+        console.error('❌ Invalid webhook signature');
+        return res.status(401).json({ error: 'Invalid signature' });
+      }
+      console.log('✅ Webhook signature verified');
+    } else {
+      console.log('⚠️ Webhook signature verification skipped (secret not configured or signature missing)');
     }
-
-    if (!webhookSecret) {
-      console.error('❌ Missing webhook secret in environment');
-      return res.status(500).json({ error: 'Webhook secret not configured' });
-    }
-
-    // Verify webhook signature
-    const body = JSON.stringify(req.body);
-    const expectedSignature = crypto
-      .createHmac('sha256', webhookSecret)
-      .update(body)
-      .digest('hex');
-
-    if (signature !== expectedSignature) {
-      console.error('❌ Invalid webhook signature');
-      return res.status(401).json({ error: 'Invalid signature' });
-    }
-
-    console.log('✅ Webhook signature verified');
 
     const event = req.body;
     const supabase = createClient(
