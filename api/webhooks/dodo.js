@@ -20,10 +20,11 @@ export default async function handler(req, res) {
   try {
     console.log('🔔 Webhook received:', {
       type: req.body.event_type,
-      hasSignature: !!req.headers['x-dodo-signature']
+      hasSignature: !!req.headers['webhook-signature'] || !!req.headers['x-dodo-signature']
     });
 
-    const signature = req.headers['x-dodo-signature'];
+    // Try both possible signature header names
+    const signature = req.headers['webhook-signature'] || req.headers['x-dodo-signature'];
     const webhookSecret = process.env.DODO_WEBHOOK_SECRET;
 
     // Verify signature if secret is configured
