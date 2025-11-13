@@ -119,8 +119,9 @@ export default async function handler(req, res) {
           quantity: 1,
         },
       ],
-      success_url: `${process.env.VITE_APP_URL}/subscription/success`,
-      cancel_url: `${process.env.VITE_APP_URL}/account`,
+      return_url: `${process.env.VITE_APP_URL}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${process.env.VITE_APP_URL}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.VITE_APP_URL}/account?cancelled=true`,
       customer: {
         email: profile.email,
         name: profile.name || profile.email,
