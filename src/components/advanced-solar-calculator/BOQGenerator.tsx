@@ -149,7 +149,7 @@ interface BOQGeneratorProps {
 }
 
 const BOQGenerator: React.FC<BOQGeneratorProps> = ({ designSummaryData }) => {
-  const [selectedAI, setSelectedAI] = useState<'openai' | 'gemini'>('openai');
+  const [selectedAI, setSelectedAI] = useState<'openai' | 'gemini'>('gemini'); // Always use Gemini
   const [boqTemplate, setBOQTemplate] = useState<'residential_commercial' | 'industrial_utility'>('residential_commercial');
   const [boqItems, setBOQItems] = useState<BOQLineItem[]>([]);
   const [comprehensiveBOQItems, setComprehensiveBOQItems] = useState<BOQLineItem[]>([]);
@@ -361,46 +361,23 @@ Consider standard industry practices, typical cable runs, mounting requirements,
 
       {/* Configuration */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* AI Model Selection */}
-        <Card>
+        {/* AI Model Info */}
+        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Bot className="h-5 w-5 text-blue-500" />
-              AI Model Selection
+              <Zap className="h-5 w-5 text-blue-500" />
+              AI-Powered BOQ Generation
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">
-                  Select AI Model
-                </label>
-                <Select value={selectedAI} onValueChange={(value: 'openai' | 'gemini') => setSelectedAI(value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="openai">
-                      <div className="flex items-center gap-2">
-                        <Bot className="h-4 w-4" />
-                        OpenAI GPT-4
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="gemini">
-                      <div className="flex items-center gap-2">
-                        <Zap className="h-4 w-4" />
-                        Google Gemini 2.0 Flash (Experimental)
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                <span className="font-semibold text-gray-900">Google Gemini 2.0</span>
               </div>
-              <div className="text-sm text-gray-600">
-                {selectedAI === 'openai' 
-                  ? "GPT-4 provides detailed engineering calculations with high accuracy"
-                  : "Gemini 2.0 Flash offers advanced reasoning with latest capabilities"
-                }
-              </div>
+              <p className="text-sm text-gray-600">
+                Uses AI/LLM with detailed prompt specifications and IEC standards for comprehensive BOQ generation
+              </p>
             </div>
           </CardContent>
         </Card>

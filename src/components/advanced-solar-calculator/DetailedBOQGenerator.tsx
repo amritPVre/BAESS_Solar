@@ -333,7 +333,7 @@ const DetailedBOQGenerator: React.FC<DetailedBOQGeneratorProps> = ({
     initialBOQData?.pricingTimestamp ? new Date(initialBOQData.pricingTimestamp) : null
   );
   const [selectedAIModel, setSelectedAIModel] = useState<'openai' | 'gemini'>(
-    initialBOQData?.selectedAIModel || 'openai'
+    'gemini' // Always use Gemini model
   );
   
   // Additional project costs state
@@ -2148,30 +2148,14 @@ CRITICAL:
                   )}
                 </div>
 
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <h4 className="font-medium text-gray-900 mb-2">AI Model Selection</h4>
+                <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
                   <div className="flex items-center gap-3">
-                    <Select value={selectedAIModel} onValueChange={(value: 'openai' | 'gemini') => setSelectedAIModel(value)}>
-                      <SelectTrigger className="w-40">
-                        <SelectValue placeholder="Select AI Model" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="openai">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                            OpenAI GPT-4
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="gemini">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                            Google Gemini 2.0
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-gray-500 flex-1">
-                      Choose the AI model for BOQ generation. GPT-4 provides detailed engineering analysis, while Gemini offers fast processing.
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                      <span className="font-semibold text-gray-900">Google Gemini 2.0</span>
+                    </div>
+                    <p className="text-xs text-gray-600 flex-1">
+                      Uses AI/LLM with detailed prompt specifications and IEC standards for comprehensive BOQ generation
                     </p>
                   </div>
                 </div>
