@@ -1,0 +1,37 @@
+# robots.txt for BAESS Labs (baess.app)
+
+# Allow all search engines
+User-agent: *
+Allow: /
+
+# Disallow private/authenticated areas
+Disallow: /api/
+Disallow: /account
+Disallow: /dashboard/
+Disallow: /admin/
+Disallow: /subscription/
+
+# Allow crawling of public pages
+Allow: /blog
+Allow: /forum
+Allow: /documentation
+Allow: /faq
+Allow: /about
+Allow: /contact
+
+# Crawl-delay (optional, helps manage server load)
+Crawl-delay: 1
+
+# Sitemap location
+Sitemap: https://baess.app/sitemap.xml
+
+# Additional search engines
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Slurp
+Allow: /
+
