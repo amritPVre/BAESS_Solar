@@ -159,11 +159,11 @@ export default function ProductBESSDesigner() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 max-w-4xl mx-auto">
               <div className="text-center">
                 <div className="text-4xl sm:text-5xl font-black text-[#3B82F6] mb-2">10kWh</div>
-                <div className="text-sm text-[#0A2463] font-medium">Min Capacity</div>
+                <div className="text-sm text-[#0A2463] font-medium">Start From</div>
               </div>
               <div className="text-center">
-                <div className="text-4xl sm:text-5xl font-black text-[#3B82F6] mb-2">10MWh</div>
-                <div className="text-sm text-[#0A2463] font-medium">Max Capacity</div>
+                <div className="text-4xl sm:text-5xl font-black text-[#3B82F6] mb-2">100MWh+</div>
+                <div className="text-sm text-[#0A2463] font-medium">Design Capacity</div>
               </div>
               <div className="text-center">
                 <div className="text-4xl sm:text-5xl font-black text-[#3B82F6] mb-2">IEC</div>
@@ -204,7 +204,7 @@ export default function ProductBESSDesigner() {
         </section>
 
         {/* Benefits */}
-        <section className="py-16 bg-[#3B82F6] relative overflow-hidden">
+        <section className="py-16 bg-gradient-to-r from-[#0A2463] via-[#1e3a8a] to-[#0A2463] relative overflow-hidden">
           <div className="absolute inset-0 opacity-10">
             <div className="absolute top-0 left-0 w-full h-full" style={{
               backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
@@ -214,20 +214,20 @@ export default function ProductBESSDesigner() {
 
           <div className="container mx-auto px-4 relative z-10">
             <h2 className="text-3xl sm:text-4xl font-black text-white mb-8 text-center">
-              Why Choose Our <span className="text-[#10B981]">BESS Designer</span>?
+              Why Choose Our <span className="text-[#FFA500] bg-[#FFA500]/10 px-3 py-1 rounded-lg">BESS Designer</span>?
             </h2>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
               {[
-                "Design 10kWh-10MWh systems",
+                "Design 10kWh-100MWh+ systems",
                 "Residential to utility-scale",
                 "Component database included",
                 "Grid independence calculations",
                 "Backup duration analysis",
                 "Solar PV integration"
               ].map((item, index) => (
-                <div key={index} className="flex items-start gap-3 bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20 hover:border-white transition-all">
+                <div key={index} className="flex items-start gap-3 bg-white/5 backdrop-blur-sm rounded-xl p-4 border-2 border-[#3B82F6]/30 hover:border-[#FFA500] transition-all hover:bg-white/10">
                   <CheckCircle2 className="h-6 w-6 flex-shrink-0 text-[#10B981]" />
-                  <span className="text-white font-medium">{item}</span>
+                  <span className="text-white font-semibold text-base">{item}</span>
                 </div>
               ))}
             </div>
