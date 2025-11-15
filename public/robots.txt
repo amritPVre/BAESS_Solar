@@ -1,4 +1,4 @@
-# robots.txt for BAESS Labs (baess.app)
+# robots.txt for BAESS Labs (www.baess.app)
 
 # Allow all search engines
 User-agent: *
@@ -11,7 +11,10 @@ Disallow: /dashboard/
 Disallow: /admin/
 Disallow: /subscription/
 
-# Allow crawling of public pages
+# Allow crawling of public pages and product pages
+Allow: /products
+Allow: /products/pv-designer
+Allow: /products/bess-designer
 Allow: /blog
 Allow: /forum
 Allow: /documentation
@@ -23,7 +26,7 @@ Allow: /contact
 Crawl-delay: 1
 
 # Sitemap location
-Sitemap: https://baess.app/sitemap.xml
+Sitemap: https://www.baess.app/sitemap.xml
 
 # Additional search engines
 User-agent: Googlebot

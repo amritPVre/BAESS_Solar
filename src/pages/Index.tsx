@@ -97,7 +97,7 @@ const Index: React.FC = () => {
                               AI PV Designer Pro
                             </div>
                             <div className="text-xs text-[#0A2463]/70">
-                              Advanced calculator for solar design
+                              Advanced simulator for solar design
                             </div>
                           </div>
                         </Link>
@@ -181,7 +181,7 @@ const Index: React.FC = () => {
                 <div>
                   <div className="text-sm font-bold text-[#0A2463] mb-2 px-2">Products</div>
                   <Link to="/products/pv-designer" onClick={() => setIsMenuOpen(false)} className="text-sm font-medium text-[#0A2463]/70 hover:text-[#FFA500] transition-colors block pl-4 py-1">
-                    AI PV Designer Pro
+                    AI PV Designer Pro - Advanced Simulator
                   </Link>
                   <Link to="/products/bess-designer" onClick={() => setIsMenuOpen(false)} className="text-sm font-medium text-[#0A2463]/70 hover:text-[#FFA500] transition-colors block pl-4 py-1">
                     BESS Designer

@@ -6,183 +6,183 @@
 
   <!-- Homepage -->
   <url>
-    <loc>https://baess.app/</loc>
-    <lastmod>2025-11-13</lastmod>
+    <loc>https://www.baess.app/</loc>
+    <lastmod>2025-11-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
 
   <!-- Authentication -->
   <url>
-    <loc>https://baess.app/auth</loc>
-    <lastmod>2025-11-13</lastmod>
+    <loc>https://www.baess.app/auth</loc>
+    <lastmod>2025-11-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
 
   <!-- Dashboard (Protected - lower priority for SEO) -->
   <url>
-    <loc>https://baess.app/dashboard</loc>
-    <lastmod>2025-11-13</lastmod>
+    <loc>https://www.baess.app/dashboard</loc>
+    <lastmod>2025-11-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
 
-  <!-- Solar Calculator -->
+  <!-- Solar Simulator -->
   <url>
-    <loc>https://baess.app/solar-calculator</loc>
-    <lastmod>2025-11-13</lastmod>
+    <loc>https://www.baess.app/solar-calculator</loc>
+    <lastmod>2025-11-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
 
   <!-- PV Designer -->
   <url>
-    <loc>https://baess.app/pv-designer</loc>
-    <lastmod>2025-11-13</lastmod>
+    <loc>https://www.baess.app/pv-designer</loc>
+    <lastmod>2025-11-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
 
-  <!-- Advanced Solar Calculator -->
+  <!-- Advanced Solar Simulator -->
   <url>
-    <loc>https://baess.app/advanced-calculator</loc>
-    <lastmod>2025-11-13</lastmod>
+    <loc>https://www.baess.app/advanced-calculator</loc>
+    <lastmod>2025-11-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
 
   <!-- BESS Designer -->
   <url>
-    <loc>https://baess.app/bess-designer</loc>
-    <lastmod>2025-11-13</lastmod>
+    <loc>https://www.baess.app/bess-designer</loc>
+    <lastmod>2025-11-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
 
   <!-- BOQ Generator -->
   <url>
-    <loc>https://baess.app/boq-generator</loc>
-    <lastmod>2025-11-13</lastmod>
+    <loc>https://www.baess.app/boq-generator</loc>
+    <lastmod>2025-11-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
 
   <!-- Solar Components -->
   <url>
-    <loc>https://baess.app/solar-components</loc>
-    <lastmod>2025-11-13</lastmod>
+    <loc>https://www.baess.app/solar-components</loc>
+    <lastmod>2025-11-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <!-- Admin Dashboard (Protected - lower priority) -->
   <url>
-    <loc>https://baess.app/admin</loc>
-    <lastmod>2025-11-13</lastmod>
+    <loc>https://www.baess.app/admin</loc>
+    <lastmod>2025-11-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
   </url>
 
   <!-- Blog -->
   <url>
-    <loc>https://baess.app/blog</loc>
-    <lastmod>2025-11-13</lastmod>
+    <loc>https://www.baess.app/blog</loc>
+    <lastmod>2025-11-15</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
 
   <!-- Forum -->
   <url>
-    <loc>https://baess.app/forum</loc>
-    <lastmod>2025-11-13</lastmod>
+    <loc>https://www.baess.app/forum</loc>
+    <lastmod>2025-11-15</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
 
-  <!-- Product Pages (SEO Landing Pages) -->
+  <!-- Product Pages (SEO Landing Pages) - High Priority -->
   <url>
-    <loc>https://baess.app/products</loc>
-    <lastmod>2025-11-13</lastmod>
+    <loc>https://www.baess.app/products</loc>
+    <lastmod>2025-11-15</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
+    <priority>0.95</priority>
   </url>
 
   <url>
-    <loc>https://baess.app/products/pv-designer</loc>
-    <lastmod>2025-11-13</lastmod>
+    <loc>https://www.baess.app/products/pv-designer</loc>
+    <lastmod>2025-11-15</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
+    <priority>0.95</priority>
   </url>
 
   <url>
-    <loc>https://baess.app/products/bess-designer</loc>
-    <lastmod>2025-11-13</lastmod>
+    <loc>https://www.baess.app/products/bess-designer</loc>
+    <lastmod>2025-11-15</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
+    <priority>0.95</priority>
   </url>
 
   <!-- Public Pages -->
   <url>
-    <loc>https://baess.app/about</loc>
-    <lastmod>2025-11-13</lastmod>
+    <loc>https://www.baess.app/about</loc>
+    <lastmod>2025-11-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
 
   <url>
-    <loc>https://baess.app/careers</loc>
-    <lastmod>2025-11-13</lastmod>
+    <loc>https://www.baess.app/careers</loc>
+    <lastmod>2025-11-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
 
   <url>
-    <loc>https://baess.app/integrations</loc>
-    <lastmod>2025-11-13</lastmod>
+    <loc>https://www.baess.app/integrations</loc>
+    <lastmod>2025-11-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
 
   <url>
-    <loc>https://baess.app/changelog</loc>
-    <lastmod>2025-11-13</lastmod>
+    <loc>https://www.baess.app/changelog</loc>
+    <lastmod>2025-11-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
 
   <url>
-    <loc>https://baess.app/documentation</loc>
-    <lastmod>2025-11-13</lastmod>
+    <loc>https://www.baess.app/documentation</loc>
+    <lastmod>2025-11-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
-    <loc>https://baess.app/faq</loc>
-    <lastmod>2025-11-13</lastmod>
+    <loc>https://www.baess.app/faq</loc>
+    <lastmod>2025-11-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
-    <loc>https://baess.app/contact</loc>
-    <lastmod>2025-11-13</lastmod>
+    <loc>https://www.baess.app/contact</loc>
+    <lastmod>2025-11-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
 
   <!-- Legal Pages -->
   <url>
-    <loc>https://baess.app/privacy</loc>
-    <lastmod>2025-11-13</lastmod>
+    <loc>https://www.baess.app/privacy</loc>
+    <lastmod>2025-11-15</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>
   </url>
 
   <url>
-    <loc>https://baess.app/terms</loc>
-    <lastmod>2025-11-13</lastmod>
+    <loc>https://www.baess.app/terms</loc>
+    <lastmod>2025-11-15</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>
   </url>
