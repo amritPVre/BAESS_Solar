@@ -38,6 +38,9 @@ import FAQ from "./pages/FAQ";
 import ContactUs from "./pages/ContactUs";
 import Documentation from "./pages/Documentation";
 import BESSDesigner from "./pages/BESSDesigner";
+import Products from "./pages/Products";
+import ProductBESSDesigner from "./pages/ProductBESSDesigner";
+import ProductPVDesigner from "./pages/ProductPVDesigner";
 
 const queryClient = new QueryClient();
 
@@ -135,6 +138,11 @@ const App = () => (
               <Route path="/faq" element={<FAQ />} />
               <Route path="/contact" element={<ContactUs />} />
               <Route path="/documentation" element={<Documentation />} />
+              
+              {/* Product Pages (SEO Landing Pages) */}
+              <Route path="/products" element={<Products />} />
+              <Route path="/products/pv-designer" element={<ProductPVDesigner />} />
+              <Route path="/products/bess-designer" element={<ProductBESSDesigner />} />
               
               {/* Blog Routes */}
               <Route path="/blog" element={<Blog />} />
