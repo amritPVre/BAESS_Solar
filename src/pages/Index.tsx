@@ -26,7 +26,7 @@ const Index: React.FC = () => {
   return (
     <div className="min-h-screen bg-white overflow-x-hidden">
       <Helmet>
-        <title>BAESS Labs - Solar Intelligence from the Future</title>
+        <title>BAESS Labs - Solar Intelligence for the Future</title>
         <meta name="description" content="Experience the future of solar design with AI-powered tools, real-time calculations, and intelligent project management." />
       </Helmet>
 
@@ -70,60 +70,60 @@ const Index: React.FC = () => {
             {/* Desktop Navigation */}
             <div className="hidden lg:flex items-center gap-8">
               {/* Products Dropdown */}
-              <div className="relative">
+              <div 
+                className="relative"
+                onMouseEnter={() => setIsProductsOpen(true)}
+                onMouseLeave={() => setIsProductsOpen(false)}
+              >
                 <button
-                  className="text-sm font-medium text-[#0A2463] hover:text-[#FFA500] transition-colors flex items-center gap-1"
-                  onMouseEnter={() => setIsProductsOpen(true)}
-                  onMouseLeave={() => setIsProductsOpen(false)}
+                  className="text-sm font-medium text-[#0A2463] hover:text-[#FFA500] transition-colors flex items-center gap-1 py-2"
                 >
                   Products
                   <ChevronRight className={`h-4 w-4 transition-transform ${isProductsOpen ? 'rotate-90' : ''}`} />
                 </button>
                 {isProductsOpen && (
-                  <div
-                    className="absolute left-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-2xl border-2 border-[#FFA500]/20 z-50 overflow-hidden"
-                    onMouseEnter={() => setIsProductsOpen(true)}
-                    onMouseLeave={() => setIsProductsOpen(false)}
-                  >
-                    <div className="p-2">
-                      <Link
-                        to="/products/pv-designer"
-                        className="flex items-start gap-3 p-3 rounded-xl hover:bg-[#FEF3C7] transition-all group"
-                      >
-                        <div className="w-10 h-10 bg-gradient-to-br from-[#FFA500] to-[#F7931E] rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                          <Lightbulb className="h-5 w-5 text-white" />
-                        </div>
-                        <div>
-                          <div className="font-semibold text-[#0A2463] text-sm mb-1">
-                            AI PV Designer Pro
+                  <div className="absolute left-0 top-full pt-2 z-50">
+                    <div className="w-80 bg-white rounded-2xl shadow-2xl border-2 border-[#FFA500]/20 overflow-hidden">
+                      <div className="p-2">
+                        <Link
+                          to="/products/pv-designer"
+                          className="flex items-start gap-3 p-3 rounded-xl hover:bg-[#FEF3C7] transition-all group"
+                        >
+                          <div className="w-10 h-10 bg-gradient-to-br from-[#FFA500] to-[#F7931E] rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                            <Lightbulb className="h-5 w-5 text-white" />
                           </div>
-                          <div className="text-xs text-[#0A2463]/70">
-                            Advanced calculator for solar design
+                          <div>
+                            <div className="font-semibold text-[#0A2463] text-sm mb-1">
+                              AI PV Designer Pro
+                            </div>
+                            <div className="text-xs text-[#0A2463]/70">
+                              Advanced calculator for solar design
+                            </div>
                           </div>
-                        </div>
-                      </Link>
-                      <Link
-                        to="/products/bess-designer"
-                        className="flex items-start gap-3 p-3 rounded-xl hover:bg-[#FEF3C7] transition-all group"
-                      >
-                        <div className="w-10 h-10 bg-gradient-to-br from-[#3B82F6] to-[#10B981] rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                          <Battery className="h-5 w-5 text-white" />
-                        </div>
-                        <div>
-                          <div className="font-semibold text-[#0A2463] text-sm mb-1">
-                            BESS Designer
+                        </Link>
+                        <Link
+                          to="/products/bess-designer"
+                          className="flex items-start gap-3 p-3 rounded-xl hover:bg-[#FEF3C7] transition-all group"
+                        >
+                          <div className="w-10 h-10 bg-gradient-to-br from-[#3B82F6] to-[#10B981] rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                            <Battery className="h-5 w-5 text-white" />
                           </div>
-                          <div className="text-xs text-[#0A2463]/70">
-                            Battery energy storage system design
+                          <div>
+                            <div className="font-semibold text-[#0A2463] text-sm mb-1">
+                              BESS Designer
+                            </div>
+                            <div className="text-xs text-[#0A2463]/70">
+                              Battery energy storage system design
+                            </div>
                           </div>
-                        </div>
-                      </Link>
-                      <Link
-                        to="/products"
-                        className="block p-3 text-center text-sm font-medium text-[#FFA500] hover:bg-[#FEF3C7] rounded-xl transition-all"
-                      >
-                        View All Products →
-                      </Link>
+                        </Link>
+                        <Link
+                          to="/products"
+                          className="block p-3 text-center text-sm font-medium text-[#FFA500] hover:bg-[#FEF3C7] rounded-xl transition-all"
+                        >
+                          View All Products →
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -249,7 +249,7 @@ const Index: React.FC = () => {
               <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black text-white mb-6 leading-tight">
                 Solar Intelligence
                 <br />
-                <span className="text-[#0A2463]">from the Future</span>
+                <span className="text-[#0A2463]">for the Future</span>
               </h1>
               
               <p className="text-lg sm:text-xl text-white/90 mb-8 max-w-2xl mx-auto lg:mx-0">
