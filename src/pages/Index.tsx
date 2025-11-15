@@ -68,6 +68,9 @@ const Index: React.FC = () => {
 
             {/* Desktop Navigation */}
             <div className="hidden lg:flex items-center gap-8">
+              <Link to="/products" className="text-sm font-medium text-[#0A2463] hover:text-[#FFA500] transition-colors">
+                Products
+              </Link>
               <a href="#features" className="text-sm font-medium text-[#0A2463] hover:text-[#FFA500] transition-colors">
                 Features
               </a>
@@ -80,15 +83,9 @@ const Index: React.FC = () => {
               <Link to="/blog" className="text-sm font-medium text-[#0A2463] hover:text-[#FFA500] transition-colors">
                 Blog
               </Link>
-              <Link to="/forum" className="text-sm font-medium text-[#0A2463] hover:text-[#FFA500] transition-colors">
-                Forum
-              </Link>
               <Link to="/faq" className="text-sm font-medium text-[#0A2463] hover:text-[#FFA500] transition-colors">
                 FAQ
               </Link>
-              <a href="#testimonials" className="text-sm font-medium text-[#0A2463] hover:text-[#FFA500] transition-colors">
-                Testimonials
-              </a>
           {user ? (
             <Link to="/dashboard">
                   <Button className="bg-gradient-to-r from-[#FFA500] to-[#F7931E] hover:from-[#F7931E] hover:to-[#FFA500] text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300">
