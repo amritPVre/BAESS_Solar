@@ -1,5 +1,5 @@
 import { Helmet } from "react-helmet";
-import { Button } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Battery, Lightbulb, FileText, Calculator, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
