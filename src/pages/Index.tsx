@@ -6,13 +6,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { 
   ArrowRight, Calculator, PanelTop, BarChart3, Zap, Check, 
   Star, Sparkles, TrendingUp, Users, Globe, Award,
-  ChevronRight, Menu, X, Sun, DollarSign, Shield, Rocket
+  ChevronRight, Menu, X, Sun, DollarSign, Shield, Rocket, Lightbulb, Battery
 } from "lucide-react";
 
 const Index: React.FC = () => {
   const { user } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [isProductsOpen, setIsProductsOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -68,9 +69,65 @@ const Index: React.FC = () => {
 
             {/* Desktop Navigation */}
             <div className="hidden lg:flex items-center gap-8">
-              <Link to="/products" className="text-sm font-medium text-[#0A2463] hover:text-[#FFA500] transition-colors">
-                Products
-              </Link>
+              {/* Products Dropdown */}
+              <div className="relative">
+                <button
+                  className="text-sm font-medium text-[#0A2463] hover:text-[#FFA500] transition-colors flex items-center gap-1"
+                  onMouseEnter={() => setIsProductsOpen(true)}
+                  onMouseLeave={() => setIsProductsOpen(false)}
+                >
+                  Products
+                  <ChevronRight className={`h-4 w-4 transition-transform ${isProductsOpen ? 'rotate-90' : ''}`} />
+                </button>
+                {isProductsOpen && (
+                  <div
+                    className="absolute left-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-2xl border-2 border-[#FFA500]/20 z-50 overflow-hidden"
+                    onMouseEnter={() => setIsProductsOpen(true)}
+                    onMouseLeave={() => setIsProductsOpen(false)}
+                  >
+                    <div className="p-2">
+                      <Link
+                        to="/products/pv-designer"
+                        className="flex items-start gap-3 p-3 rounded-xl hover:bg-[#FEF3C7] transition-all group"
+                      >
+                        <div className="w-10 h-10 bg-gradient-to-br from-[#FFA500] to-[#F7931E] rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                          <Lightbulb className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <div className="font-semibold text-[#0A2463] text-sm mb-1">
+                            AI PV Designer Pro
+                          </div>
+                          <div className="text-xs text-[#0A2463]/70">
+                            Advanced calculator for solar design
+                          </div>
+                        </div>
+                      </Link>
+                      <Link
+                        to="/products/bess-designer"
+                        className="flex items-start gap-3 p-3 rounded-xl hover:bg-[#FEF3C7] transition-all group"
+                      >
+                        <div className="w-10 h-10 bg-gradient-to-br from-[#3B82F6] to-[#10B981] rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                          <Battery className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <div className="font-semibold text-[#0A2463] text-sm mb-1">
+                            BESS Designer
+                          </div>
+                          <div className="text-xs text-[#0A2463]/70">
+                            Battery energy storage system design
+                          </div>
+                        </div>
+                      </Link>
+                      <Link
+                        to="/products"
+                        className="block p-3 text-center text-sm font-medium text-[#FFA500] hover:bg-[#FEF3C7] rounded-xl transition-all"
+                      >
+                        View All Products →
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
               <a href="#features" className="text-sm font-medium text-[#0A2463] hover:text-[#FFA500] transition-colors">
                 Features
               </a>
@@ -82,6 +139,9 @@ const Index: React.FC = () => {
               </a>
               <Link to="/blog" className="text-sm font-medium text-[#0A2463] hover:text-[#FFA500] transition-colors">
                 Blog
+              </Link>
+              <Link to="/forum" className="text-sm font-medium text-[#0A2463] hover:text-[#FFA500] transition-colors">
+                Forum
               </Link>
               <Link to="/faq" className="text-sm font-medium text-[#0A2463] hover:text-[#FFA500] transition-colors">
                 FAQ
@@ -118,6 +178,18 @@ const Index: React.FC = () => {
           {isMenuOpen && (
             <div className="lg:hidden py-4 border-t border-[#FEF3C7]">
               <div className="flex flex-col gap-4">
+                <div>
+                  <div className="text-sm font-bold text-[#0A2463] mb-2 px-2">Products</div>
+                  <Link to="/products/pv-designer" onClick={() => setIsMenuOpen(false)} className="text-sm font-medium text-[#0A2463]/70 hover:text-[#FFA500] transition-colors block pl-4 py-1">
+                    AI PV Designer Pro
+                  </Link>
+                  <Link to="/products/bess-designer" onClick={() => setIsMenuOpen(false)} className="text-sm font-medium text-[#0A2463]/70 hover:text-[#FFA500] transition-colors block pl-4 py-1">
+                    BESS Designer
+                  </Link>
+                  <Link to="/products" onClick={() => setIsMenuOpen(false)} className="text-sm font-medium text-[#FFA500] hover:text-[#F7931E] transition-colors block pl-4 py-1">
+                    View All →
+                  </Link>
+                </div>
                 <a href="#features" onClick={() => setIsMenuOpen(false)} className="text-sm font-medium text-[#0A2463] hover:text-[#FFA500] transition-colors">
                   Features
                 </a>
