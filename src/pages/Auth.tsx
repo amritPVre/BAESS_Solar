@@ -1,12 +1,12 @@
 
 import React, { useEffect, useState } from "react";
-import { useNavigate, Link, useLocation } from "react-router-dom";
+import { useNavigate, Link, useLocation, useSearchParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowLeft, Home } from "lucide-react";
+import { ArrowLeft, Home, Gift } from "lucide-react";
 import LoginForm from "@/components/auth/LoginForm";
 import RegisterForm from "@/components/auth/RegisterForm";
 import AuthInfoPanel from "@/components/auth/AuthInfoPanel";
@@ -15,7 +15,9 @@ const Auth: React.FC = () => {
   const { isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState("login");
+  const [searchParams] = useSearchParams();
+  const referralCode = searchParams.get('ref') || '';
+  const [activeTab, setActiveTab] = useState(referralCode ? "register" : "login");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -71,6 +73,17 @@ const Auth: React.FC = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
+                {referralCode && (
+                  <div className="bg-gradient-to-r from-[#FFA500]/10 to-[#F7931E]/10 border-2 border-[#FFA500]/30 px-4 py-3 rounded-lg mb-4">
+                    <div className="flex items-center gap-2 text-[#0A2463]">
+                      <Gift className="h-5 w-5 text-[#FFA500]" />
+                      <p className="text-sm font-medium">
+                        🎉 You've been referred! Sign up now and get <span className="font-bold text-[#FFA500]">+3 AI credits</span> bonus!
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {error && (
                   <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
                     {error}
@@ -88,7 +101,7 @@ const Auth: React.FC = () => {
                   </TabsContent>
                   
                   <TabsContent value="register" className="mt-6">
-                    <RegisterForm setError={setError} clearError={clearError} />
+                    <RegisterForm setError={setError} clearError={clearError} initialReferralCode={referralCode} />
                   </TabsContent>
                 </Tabs>
               </CardContent>
