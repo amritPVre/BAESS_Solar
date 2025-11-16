@@ -14,7 +14,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { getCreditBalance } from '@/services/aiCreditService';
 import { AICreditBalance } from '@/components/ai-credits/AICreditBalance';
 import { SubscriptionPlans } from '@/components/ai-credits/SubscriptionPlans';
-import { User, CreditCard, History, Settings, Trash2, ArrowLeft, Download, FileText, Sparkles, Calendar, TrendingUp, TrendingDown } from 'lucide-react';
+import { ReferralCard } from '@/components/referral/ReferralCard';
+import { User, CreditCard, History, Settings, Trash2, ArrowLeft, Download, FileText, Sparkles, Calendar, TrendingUp, TrendingDown, Gift } from 'lucide-react';
 import { format } from 'date-fns';
 import { Helmet } from 'react-helmet';
 
@@ -247,6 +248,13 @@ export const UserAccount = () => {
                     <span>Subscription</span>
                   </a>
                   <a 
+                    href="#referral" 
+                    className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-orange-50 hover:text-orange-600 transition-colors text-sm"
+                  >
+                    <Gift className="h-4 w-4 text-gray-500" />
+                    <span>Referral Program</span>
+                  </a>
+                  <a 
                     href="#credits" 
                     className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-100 transition-colors text-sm"
                   >
@@ -427,6 +435,13 @@ export const UserAccount = () => {
                   </Card>
                 )}
               </div>
+            </section>
+
+            <Separator className="my-8" />
+
+            {/* Referral Program Section */}
+            <section id="referral">
+              <ReferralCard />
             </section>
 
             <Separator className="my-8" />
