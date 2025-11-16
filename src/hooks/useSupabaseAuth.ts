@@ -24,8 +24,7 @@ export const useSupabaseAuth = () => {
     name: string, 
     email: string, 
     password: string,
-    referralCode?: string,
-    recaptchaToken?: string
+    referralCode?: string
   ) => {
     // Step 1: Create auth user
     const { error, data } = await supabase.auth.signUp({
@@ -35,7 +34,6 @@ export const useSupabaseAuth = () => {
         data: {
           name: name,
           referral_code: referralCode || null,
-          recaptcha_token: recaptchaToken || null,
         },
       },
     });

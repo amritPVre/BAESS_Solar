@@ -8,11 +8,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useAuth } from "@/hooks/useAuth";
-import { validateEmail } from "@/services/emailValidationService";
-import { isRateLimited, recordSignupAttempt, isEmailRateLimited, recordEmailAttempt } from "@/services/rateLimitService";
-import { executeRecaptcha, initializeRecaptcha } from "@/services/recaptchaService";
-import { Gift, AlertCircle, Shield } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Gift } from "lucide-react";
 
 const registerSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
@@ -46,7 +42,6 @@ interface RegisterFormProps {
 const RegisterForm: React.FC<RegisterFormProps> = ({ setError, clearError, initialReferralCode = "" }) => {
   const { register } = useAuth();
   const [isRegistering, setIsRegistering] = React.useState(false);
-  const [recaptchaReady, setRecaptchaReady] = React.useState(false);
   const [hasReferralBonus, setHasReferralBonus] = React.useState(false);
 
   const form = useForm<z.infer<typeof registerSchema>>({
@@ -60,16 +55,6 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ setError, clearError, initi
       referralCode: initialReferralCode.toUpperCase(),
     },
   });
-
-  // Initialize reCAPTCHA
-  useEffect(() => {
-    initializeRecaptcha().then((success) => {
-      setRecaptchaReady(success);
-      if (!success) {
-        console.warn('reCAPTCHA not available, proceeding without it');
-      }
-    });
-  }, []);
 
   // Check if referral code is entered
   useEffect(() => {
@@ -86,56 +71,13 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ setError, clearError, initi
     setIsRegistering(true);
     
     try {
-      // 1. Check rate limits
-      const rateLimit = isRateLimited();
-      if (rateLimit.limited) {
-        setError(rateLimit.message || "Too many sign-up attempts. Please try again later.");
-        setIsRegistering(false);
-        return;
-      }
-
-      const emailLimit = isEmailRateLimited(values.email);
-      if (emailLimit.limited) {
-        setError(emailLimit.message || "This email was recently used. Please try again later.");
-        setIsRegistering(false);
-        return;
-      }
-
-      // 2. Validate email
-      const emailValidation = await validateEmail(values.email);
-      if (!emailValidation.isValid) {
-        setError(emailValidation.reason || "Invalid email address");
-        setIsRegistering(false);
-        return;
-      }
-
-      // 3. Execute reCAPTCHA
-      let recaptchaToken = '';
-      if (recaptchaReady) {
-        try {
-          recaptchaToken = await executeRecaptcha('signup');
-          console.log('reCAPTCHA token obtained');
-        } catch (error) {
-          console.error('reCAPTCHA error:', error);
-          // Continue without reCAPTCHA if it fails
-        }
-      }
-
-      // 4. Record signup attempt
-      recordSignupAttempt();
-      recordEmailAttempt(values.email);
-
-      // 5. Attempt registration with referral code
       console.log("Attempting registration with:", values.email);
       await register(
         values.name, 
         values.email, 
         values.password, 
-        values.referralCode, 
-        recaptchaToken
+        values.referralCode
       );
-
-      // Success! The register function will handle profile creation and referral processing
     } catch (error: any) {
       console.error("Registration error:", error);
       setError(error.message || "Registration failed. Please try again.");
@@ -147,15 +89,6 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ setError, clearError, initi
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleRegister)} className="space-y-4">
-        {/* Security Badge */}
-        {recaptchaReady && (
-          <Alert className="bg-green-50 border-green-200">
-            <Shield className="h-4 w-4 text-green-600" />
-            <AlertDescription className="text-xs text-green-700">
-              Protected by reCAPTCHA
-            </AlertDescription>
-          </Alert>
-        )}
 
         <FormField
           control={form.control}
@@ -280,21 +213,6 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ setError, clearError, initi
         >
           {isRegistering ? "Registering..." : "Register"}
         </Button>
-
-        {/* reCAPTCHA Notice */}
-        {recaptchaReady && (
-          <p className="text-xs text-gray-500 text-center">
-            This site is protected by reCAPTCHA and the Google{' '}
-            <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="text-[#FFA500] hover:underline">
-              Privacy Policy
-            </a>{' '}
-            and{' '}
-            <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer" className="text-[#FFA500] hover:underline">
-              Terms of Service
-            </a>{' '}
-            apply.
-          </p>
-        )}
       </form>
     </Form>
   );
