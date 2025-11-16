@@ -20,47 +20,19 @@ export const useSupabaseAuth = () => {
     return data;
   };
 
-  const signUp = async (
-    name: string, 
-    email: string, 
-    password: string,
-    referralCode?: string
-  ) => {
-    // Step 1: Create auth user
+  const signUp = async (name: string, email: string, password: string) => {
     const { error, data } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
           name: name,
-          referral_code: referralCode || null,
         },
       },
     });
     
     if (error) {
       throw error;
-    }
-    
-    // Step 2: If referral code provided, process the referral
-    if (data.user && referralCode && referralCode.length === 5) {
-      try {
-        const { data: referralData, error: referralError } = await supabase
-          .rpc('process_referral_reward', {
-            p_referee_id: data.user.id,
-            p_referral_code: referralCode.toUpperCase()
-          });
-        
-        if (referralError) {
-          console.error('Referral processing error:', referralError);
-          // Don't throw - user is already created, just log the referral error
-        } else if (referralData) {
-          console.log('Referral processed successfully:', referralData);
-        }
-      } catch (refError) {
-        console.error('Referral exception:', refError);
-        // Don't throw - user is already created
-      }
     }
     
     return data;

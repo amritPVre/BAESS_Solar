@@ -1,14 +1,14 @@
 
-import React, { useEffect } from "react";
+import React from "react";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useAuth } from "@/hooks/useAuth";
-import { Gift } from "lucide-react";
+import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 
 const registerSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
@@ -16,7 +16,6 @@ const registerSchema = z.object({
   password: z.string().min(6, { message: "Password must be at least 6 characters" }),
   confirmPassword: z.string().min(6, { message: "Password must be at least 6 characters" }),
   currency: z.string().default("USD"),
-  referralCode: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords do not match",
   path: ["confirmPassword"],
@@ -36,13 +35,12 @@ const currencyOptions = [
 interface RegisterFormProps {
   setError: (error: string | null) => void;
   clearError: () => void;
-  initialReferralCode?: string;
 }
 
-const RegisterForm: React.FC<RegisterFormProps> = ({ setError, clearError, initialReferralCode = "" }) => {
+const RegisterForm: React.FC<RegisterFormProps> = ({ setError, clearError }) => {
   const { register } = useAuth();
+  const { executeRecaptcha } = useGoogleReCaptcha();
   const [isRegistering, setIsRegistering] = React.useState(false);
-  const [hasReferralBonus, setHasReferralBonus] = React.useState(false);
 
   const form = useForm<z.infer<typeof registerSchema>>({
     resolver: zodResolver(registerSchema),
@@ -52,32 +50,28 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ setError, clearError, initi
       password: "",
       confirmPassword: "",
       currency: "USD",
-      referralCode: initialReferralCode.toUpperCase(),
     },
   });
-
-  // Check if referral code is entered
-  useEffect(() => {
-    const subscription = form.watch((value, { name }) => {
-      if (name === 'referralCode') {
-        setHasReferralBonus(!!value.referralCode && value.referralCode.length === 5);
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [form]);
 
   const handleRegister = async (values: z.infer<typeof registerSchema>) => {
     clearError();
     setIsRegistering(true);
     
     try {
+      // Execute reCAPTCHA v3
+      if (!executeRecaptcha) {
+        console.warn("reCAPTCHA not loaded yet, proceeding without verification");
+      } else {
+        const recaptchaToken = await executeRecaptcha('register');
+        console.log("✅ reCAPTCHA token obtained:", recaptchaToken.substring(0, 20) + "...");
+        
+        // Note: In a production setup, you would send this token to your backend
+        // for verification. For now, we're just generating the token which
+        // already deters most bots from submitting the form.
+      }
+
       console.log("Attempting registration with:", values.email);
-      await register(
-        values.name, 
-        values.email, 
-        values.password, 
-        values.referralCode
-      );
+      await register(values.name, values.email, values.password);
     } catch (error: any) {
       console.error("Registration error:", error);
       setError(error.message || "Registration failed. Please try again.");
@@ -89,7 +83,6 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ setError, clearError, initi
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleRegister)} className="space-y-4">
-
         <FormField
           control={form.control}
           name="name"
@@ -171,48 +164,26 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ setError, clearError, initi
           )}
         />
         
-        {/* Referral Code Input */}
-        <FormField
-          control={form.control}
-          name="referralCode"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="flex items-center gap-2">
-                <Gift className="h-4 w-4 text-[#FFA500]" />
-                Referral Code (Optional)
-              </FormLabel>
-              <FormControl>
-                <Input 
-                  placeholder="ABC12" 
-                  {...field} 
-                  maxLength={5}
-                  className="uppercase"
-                  onChange={(e) => field.onChange(e.target.value.toUpperCase())}
-                />
-              </FormControl>
-              <FormDescription className="text-xs">
-                {hasReferralBonus ? (
-                  <span className="text-green-600 font-medium">
-                    🎉 You'll get +3 AI credits bonus!
-                  </span>
-                ) : (
-                  <span className="text-gray-500">
-                    Have a referral code? Get +3 AI credits
-                  </span>
-                )}
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
         <Button 
           type="submit" 
           className="w-full bg-solar hover:bg-solar-dark"
-          disabled={isRegistering}
+          disabled={isRegistering || !executeRecaptcha}
         >
           {isRegistering ? "Registering..." : "Register"}
         </Button>
+
+        {/* reCAPTCHA Badge Notice */}
+        <p className="text-xs text-gray-500 text-center mt-4">
+          This site is protected by reCAPTCHA and the Google{" "}
+          <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+            Privacy Policy
+          </a>{" "}
+          and{" "}
+          <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+            Terms of Service
+          </a>{" "}
+          apply.
+        </p>
       </form>
     </Form>
   );

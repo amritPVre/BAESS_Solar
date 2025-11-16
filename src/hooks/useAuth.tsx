@@ -122,17 +122,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
   
-  const register = async (
-    name: string, 
-    email: string, 
-    password: string,
-    referralCode?: string
-  ) => {
-    console.log("Registration attempt for:", email, referralCode ? `with referral code: ${referralCode}` : '');
+  const register = async (name: string, email: string, password: string) => {
+    console.log("Registration attempt for:", email);
     setLoading(true);
     
     try {
-      await signUp(name, email, password, referralCode);
+      await signUp(name, email, password);
       console.log("Registration successful");
       toast.success("Registration successful! Please check your email to confirm your account.");
     } catch (error: any) {
