@@ -258,11 +258,15 @@ export function isDisposableEmail(email: string): boolean {
 
 /**
  * Checks if email matches suspicious patterns
+ * Note: Only checks domain part to avoid false positives on username
  */
 export function hasSuspiciousPattern(email: string): boolean {
-  const emailLower = email.toLowerCase();
+  const domain = getEmailDomain(email);
+  if (!domain) return false;
   
-  return SUSPICIOUS_PATTERNS.some(pattern => pattern.test(emailLower));
+  // Check patterns against domain only (not the full email)
+  // This prevents false positives like "minutes2energy@gmail.com"
+  return SUSPICIOUS_PATTERNS.some(pattern => pattern.test(domain));
 }
 
 /**
@@ -279,6 +283,15 @@ export async function validateEmail(email: string): Promise<EmailValidationResul
     };
   }
 
+  // IMPORTANT: Check if from trusted domain FIRST (bypass all other checks)
+  if (isTrustedDomain(email)) {
+    return {
+      isValid: true,
+      isDisposable: false,
+      isSuspicious: false
+    };
+  }
+
   // Check if disposable
   const isDisposable = isDisposableEmail(email);
   if (isDisposable) {
@@ -290,7 +303,7 @@ export async function validateEmail(email: string): Promise<EmailValidationResul
     };
   }
 
-  // Check suspicious patterns
+  // Check suspicious patterns (only for non-trusted domains)
   const isSuspicious = hasSuspiciousPattern(email);
   if (isSuspicious) {
     return {
@@ -322,16 +335,54 @@ export function getEmailDomain(email: string): string | null {
  */
 export function isTrustedDomain(email: string): boolean {
   const trustedDomains = [
+    // Google
     'gmail.com',
-    'yahoo.com',
+    'googlemail.com',
+    
+    // Microsoft
     'outlook.com',
     'hotmail.com',
     'live.com',
+    'msn.com',
+    
+    // Apple
     'icloud.com',
+    'me.com',
+    'mac.com',
+    
+    // Yahoo
+    'yahoo.com',
+    'yahoo.co.uk',
+    'yahoo.in',
+    'ymail.com',
+    
+    // Other Major Providers
     'protonmail.com',
+    'proton.me',
     'aol.com',
     'zoho.com',
-    'mail.com'
+    'mail.com',
+    'gmx.com',
+    'gmx.net',
+    'fastmail.com',
+    'tutanota.com',
+    'mailfence.com',
+    
+    // Business/Enterprise
+    'mail.ru',
+    'yandex.com',
+    'qq.com',
+    '163.com',
+    '126.com',
+    
+    // Regional Popular
+    'rediffmail.com',
+    'inbox.com',
+    'bigpond.com',
+    'att.net',
+    'sbcglobal.net',
+    'verizon.net',
+    'comcast.net'
   ];
 
   const domain = getEmailDomain(email);
