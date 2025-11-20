@@ -52,13 +52,14 @@ export default async function handler(req, res) {
         const body = JSON.stringify(req.body);
         const signedContent = `${svixId}.${svixTimestamp}.${body}`;
         
-        // Remove "whsec_" prefix from secret if present
-        const secret = webhookSecret.replace('whsec_', '');
+        // Remove "whsec_" prefix from secret and base64 decode it
+        const secretBase64 = webhookSecret.replace('whsec_', '');
+        const secret = Buffer.from(secretBase64, 'base64');
         
         // Calculate expected signature
         const expectedSignature = crypto
           .createHmac('sha256', secret)
-          .update(signedContent)
+          .update(signedContent, 'utf8')
           .digest('base64');
 
         if (signature !== expectedSignature) {
