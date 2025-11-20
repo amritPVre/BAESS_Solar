@@ -38,6 +38,28 @@ What's your biggest challenge in solar design? Drop a comment below 👇
 - **Content:** Split screen showing "Before" (person frustrated with spreadsheets) vs "After" (person smiling at a clean design interface)
 - **Alt text:** "Traditional solar design vs modern approach"
 
+### AI Image Generation Prompt:
+```
+Create a professional split-screen comparison image for LinkedIn post. 
+Left side: A frustrated solar engineer surrounded by messy spreadsheets, calculators, and papers on desk, dim lighting, stressed expression, cluttered workspace. 
+Right side: Same person now confident and relaxed, using a clean modern laptop showing a sleek solar design interface, bright natural lighting, organized minimalist desk, smiling. 
+Style: Modern professional illustration, photorealistic quality, warm color palette with orange and blue accents, corporate professional aesthetic, 1200x628 pixels, high quality, LinkedIn-optimized format.
+```
+
+### Canva/Design Tool Instructions:
+1. **Template:** Use "LinkedIn Post" template (1200x628px)
+2. **Background:** White or light gray gradient
+3. **Left Panel:** 
+   - Add icon of spreadsheet/calculator
+   - Text: "Before: Hours of manual work"
+   - Color: Muted gray/blue
+4. **Right Panel:**
+   - Add icon of modern interface/AI
+   - Text: "After: Minutes with BAESS"
+   - Color: Orange/warm gradient
+5. **Divider:** Thin vertical line or arrow between panels
+6. **Branding:** Add BAESS Labs logo in corner
+
 ---
 
 ## 📅 Day 3: Feature Spotlight - AI-Powered PV Design
@@ -69,6 +91,41 @@ Try it free → www.baess.app
 - **Type:** Short video (30 seconds) or carousel of 3-4 screenshots
 - **Content:** Quick walkthrough of creating a design: location input → roof area → system design → results
 - **Alt text:** "Creating a solar PV design in BAESS Labs"
+
+### Screenshot Carousel Instructions (4 slides):
+**Slide 1 - Location Input:**
+- Screenshot: Location/address input screen
+- Annotation: "Step 1: Enter project location" (top)
+- Highlight: Location field with arrow
+- Background: Light blue overlay
+
+**Slide 2 - Roof Area:**
+- Screenshot: Roof area configuration
+- Annotation: "Step 2: Define roof dimensions"
+- Highlight: Roof area inputs circled
+- Background: Light orange overlay
+
+**Slide 3 - System Design:**
+- Screenshot: Module selection and layout
+- Annotation: "Step 3: AI generates optimal design"
+- Highlight: Module count and layout visualization
+- Background: Light green overlay
+
+**Slide 4 - Results:**
+- Screenshot: Energy production and financial results
+- Annotation: "Step 4: Get complete analysis in minutes"
+- Highlight: Key metrics boxed
+- Background: Light purple overlay
+
+### AI Video Generation Prompt:
+```
+Create a 30-second screen recording video showing solar PV design process. 
+Scene 1 (0-7s): Cursor enters address "123 Main Street, California" in location field, map loads showing satellite view
+Scene 2 (8-15s): User inputs roof dimensions (50x30 feet), roof area highlights on map
+Scene 3 (16-22s): AI calculates optimal module layout, animation shows panels being placed on roof, system specs appear
+Scene 4 (23-30s): Results dashboard displays with energy production graphs, financial metrics, ROI calculations
+Style: Clean modern UI, smooth transitions, professional color scheme (blue and orange), cursor movements natural and purposeful, text overlays for each step, upbeat background music (optional), no voice-over for this version, 1080p quality.
+```
 
 ---
 
@@ -109,6 +166,35 @@ What repetitive tasks take up most of your time? Let's talk about it 👇
 - **Content:** Clock showing "6 hours → 2 hours" with task breakdown
 - **Alt text:** "Time saved on solar project planning with BAESS"
 
+### AI Image Generation Prompt:
+```
+Create a professional time-saving comparison infographic for LinkedIn.
+Top section: Large clock icon showing "6 HOURS" in red, with checklist items: "Manual BOQ calculations", "Spreadsheet updates", "Vendor pricing", "Material counting" - all with checkboxes, stress/effort indicators
+Large downward arrow with "BAESS Labs" text in center
+Bottom section: Same clock showing "2 HOURS" in green, same checklist items but with green checkmarks, "automated" badges next to each item, relaxed/easy indicators
+Bottom quote card: Testimonial text "I used to spend my Friday afternoons on BOQ calculations. Now I spend them with my family." - Solar EPC Professional
+Style: Clean modern infographic, professional color palette (orange, blue, green), icons for tasks, minimalist design, 1200x1200 pixels for LinkedIn carousel, high contrast, readable fonts, corporate aesthetic.
+```
+
+### Canva/Design Tool Instructions:
+1. **Template:** LinkedIn Carousel (1080x1080px)
+2. **Layout:** Vertical split design
+3. **Top Half (Before):**
+   - Clock icon: 6 hours (red color)
+   - Task list with X marks
+   - Stressed emoji/icon
+4. **Middle:** 
+   - Big arrow pointing down
+   - "BAESS Labs" badge
+5. **Bottom Half (After):**
+   - Clock icon: 2 hours (green color)
+   - Same tasks with checkmarks
+   - Happy emoji/icon
+6. **Quote Box:**
+   - Testimonial in quotation marks
+   - Attribution line
+   - Light background box
+
 ---
 
 ## 📅 Day 7: Feature Deep Dive - Financial Analysis
@@ -146,6 +232,45 @@ Link in bio to try it out.
 - **Content:** Sample financial metrics with charts (payback period, 25-year savings)
 - **Alt text:** "Solar project financial analysis dashboard"
 
+### Screenshot Instructions:
+1. **Take clean screenshot** of financial results dashboard from BAESS app
+2. **Blur/anonymize** any sensitive data
+3. **Highlight key metrics** with colored boxes or circles:
+   - Payback period (orange box)
+   - ROI percentage (green box)
+   - 25-year savings (blue box)
+   - LCOE value (yellow box)
+4. **Add annotations** with arrows pointing to each metric
+5. **Polish:** Increase brightness by 10%, add subtle shadow
+
+### AI Infographic Generation Prompt:
+```
+Create a professional financial dashboard infographic for solar PV project analysis.
+Layout: Modern dashboard design with 4 key metric cards arranged in 2x2 grid
+Card 1 (Top Left): "Payback Period" - Large "7.2 YEARS" text, small upward trending arrow, icon of calendar/clock, orange accent color
+Card 2 (Top Right): "ROI (25 Years)" - Large "342%" text, small growth chart icon, green accent color  
+Card 3 (Bottom Left): "LCOE" - Large "$0.08/kWh" text, small lightning bolt icon, blue accent color
+Card 4 (Bottom Right): "Total Savings" - Large "$156,000" text, small money/piggy bank icon, purple accent color
+Center: Small line graph showing 25-year savings projection curve (upward trend)
+Bottom: Text "Based on NREL data & global financial standards"
+Style: Clean modern dashboard UI, professional corporate design, white background, colorful accent cards with subtle shadows, clear readable fonts (Roboto/Inter), icons in flat design style, 1200x1200 pixels, high quality, LinkedIn-optimized.
+```
+
+### Canva Dashboard Template:
+1. **Grid Layout:** 2x2 metric cards
+2. **Each Card Contains:**
+   - Icon (top)
+   - Large number (center)
+   - Label text (bottom)
+   - Colored border/background
+3. **Colors:**
+   - Orange: Payback
+   - Green: ROI
+   - Blue: LCOE
+   - Purple: Savings
+4. **Footer:** Add disclaimer text
+5. **Branding:** BAESS Labs logo bottom right
+
 ---
 
 ## 📅 Day 9: Introducing BESS Designer
@@ -178,6 +303,49 @@ Your thoughts on BESS integration? Drop them below 👇
 - **Type:** Product screenshot or animated GIF
 - **Content:** BESS system sizing interface with configuration options
 - **Alt text:** "Battery energy storage system design tool"
+
+### AI Image Generation Prompt:
+```
+Create a professional product showcase image for battery energy storage system (BESS) design tool.
+Main element: Isometric 3D illustration of modern battery storage system (sleek container design with battery racks visible through transparent panel)
+Foreground: Modern UI interface overlay showing:
+- Battery capacity slider (10kWh to 100MWh+)
+- Configuration options panel
+- Charge/discharge cycle graph
+- System specifications display
+- Performance metrics dashboard
+Background: Clean gradient from dark blue to light blue, subtle grid pattern, energy flow particles/lines around battery system
+Additional elements: Small icons for residential house and commercial building showing different use cases, lightning bolt symbols for power flow
+Style: Modern tech aesthetic, professional 3D render quality, blue and orange color scheme, glowing accents on UI elements, futuristic but professional, clean composition, 1200x675 pixels (16:9 LinkedIn video format), high detail, corporate presentation quality.
+```
+
+### Animated GIF Instructions (Using Canva or After Effects):
+**Duration:** 5 seconds, loops continuously
+
+**Frame 1 (0-1s):**
+- Show battery system at 10kWh (small residential)
+- Text: "Residential: 10kWh"
+
+**Frame 2 (1-2.5s):**
+- Animate scale up to medium commercial system
+- Text: "Commercial: 500kWh"
+
+**Frame 3 (2.5-4s):**
+- Animate scale up to large industrial system
+- Text: "Industrial: 10MWh"
+
+**Frame 4 (4-5s):**
+- Show "100MWh+ capable" with checkmark
+- Text: "Scalable for any project size"
+
+**Transitions:** Smooth morph/scale animations, fade in/out text
+
+### Screenshot Enhancement:
+1. Take screenshot of BESS Designer interface
+2. Add colored overlays to highlight key features
+3. Add numbered annotations (1, 2, 3, 4) with arrow pointers
+4. Create side text box explaining each numbered feature
+5. Apply modern UI mockup frame (like browser window or device mockup)
 
 ---
 
@@ -214,6 +382,53 @@ That's the idea, anyway. We'd love to hear if you think we're on the right track
 - **Type:** Simple diagram or split-screen comparison
 - **Content:** "AI analyzes data" → "You make decisions" flow
 - **Alt text:** "How AI assists solar design workflow"
+
+### AI Image Generation Prompt:
+```
+Create a clean professional workflow diagram showing AI-human collaboration in solar design.
+Layout: Horizontal flow diagram with 3 main sections connected by arrows
+Left Section (AI): 
+- Robot/AI brain icon in blue circle
+- Text "AI Analyzes"
+- Sub-items in smaller text:
+  • Satellite imagery
+  • Weather patterns
+  • Energy calculations
+  • Material quantities
+  • Pricing data
+- Background: Light blue panel
+Center Section (Collaboration):
+- Large right arrow with "+" symbol
+- Small icons showing data exchange
+- Text "Working Together"
+Middle connector showing handshake/partnership icon
+Right Section (Human):
+- Professional person icon in orange circle
+- Text "You Decide"
+- Sub-items in smaller text:
+  • Client consultation
+  • Site-specific adjustments
+  • Design customization
+  • Final approval
+  • Relationship building
+- Background: Light orange panel
+Bottom text: "AI handles repetitive tasks • You handle creative decisions"
+Style: Clean minimal diagram, professional illustration, corporate color scheme (blue and orange), flat design icons, clear typography (sans-serif), white background, subtle shadows on panels, 1200x628 pixels, LinkedIn optimized, infographic style.
+```
+
+### Canva Diagram Instructions:
+1. **Template:** Process Flow / Workflow Diagram
+2. **Three Columns Layout:**
+   - Column 1: AI side (blue theme)
+   - Column 2: Partnership (neutral)
+   - Column 3: Human side (orange theme)
+3. **Icons:** Use simple, flat style icons
+4. **Connectors:** Arrows with "+" or "=" symbols
+5. **Text Hierarchy:**
+   - Large headers for main sections
+   - Bullet points for sub-items
+   - Footer text for summary
+6. **Spacing:** Balanced white space, not cluttered
 
 ---
 
@@ -256,6 +471,40 @@ What tools do you currently use? We'd genuinely love to know 👇
 - **Content:** Feature comparison showing workflow differences
 - **Alt text:** "Solar design workflow comparison"
 
+### AI Image Generation Prompt:
+```
+Create a professional, respectful comparison table for solar design workflows.
+Layout: Two-column comparison table with neutral, non-aggressive tone
+Header row: "Traditional Approach" (left, gray theme) | "Modern Integrated Approach" (right, blue/orange theme)
+Row 1: Tools - "Multiple disconnected software" with 4-5 small separate app icons | "All-in-one platform" with single unified interface icon
+Row 2: Workflow - "Manual data re-entry" with typing/copy-paste icons | "Automated data flow" with connection/sync icon
+Row 3: Learning - "Steep learning curve" with upward mountain icon | "Intuitive interface" with gentle slope icon
+Row 4: Access - "Desktop-only, location-bound" with computer icon | "Web-based, work anywhere" with cloud/mobile icons
+Row 5: Cost - "High upfront licensing" with dollar signs | "Flexible pricing" with scale icon
+Bottom section: Text "Both approaches have merit • Choose what fits your needs"
+Style: Clean professional table design, neutral color palette (grays, blues, soft orange accents), NOT confrontational, respectful comparison, clear icons in flat style, readable fonts, balanced layout, 1200x1200 pixels for LinkedIn, white/light gray background, subtle borders, professional corporate aesthetic, no aggressive red X marks or negative imagery.
+```
+
+### Canva Comparison Table:
+1. **Template:** Comparison Chart (2-column)
+2. **Styling Guidelines:**
+   - NO red X marks or negative symbols
+   - Use neutral icons
+   - Both columns get equal visual weight
+   - Soft color differences only
+3. **Left Column (Traditional):**
+   - Gray/neutral theme
+   - Simple icons
+   - Factual descriptions
+4. **Right Column (BAESS):**
+   - Blue/orange accent
+   - Modern icons
+   - Factual descriptions
+5. **Footer:**
+   - Neutral statement acknowledging both
+   - "Different tools for different needs"
+6. **Tone:** Respectful, educational, not combative
+
 ---
 
 ## 📅 Day 13: Coming Soon - What We're Building
@@ -290,6 +539,43 @@ What feature would make your work easier? Tell us—we're taking notes 📝
 - **Type:** Roadmap infographic or teaser mockup
 - **Content:** Timeline or feature cards showing upcoming releases
 - **Alt text:** "BAESS Labs product roadmap preview"
+
+### AI Image Generation Prompt:
+```
+Create a modern product roadmap infographic for BAESS Labs.
+Layout: Horizontal timeline with milestone markers
+Left section labeled "In Development 🔧" with 5 feature cards:
+Card 1: 3D shading analysis icon (cube with shadows), progress bar at 70%
+Card 2: Project management dashboard icon (kanban board), progress bar at 50%
+Card 3: Vendor integration icon (handshake/link), progress bar at 40%
+Card 4: Mobile app icon (smartphone), progress bar at 30%
+Card 5: Multi-language icon (globe/flags), progress bar at 20%
+Right section labeled "On Roadmap 📋" with 4 feature cards:
+Card 1: Team collaboration icon (people connected)
+Card 2: Weather data icon (cloud with data)
+Card 3: Compliance checker icon (checkmark shield)
+Card 4: API integration icon (puzzle pieces)
+Center: Timeline road graphic connecting all elements
+Bottom text: "Building based on your feedback • What should we prioritize?"
+Style: Modern roadmap infographic, clean flat design, blue and orange color scheme, progress bars in gradient, friendly icons, optimistic and transparent feel, 1200x675 pixels, professional but approachable, white background, subtle shadows on cards.
+```
+
+### Canva Roadmap Template:
+1. **Layout:** Horizontal or winding road graphic
+2. **Milestone Markers:** 
+   - Different colored flags for different stages
+   - "In Development" = Orange flags
+   - "Roadmap" = Blue flags
+3. **Feature Cards:**
+   - Icon at top
+   - Feature name
+   - Progress indicator (for in-development)
+   - Estimated timeframe
+4. **Design Elements:**
+   - Road/path connecting all features
+   - Small vehicle/marker showing "current position"
+   - Destination marker at end
+5. **Footer:** "What feature matters most to you?" CTA
 
 ---
 
@@ -327,6 +613,42 @@ We truly appreciate it.
 - **Type:** Team photo or workspace image
 - **Content:** Authentic behind-the-scenes moment (if available) or mission statement graphic
 - **Alt text:** "The team behind BAESS Labs"
+
+### AI Image Generation Prompt (If no team photo available):
+```
+Create a professional mission statement graphic for a clean energy tech startup.
+Central image: Stylized illustration of diverse team of 4-5 people collaborating around a laptop showing solar panel diagrams, modern office setting with plants and natural light through windows, solar panels visible through window in background
+Top text: "Why We Built BAESS Labs"
+Center quote card (overlaid on image): 
+"Making solar design faster, simpler, and more accessible—
+so more solar gets installed, and we all get a cleaner future"
+Bottom section: Three pillars with icons:
+Icon 1: Target/goal icon - "Focus on user needs"
+Icon 2: Growth/improve icon - "Learn and improve daily"  
+Icon 3: World/sustainability icon - "Accelerate clean energy adoption"
+Style: Warm professional illustration, inspiring and authentic feel, realistic but illustrated style, diverse and inclusive team representation, modern workspace aesthetic, natural color palette with solar orange and sky blue accents, optimistic and human-centric, 1200x1200 pixels, high quality, genuine and not overly corporate.
+```
+
+### Real Photo Guidelines (If using team photo):
+1. **Setting:** Natural workspace or outdoor setting
+2. **Lighting:** Natural light, avoid harsh shadows
+3. **Composition:** 
+   - Casual but professional
+   - Team working or collaborating
+   - NOT stiff formal poses
+   - Show personality
+4. **Overlay Text:**
+   - Add semi-transparent overlay box
+   - Mission statement in clear text
+   - Keep faces visible
+5. **Authenticity:** Real moment, not overly staged
+
+### Alternative Mission Graphic:
+1. **Center:** Large inspiring quote about solar energy
+2. **Background:** Subtle solar panel texture or sunrise
+3. **Icons:** Small icons representing company values
+4. **Colors:** Warm, optimistic, authentic
+5. **No stock photos:** Use original content or illustrations
 
 ---
 
@@ -372,6 +694,59 @@ Drop your email or connect with us if you want to be part of this journey.
 - **Type:** Thank you graphic or video montage
 - **Content:** Highlights from previous posts, key features, call-to-action button
 - **Alt text:** "Join BAESS Labs - Solar design made simpler"
+
+### AI Image Generation Prompt:
+```
+Create a thank you and call-to-action image for LinkedIn campaign conclusion.
+Top section: Large "Thank You" text in elegant font with subtle particle effects
+Middle section: Grid of 6 small preview cards showing highlights from the campaign:
+Card 1: AI PV Designer icon/mini screenshot
+Card 2: BESS Designer icon/mini screenshot
+Card 3: Time savings statistic "Save 3-4 hours per project"
+Card 4: Financial analysis icon with graphs
+Card 5: BOQ generation icon
+Card 6: Community/growth icon
+Center prominent card: 
+"Ready to Try BAESS?"
+"✓ Start free today"
+"✓ No credit card required"
+"✓ Design your first project in minutes"
+Large CTA button: "Get Started → www.baess.app"
+Bottom section: "Join 1000+ solar professionals already using BAESS" with small avatar icons
+Style: Celebration and gratitude feel, warm welcoming colors (orange, blue, green), confetti or light particle effects, professional but friendly, clear CTA hierarchy, 1200x1200 pixels, high quality, inspiring and action-oriented, grateful tone.
+```
+
+### Video Montage Instructions (15-20 seconds):
+**Segment 1 (0-3s):** "Thank You" animation with subtle celebration
+**Segment 2 (3-10s):** Quick flash of highlights from previous posts (0.5s each):
+- Problem statement
+- PV Designer in action
+- Time savings graphic
+- Financial dashboard
+- BESS Designer
+- AI workflow
+- Roadmap
+**Segment 3 (10-15s):** Key features text overlay:
+"AI-Powered Design"
+"BESS Integration"
+"Financial Analysis"
+"BOQ Generation"
+**Segment 4 (15-20s):** Call to action:
+Large text: "Start Your Free Trial"
+Website URL appears
+End with BAESS Labs logo
+**Style:** Upbeat, professional, energetic background music, smooth transitions
+
+### Canva Thank You Card:
+1. **Header:** "15 Days Complete - Thank You!"
+2. **Image Grid:** 3x2 grid of campaign highlights
+3. **CTA Box:** 
+   - Prominent placement
+   - Contrasting color
+   - Clear button
+   - Website URL
+4. **Social Proof:** User count or testimonial snippet
+5. **Footer:** Simple, "Let's stay connected"
 
 ---
 

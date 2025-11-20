@@ -1,890 +1,682 @@
-# 🎬 AI Video Generation Prompts for PV AI Designer Pro
-## Individual Scene-Based Prompts for Marketing Video Creation
+# 🎬 AI Video Generation Prompts & Voice-Over Scripts
+## BAESS Labs LinkedIn Campaign
 
-**Document Version:** 1.0  
-**Last Updated:** January 2025  
-**Video Format:** 4K (3840x2160px) at 60fps  
-**Individual Clip Duration:** 5-6 seconds each  
-**Total Video Length:** 30-35 seconds (after stitching)  
-**Aspect Ratio:** 16:9 (or 9:16 for social media vertical)
+This document contains detailed video generation prompts and professional voice-over scripts for all video content in the LinkedIn campaign.
 
 ---
 
-## 📋 Table of Contents
-1. [Scene 1: PV Area Design (Map Interface)](#scene-1-pv-area-design-map-interface)
-2. [Scene 2: BOQ Generation (AI Processing)](#scene-2-boq-generation-ai-processing)
-3. [Scene 3: Financial Analysis (Charts & Metrics)](#scene-3-financial-analysis-charts--metrics)
-4. [Video Stitching Guide](#video-stitching-guide)
-5. [Technical Specifications](#technical-specifications)
+## 📹 Video 1: Introduction - The Problem (Day 1)
+**Duration:** 30 seconds  
+**Style:** Problem-solution narrative  
+**Tone:** Empathetic, professional, solution-oriented
 
----
-
-## 🗺️ Scene 1: PV Area Design (Map Interface)
-
-### Video 1.1 - Map Zoom & Location Search (5 seconds)
-
-**Screenshot Requirements:**
-- Empty Google Maps satellite view
-- Search bar focused and visible
-- Clean interface with no clutter
-- Location marker/pin visible
-
-**AI Video Generation Prompt:**
+### Video Generation Prompt:
 ```
-Create a 5-second cinematic video from this solar design map interface screenshot.
-
-Animation Instructions:
-- Start with slight zoom-out effect (1.05x to 1.0x scale)
-- Add smooth parallax depth to the map layers
-- Gentle camera drift from top-left to center (subtle pan)
-- Apply soft glow effect to the search bar and UI elements
-- Add subtle pulse animation to the location marker/pin
-- Overlay floating holographic grid lines that fade in/out
-- Particle effects: Small light particles drifting across the screen suggesting GPS/location data
-- Color enhancement: Boost satellite image saturation by 15%
-- Add lens flare effect from top-right corner
-- UI elements: Add subtle breathing glow to buttons and controls
-
-Visual Effects:
-- Depth of field: Slight blur on edges, sharp center
-- Motion blur: 2-3% for cinematic feel
-- Lighting: Soft ambient glow with blue-orange color grading
-- Transitions: Fade in from 10% opacity to full
-- End frame: Freeze with slight zoom-in
-
-Style: Professional tech demo, Apple-style product reveal, futuristic interface
-Mood: Precise, innovative, high-tech exploration
-Resolution: 4K (3840x2160px) at 60fps
+Create a 30-second professional video showing the challenges of traditional solar design.
+Scene 1 (0-8s): Close-up of frustrated solar engineer's hands flipping through messy spreadsheets, calculator, and papers scattered on desk, coffee cup, stressed atmosphere, dim office lighting
+Scene 2 (8-12s): Wide shot of cluttered desk with multiple software windows open on computer screens, person rubbing temples in frustration
+Scene 3 (12-18s): Transition to clean modern workspace, person now calm and smiling, using single laptop showing clean BAESS interface
+Scene 4 (18-25s): Close-up of BAESS app interface showing smooth solar design workflow, clean UI, modern aesthetic
+Scene 5 (25-30s): Person leaning back satisfied, sunlight streaming through window with solar panels visible outside, fade to BAESS Labs logo with tagline
+Style: Professional commercial quality, cinematic lighting, color grading from cold/blue (problem) to warm/orange (solution), smooth transitions, inspirational feel, 1080p quality, no text overlays (voice-over only).
 ```
 
----
-
-### Video 1.2 - Polygon Drawing & Zone Creation (6 seconds)
-
-**Screenshot Requirements:**
-- Satellite map with 2-3 drawn polygon zones
-- Zones on different rooftops or areas
-- Drawing tools panel visible
-- Clear zone boundaries
-
-**AI Video Generation Prompt:**
+### Voice-Over Script:
 ```
-Create a 6-second dynamic video showcasing solar installation zones on satellite map.
+[Warm, conversational male or female voice, professional but friendly]
 
-Animation Instructions:
-- Open with gentle rotation (2-3 degrees clockwise then back)
-- Polygon zones: Add animated glowing orange outline that pulses rhythmically
-- Traced effect: Make polygon borders appear as if being drawn in real-time (0-2 sec)
-- Inside zones: Subtle grid pattern overlay that fades in
-- Add floating data tags above each zone with smooth bounce-in animation
-- Parallax effect: Different layers of UI move at different speeds
-- Camera movement: Slow push-in zoom (1.0x to 1.15x) with drift down-right
-- Holographic elements: Floating measurement lines between zones
-- Particle system: Small orange sparkles along polygon edges
+[0-8s]
+"Solar design shouldn't take hours of manual calculations, 
+endless spreadsheets, and constant double-checking."
 
-Visual Effects:
-- Glow effects on all polygon borders (orange #FFA500)
-- Soft shadows under floating UI elements for 3D depth
-- Subtle scan-line effect moving across the zones (like radar)
-- Color grading: Enhanced blues and greens for satellite imagery
-- Add subtle lens distortion for premium look
-- Digital grid overlay at 10% opacity
+[8-12s - slight pause for emphasis]
+"But for too many professionals... it does."
 
-Style: High-tech GIS software, futuristic mapping interface, holographic display
-Mood: Precise engineering, intelligent design, cutting-edge technology
-Resolution: 4K at 60fps, 16:9 aspect ratio
+[12-18s - tone shifts to hopeful]
+"That's why we created BAESS Labs."
+
+[18-25s - confident, clear]
+"AI-powered tools that handle the repetitive work,
+so you can focus on what matters:"
+
+[25-30s - warm, inspiring]
+"Delivering great solar solutions to your clients.
+BAESS Labs. Solar design, simplified."
+
+[End with subtle music fade]
+```
+
+### Alternative Script (More Technical):
+```
+[Professional, expert voice]
+
+[0-8s]
+"Traditional solar design: multiple disconnected tools,
+hours of manual data entry, and endless calculations."
+
+[8-12s]
+"There had to be a better way."
+
+[12-18s]
+"BAESS Labs combines AI-powered simulation,
+financial analysis, and BOQ generation"
+
+[18-25s]
+"all in one integrated platform.
+From concept to complete design in minutes, not hours."
+
+[25-30s]
+"BAESS Labs. The future of solar design.
+Visit www.baess.app"
 ```
 
 ---
 
-### Video 1.3 - Solar Modules Populating Zones (5 seconds)
+## 📹 Video 2: AI PV Designer Pro Walkthrough (Day 3)
+**Duration:** 45-60 seconds  
+**Style:** Product demo, screen recording  
+**Tone:** Clear, instructional, professional
 
-**Screenshot Requirements:**
-- Zones completely filled with solar panel grid pattern
-- Individual module outlines clearly visible
-- Capacity calculations shown
-- Legend/info panel with metrics
-
-**AI Video Generation Prompt:**
+### Video Generation Prompt:
 ```
-Create a 5-second satisfying video of solar panels filling installation zones.
-
-Animation Instructions:
-- Start frame: Empty zones with just outlines
-- Animation sequence (0-3 sec): Solar module grid appears progressively
-  - Use "paint reveal" effect - modules materialize from center outward
-  - Each module has micro-scale pulse when appearing
-  - Stagger animation: Zones fill one after another, not simultaneously
-- Add shimmer/shine effect sweeping across completed module arrays
-- Floating capacity numbers count up dynamically (e.g., "0 kW → 487 kW")
-- Energy visualization: Blue glowing lines connecting modules like circuit traces
-- 3D depth illusion: Slight parallax between module layer and map background
-- Camera: Smooth orbital motion around zones (5-degree arc)
-- Particle effects: Small blue energy particles flowing between panels
-
-Visual Effects:
-- Panels have subtle gradient overlay (blue to white) suggesting electricity
-- Soft ambient glow around entire array (blue-white halo)
-- Modules slightly pop forward in Z-axis when appearing (2-3px)
-- Add subtle motion blur during reveal animation
-- Capacity metrics: Digital counter style with glow effect
-- Final frame: Everything pulses once in unison (0.3 sec)
-
-Style: Satisfying transformation sequence, tech demo aesthetic, gamified interface
-Mood: Achievement, precision, intelligent automation, "magic moment"
-Resolution: 4K at 60fps, smooth motion throughout
+Create a 60-second screen recording demonstration of AI PV Designer Pro.
+Scene 1 (0-10s): Landing page of BAESS Labs, cursor clicks "AI PV Designer Pro", smooth page transition
+Scene 2 (10-20s): Location input screen, cursor types address "123 Solar Street, Phoenix, AZ", map loads showing satellite imagery of building with roof area highlighted
+Scene 3 (20-30s): Roof configuration screen, cursor inputs dimensions (50ft x 30ft), roof tilt (15°), azimuth (180°), visual of roof area updating on map
+Scene 4 (30-40s): Module selection dropdown opens, cursor selects "Tier-1 Module - 550W", AI calculation animation showing optimal layout being computed, module array visualizes on roof 
+Scene 5 (40-50s): Results dashboard displays with smooth animations: energy production graph (annual 45,000 kWh), financial metrics card (ROI, payback), system specifications panel (30kW system, 55 modules)
+Scene 6 (50-60s): Cursor clicks "Generate Detailed Report", download animation, final screen shows "Design Complete in 4 minutes", fade to BAESS Labs logo
+Style: Clean professional screen recording, smooth cursor movements (not jerky), modern UI with blue/orange color scheme, subtle zoom-ins on key features, professional transitions, upbeat background music (low volume), 1080p 60fps quality.
 ```
 
----
-
-### Video 1.4 - Detailed Configuration Panel (5 seconds)
-
-**Screenshot Requirements:**
-- Zoomed view of one zone with modules
-- Configuration panel visible (tilt, azimuth, module count, capacity)
-- Clear parameter displays
-- Professional layout
-
-**AI Video Generation Prompt:**
+### Voice-Over Script:
 ```
-Create a 5-second technical detail showcase video.
+[Professional, clear voice - instructional tone]
 
-Animation Instructions:
-- Start with soft focus blur (bokeh), gradually sharpen to crisp detail
-- Configuration panel: Slide in from right with smooth ease-out curve
-- Parameter values: Each line animates with typewriter effect (0.2 sec per line)
-- Module grid: Subtle breathing animation (expand/contract 2%)
-- Tilt angle visualization: Animated 3D wireframe showing panel angle
-- Azimuth indicator: Compass rose that rotates to show direction
-- Capacity badge: Pops in with bounce effect and orange glow
-- Camera: Slow push-in zoom (1.0x to 1.2x) focusing on config panel
-- Data connection lines: Thin animated lines connecting panel sections to their labels
-- Background: Map slightly darkens/blurs to emphasize foreground UI
+[0-10s]
+"Welcome to AI PV Designer Pro by BAESS Labs.
+Let's create a complete solar system design in under five minutes."
 
-Visual Effects:
-- Panel has glass morphism effect (translucent with blur)
-- Text has subtle shadow for depth
-- Icons beside each parameter gently pulse
-- Color coding: Temperature values in red, electrical in blue, capacity in orange
-- Hover state simulation: Buttons have subtle glow waves
-- Add scanline effect passing over the panel top-to-bottom
-- Final second: Everything glows brighter then settles
+[10-20s]
+"First, simply enter your project location.
+Our system instantly analyzes satellite imagery, weather patterns, and local regulations."
 
-Style: Professional engineering software, technical precision, data-rich interface
-Mood: Expert-level control, technical mastery, comprehensive detail
-Resolution: 4K at 60fps
+[20-30s]
+"Next, define your roof dimensions.
+The AI automatically calculates optimal tilt and orientation."
+
+[30-40s]
+"Select your preferred module type.
+Our algorithm determines the most efficient layout for maximum energy production."
+
+[40-50s]
+"In seconds, you get complete results:
+Annual energy production... financial projections... and system specifications."
+
+[50-60s]
+"From address to complete design—in minutes instead of hours.
+That's the power of AI-driven solar design.
+Start your free trial at www.baess.app"
+
+[End with soft music outro]
+```
+
+### Alternative Script (Shorter - 45s):
+```
+[Quick, energetic voice]
+
+[0-10s]
+"Creating solar designs just got faster. Watch this."
+
+[10-20s]
+"Enter location. AI analyzes site conditions instantly."
+
+[20-30s]
+"Define roof area. Optimal layout calculated automatically."
+
+[30-40s]
+"Select modules. System sized for maximum efficiency."
+
+[40-45s]
+"Complete design in minutes. Try BAESS Labs free today."
 ```
 
 ---
 
-## 📊 Scene 2: BOQ Generation (AI Processing)
+## 📹 Video 3: Time Savings Testimonial (Day 5)
+**Duration:** 30-40 seconds  
+**Style:** Testimonial + time-lapse visualization  
+**Tone:** Authentic, relatable, grateful
 
-### Video 2.1 - BOQ Tab & Generate Button (5 seconds)
-
-**Screenshot Requirements:**
-- BOQ generator interface clean and visible
-- Prominent "Generate BOQ with AI" button
-- Model selection dropdown (OpenAI/Gemini)
-- AI credit indicator visible
-- Parameter cards displayed
-
-**AI Video Generation Prompt:**
+### Video Generation Prompt:
 ```
-Create a 5-second anticipation-building video for AI BOQ generation.
-
-Animation Instructions:
-- Open with UI sliding up from bottom (0-0.5 sec)
-- "Generate BOQ" button: Continuous pulsing glow effect (orange to yellow gradient)
-- Button edges: Animated electric shimmer running along border
-- AI model selector: Subtle dropdown bounce animation
-- Parameter cards: Stagger-fade in from bottom (each 0.2 sec apart)
-- AI credit indicator: Number glows with particle sparkles
-- Cursor simulation: Animated cursor moves toward button, hovers, creates ripple effect
-- Background: Subtle gradient wave animation (blue to orange)
-- Floating AI icons: Brain, sparkles, circuit icons float across screen
-- Interface elements: Gentle floating animation (2-3px up and down)
-
-Visual Effects:
-- Button has 3D depth with shadow beneath
-- Glass morphism on all cards (frosted glass effect)
-- Particle system: Small orange sparkles around AI-related elements
-- Color grading: Cool blues with warm orange accents
-- Add subtle vignette to draw focus to center button
-- Text has micro-animation (very slight scale pulse)
-- Final frame: Button glows brightest with radiating rings
-
-Style: Modern SaaS interface, premium app design, AI-powered feeling
-Mood: Powerful tool ready to work, anticipation, intelligent automation
-Resolution: 4K at 60fps, centered composition
+Create a 40-second testimonial-style video showing time savings with BAESS.
+Scene 1 (0-5s): Professional solar engineer in office, looking directly at camera with friendly smile, natural lighting, real office environment
+Scene 2 (5-12s): Split screen time-lapse: Left side shows "Before" with person manually working on spreadsheets over several hours (clock overlay showing 6 hours passing), Right side shows "After" with person completing same work on BAESS in minutes (clock showing 2 hours)
+Scene 3 (12-20s): Close-up of BAESS interface showing BOQ generation feature in action, materials list populating automatically, calculations running
+Scene 4 (20-28s): Person from Scene 1 back on screen, now standing, gesturing appreciatively
+Scene 5 (28-40s): Final shot of person leaving office early with bag/jacket, walking toward exit with confident smile, overlay shows "Save 4+ hours per project", fade to BAESS logo with website URL
+Style: Documentary/testimonial style, natural realistic filming, authentic not overly produced, relatable scenarios, warm color grading, soft background music, real office settings, genuine expressions.
 ```
 
----
-
-### Video 2.2 - AI Processing & Loading State (6 seconds)
-
-**Screenshot Requirements:**
-- Loading spinner/progress bar prominent
-- "AI is generating your BOQ..." message
-- Progress indicator visible
-- Professional loading interface
-
-**AI Video Generation Prompt:**
+### Voice-Over Script (With On-Screen Person Speaking):
 ```
-Create a 6-second mesmerizing AI processing visualization.
+[On-screen person speaks directly to camera - conversational, authentic tone]
 
-Animation Instructions:
-- Central spinner: Smooth continuous rotation with speed variation (speed up slightly mid-video)
-- Add orbiting particles around spinner (like electrons around nucleus)
-- Progress bar: Fills from 0% to 85% with glowing head
-- Loading message: Text characters shimmer one by one (wave effect)
-- Background: Dynamic flowing particle streams (neural network aesthetic)
-- AI brain icon: Pulses with each "thought" (every 0.5 sec)
-- Holographic data streams: Vertical lines of code/numbers flowing upward
-- Color shift: Gradually transition from blue to orange as progress increases
-- Floating geometric shapes: Triangles and hexagons rotating in background
-- Scan lines: Multiple horizontal scan effects passing through
+[Person speaking 0-12s]
+"I'm Sarah, I run a small solar EPC in Colorado.
+Before BAESS, BOQ calculations took me most of Friday afternoon—
+about six hours of detailed spreadsheet work."
 
-Visual Effects:
-- Bokeh particles in background (defocused lights)
-- Glow effects on all animated elements
-- Motion blur on moving particles
-- Depth layers: Foreground elements sharp, background slightly blurred
-- Add prismatic chromatic aberration on edges
-- Energy ripples emanate from center every second
-- Subtle screen shake (1px) during peak processing moments
-- Final frame: Sudden bright flash transition (white flash for 0.1 sec)
+[Voice-over narration 12-20s while showing interface]
+[Professional narrator voice]
+"With BAESS's AI-powered BOQ generator,
+material quantities, pricing, and specifications are calculated automatically."
 
-Style: AI computation visualization, neural network processing, futuristic loading screen
-Mood: Intelligence at work, complex calculations, magical transformation
-Resolution: 4K at 60fps, hypnotic and smooth
+[Person speaking 20-28s]
+"Now I complete the same work in under two hours.
+That's four extra hours I get back every week—
+time I can spend with my family or growing my business."
+
+[Voice-over narration 28-40s]
+[Professional narrator voice]
+"Real people. Real time savings. Real results.
+Join thousands of solar professionals using BAESS Labs.
+Start your free trial at www.baess.app"
+```
+
+### Alternative Script (Voice-Over Only):
+```
+[Warm, story-telling voice]
+
+[0-12s]
+"Meet solar professionals like you.
+They used to spend six hours manually calculating BOQs,
+pricing materials, and updating spreadsheets."
+
+[12-20s]
+"Now, with BAESS Labs, AI handles the calculations.
+Materials lists generate automatically. Pricing updates in real-time."
+
+[20-28s]
+"The result? What took six hours now takes two.
+That's an extra half-day every week."
+
+[28-40s]
+"Time you can spend closing more deals,
+serving more clients, or just enjoying life.
+See how much time you could save. Visit www.baess.app"
 ```
 
 ---
 
-### Video 2.3 - Generated BOQ Table (Full) (6 seconds)
+## 📹 Video 4: Financial Analysis Feature (Day 7)
+**Duration:** 45 seconds  
+**Style:** Data visualization, motion graphics  
+**Tone:** Professional, confident, data-driven
 
-**Screenshot Requirements:**
-- Complete BOQ table with multiple categories
-- Line items with quantities and specifications visible
-- Category headers clear (Solar Panels, Inverters, Cables, etc.)
-- Scrollable view showing depth of data
-- Professional table layout
-
-**AI Video Generation Prompt:**
+### Video Generation Prompt:
 ```
-Create a 6-second impressive data reveal video showcasing comprehensive BOQ.
-
-Animation Instructions:
-- Opening (0-1 sec): Table rows materialize from top to bottom with cascade effect
-- Each row: Slight bounce-in animation as it appears
-- Category headers: Expand with fold-out animation and orange highlight
-- Numbers and text: Typewriter/digital counter effect (extremely fast)
-- Scroll simulation: Auto-scroll through table smoothly (top to bottom)
-- Highlight effect: Moving spotlight effect that scans down rows
-- Checkmarks: Green checkmarks appear next to completed items with pop animation
-- Quantity cells: Numbers rapidly count from 0 to final value
-- Unit columns: Icons bounce in beside text
-- Background: Subtle grid pattern pulses
-
-Visual Effects:
-- Table has professional shadow and elevation
-- Alternate row colors have subtle pulse effect
-- Category headers have gradient background that animates
-- Hover state simulation: Rows glow when imaginary cursor passes over
-- Data flow visualization: Thin lines connect related cells
-- Specification text: Has shimmer pass-through effect
-- Numbers: Digital font with glow effect
-- Border lines: Animated to draw in
-- Final frame: Zoom out slightly to show table completeness, add "100% Complete" badge
-
-Style: Professional spreadsheet aesthetic, data-rich interface, comprehensive documentation
-Mood: Thoroughness, automation success, professional output, impressive detail
-Resolution: 4K at 60fps, clean and organized
+Create a 45-second motion graphics video showcasing financial analysis features.
+Scene 1 (0-8s): Opening with animated solar panel array on rooftop, sunrise/energy flow visualization, dollar signs and energy symbols flowing from panels
+Scene 2 (8-18s): Animated financial dashboard builds up element by element:
+- Payback period gauge animates from empty to 7.2 years
+- ROI counter animates to 342%
+- LCOE meter settles at $0.08/kWh
+- Savings counter rapidly counts up to $156,000
+Each metric appears with satisfying animation and subtle sound effect
+Scene 3 (18-30s): 25-year savings projection graph animates, line drawing upward showing cumulative savings over time, area under curve fills with gradient, key milestone markers pop in (years 5, 10, 15, 20, 25)
+Scene 4 (30-40s): Three client personas appear with checkmarks:
+- Homeowner: "When do I break even?"
+- Business owner: "What's my ROI?"
+- CFO: "Show me the numbers"
+Scene 5 (40-45s): All elements merge into comprehensive report preview, "Based on NREL data & global standards" badge appears, fade to BAESS logo with CTA
+Style: Modern motion graphics, professional financial aesthetic, blue and orange color scheme, clean minimalist design, smooth animations (ease-in/ease-out), confidence-inspiring visuals, professional corporate feel, 1080p quality, subtle tech/financial background music.
 ```
 
----
-
-### Video 2.4 - BOQ Categories & Export Options (5 seconds)
-
-**Screenshot Requirements:**
-- BOQ with category breakdown visible
-- Category icons and item counts shown
-- Export buttons (CSV, PDF) prominent
-- Pricing summary visible
-- Professional completion state
-
-**AI Video Generation Prompt:**
+### Voice-Over Script:
 ```
-Create a 5-second professional finalization video for BOQ completion.
+[Confident, professional voice - news anchor quality]
 
-Animation Instructions:
-- Category cards: Slide in from left in sequence (0.15 sec stagger)
-- Each category icon: Rotates 360° when appearing
-- Item count badges: Pop in with bounce and scale animation
-- Export buttons: Pulse glow effect (blue for CSV, orange for PDF)
-- Pricing section: Currency symbols animate with sparkle effect
-- Total cost number: Rolls up like slot machine to final value
-- Category color strips: Animated progress bars fill left-to-right
-- Download icon: Bounces with document-stacking animation
-- Cursor simulation: Moves toward export button with trailing particles
-- Success indicators: Green checkmarks fade in beside complete categories
+[0-8s]
+"Your clients don't just want to know how much energy they'll generate.
+They want to know: When will I see returns?"
 
-Visual Effects:
-- Cards have 3D lift effect with shadows
-- Glass morphism on overlays
-- Color-coded categories (each has unique accent color)
-- Sparkle particles around pricing
-- Subtle gradient animation on buttons
-- Icon illustrations have micro-bounce loop
-- Text has crisp shadow for depth
-- Background: Subtle confetti burst effect (very subtle)
-- Final second: Everything glows then settles with satisfaction feedback
+[8-18s]
+"BAESS Labs provides comprehensive financial analysis:
+Payback period. Return on investment. Levelized cost of energy. Total lifetime savings."
 
-Style: Professional business software, polished interface, achievement moment
-Mood: Mission accomplished, ready for delivery, professional output
-Resolution: 4K at 60fps, organized layout
+[18-30s]
+"Our 25-year projections show exactly when your clients break even
+and how much they'll save over the system's lifetime."
+
+[30-40s]
+"Answer every financial question with confidence.
+Because clear numbers close deals."
+
+[40-45s]
+"BAESS Labs. Professional financial analysis included.
+Start your free trial today."
+```
+
+### Alternative Script (More Technical):
+```
+[Professional, expert voice]
+
+[0-8s]
+"Professional solar proposals require professional financial analysis."
+
+[8-18s]
+"BAESS calculates key metrics automatically:
+NPV, IRR, payback period, and LCOE—
+following globally recognized financial standards and NREL guidelines."
+
+[18-30s]
+"Generate detailed 25-year projections with sensitivity analysis,
+showing best case, worst case, and expected scenarios."
+
+[30-40s]
+"Present data your clients' financial teams will respect."
+
+[40-45s]
+"BAESS Labs. Real analysis for real projects.
+Visit www.baess.app"
 ```
 
 ---
 
-## 💰 Scene 3: Financial Analysis (Charts & Metrics)
+## 📹 Video 5: BESS Designer Introduction (Day 9)
+**Duration:** 50 seconds  
+**Style:** 3D product showcase + UI demonstration  
+**Tone:** Innovative, forward-thinking, professional
 
-### Video 3.1 - Financial Dashboard Overview (6 seconds)
-
-**Screenshot Requirements:**
-- Dashboard with 4 key metric cards clearly visible:
-  - LCOE (Levelized Cost of Energy)
-  - NPV (Net Present Value)
-  - IRR (Internal Rate of Return)
-  - Payback Period
-- Large, readable numbers
-- Icons for each metric
-- Color-coded positive indicators (green)
-- Professional card layout
-
-**AI Video Generation Prompt:**
+### Video Generation Prompt:
 ```
-Create a 6-second powerful financial metrics showcase video.
-
-Animation Instructions:
-- Opening: Cards flip in from flat to 3D (card flip animation, 0-1.5 sec)
-- Metric numbers: Rapidly count from 0 to final values with easing
-- Currency symbols: Animate with golden glow and particle burst
-- ROI percentage: Rotates in with green arrow pointing up
-- Payback period: Clock icon animates with sweeping hand
-- Each card: Pulses with success glow (green for positive metrics)
-- Background: Financial growth chart pattern subtly animates
-- Icons: Scale pulse animation synchronized with number counting
-- Color indicators: Traffic light animation (red→yellow→green)
-- Connecting lines: Data flow lines draw between cards
-
-Visual Effects:
-- Cards have premium shadows and elevation
-- Numbers have sharp digital font with glow
-- Color scheme: Greens for profits, blues for technical, orange for highlights
-- Particles: Small golden sparkles around positive numbers
-- Glass morphism on card backgrounds
-- Subtle radial gradient on each card (center glow)
-- Icons have subtle rotation or bounce
-- Comparison arrows: Animate upward with trail effect
-- Final frame: All cards pulse once in unison
-
-Style: Premium financial software, executive dashboard, data visualization
-Mood: Profitability, success, intelligent investment, positive ROI
-Resolution: 4K at 60fps, premium business aesthetic
+Create a 50-second cinematic video introducing BESS Designer feature.
+Scene 1 (0-8s): Cinematic 3D render of modern battery energy storage system, camera orbits around sleek container unit, blue energy pulses flowing through system, sunset/dusk lighting, professional product reveal style
+Scene 2 (8-18s): Transition to UI screen showing BESS Designer interface, scale slider animates from 10kWh (small residential battery icon) scaling up through 100kWh (medium commercial), 1MWh (large commercial), to 100MWh+ (utility scale), visual representation grows accordingly
+Scene 3 (18-30s): Split screen showing three use cases simultaneously:
+- Left: Residential home with backup power during evening (lights on while neighborhood dark)
+- Center: Commercial building with solar+storage peak shaving (energy flow visualization)
+- Right: Industrial facility with large BESS installation (grid stabilization visualization)
+Scene 4 (30-42s): BESS Designer dashboard showing: battery configuration panel, charge/discharge cycles graph animating, performance over time projection, cost analysis, round-trip efficiency metrics
+Scene 5 (42-50s): Zoom out to show complete integrated system (solar + storage), energy flow animation, BAESS Labs logo appears with "PV + Storage = Complete Solutions", website URL, fade out
+Style: High-end product video, cinematic color grading, professional 3D renders, smooth camera movements, energy flow animations with particle effects, futuristic but professional aesthetic, inspiring music with electronic elements, 1080p high quality.
 ```
 
----
-
-### Video 3.2 - 25-Year Energy Production Chart (6 seconds)
-
-**Screenshot Requirements:**
-- Line graph showing annual energy production over 25 years
-- Clear X-axis (years) and Y-axis (kWh/energy production)
-- Visible trend line
-- Grid lines for reference
-- Data points marked
-- Professional chart styling
-
-**AI Video Generation Prompt:**
+### Voice-Over Script:
 ```
-Create a 6-second engaging energy production chart animation.
+[Professional, forward-thinking voice - slightly futuristic tone]
 
-Animation Instructions:
-- Line graph: Draw animation from left to right (0-4 sec) with smooth curve
-- Drawing effect: Glowing trail follows the line as it draws
-- Data points: Circular nodes appear at each year with pop animation
-- Grid lines: Fade in progressively as graph draws
-- Y-axis numbers: Count up in real-time matching graph progress
-- Year markers: Illuminate as graph reaches them
-- Degradation curve: Slight downward slope visualized with color gradient
-- Peak year: Highlighted with star burst effect
-- Background: Subtle sun rays emanating from top
-- Tooltip simulation: Info box follows along the line showing values
+[0-8s]
+"The future of solar isn't just generation.
+It's generation plus storage."
 
-Visual Effects:
-- Line has gradient stroke (yellow-orange to blue)
-- Area under curve: Fills with translucent gradient
-- Data points: Glow effect with larger radius
-- Grid: Subtle pulse animation
-- Axes: Draw in with pen-stroke animation
-- Numbers: Digital counter style
-- Trend indicator: Arrow showing overall trajectory
-- Performance badge: "95% Efficiency" badge flies in
-- Final frame: Entire chart glows then dims to emphasize completeness
+[8-18s]
+"Introducing BESS Designer from BAESS Labs.
+Design battery energy storage systems from 10 kilowatt-hours
+all the way to 100 megawatt-hours and beyond."
 
-Style: Professional analytics software, scientific visualization, clean design
-Mood: Long-term reliability, consistent performance, data-driven confidence
-Resolution: 4K at 60fps, smooth line animation
+[18-30s]
+"Residential backup power. Commercial peak shaving. 
+Industrial load management.
+One platform. Any scale."
+
+[30-42s]
+"Calculate optimal battery configuration, analyze charge-discharge cycles,
+project system performance, and model financial returns—
+all in minutes."
+
+[42-50s]
+"Solar plus storage. Designed together. Optimized together.
+BAESS Labs. Complete energy solutions.
+Start designing at www.baess.app"
+```
+
+### Alternative Script (More Technical):
+```
+[Technical expert voice]
+
+[0-8s]
+"Battery energy storage system design requires precise calculations.
+Capacity. Configuration. Cycling. Economics."
+
+[8-18s]
+"BAESS Designer handles the complexity.
+From residential 10kWh systems to utility-scale 100MWh installations."
+
+[18-30s]
+"Model any application: backup power, peak shaving,
+demand charge management, or grid services."
+
+[30-42s]
+"Optimize battery chemistry, configuration, and controls.
+Analyze degradation over time. Project realistic financial returns."
+
+[42-50s]
+"Professional BESS design for every project size.
+BAESS Labs. Try it free at www.baess.app"
 ```
 
 ---
 
-### Video 3.3 - Cash Flow Analysis & Break-Even Point (6 seconds)
+## 📹 Video 6: AI Workflow Explanation (Day 11)
+**Duration:** 40 seconds  
+**Style:** Animated explainer, workflow visualization  
+**Tone:** Educational, clear, reassuring
 
-**Screenshot Requirements:**
-- Bar chart or cumulative cash flow graph
-- Negative values in first years (red bars/area)
-- Transition to positive values (green bars/area)
-- Break-even point clearly marked
-- X-axis showing years (1-25)
-- Y-axis showing cash flow in currency
-- Professional financial chart styling
-
-**AI Video Generation Prompt:**
+### Video Generation Prompt:
 ```
-Create a 6-second satisfying cash flow transformation video.
-
-Animation Instructions:
-- Bars/line: Grow from bottom to top in sequence (waterfall effect)
-- Negative zone (first years): Bars in red, grow downward
-- Break-even point: Dramatic color shift from red to green with glow burst
-- Positive zone: Green bars grow upward with increasing brightness
-- Break-even marker: Animated line sweeps across with "Break-Even Year 7" label
-- Cumulative line: Draws over bars showing total trajectory
-- Zero line: Pulsing horizontal line that bars cross
-- Currency amounts: Float above bars counting rapidly
-- Profit zone: Subtle celebration confetti when entering positive
-- Background: Color shifts from cool (red area) to warm (green area)
-
-Visual Effects:
-- Bars have glossy gradient fill
-- Shadow effect beneath bars for 3D depth
-- Glow intensifies on positive bars
-- Break-even moment: Screen flash effect (0.2 sec)
-- Particle system: Money icons float up in profit zone
-- Grid lines: Animated to highlight key thresholds
-- Arrows: Upward arrows appear over growing bars
-- Numbers: Sharp font with currency symbol glow
-- Final frame: Entire profitable section pulses with success
-- Overlay: "Positive ROI" badge slides in with shine
-
-Style: Financial projection software, investor-grade charts, success visualization
-Mood: Investment journey, turning point moment, profitability achieved
-Resolution: 4K at 60fps, dramatic transformation
+Create a 40-second animated explainer video showing AI-human collaboration workflow.
+Scene 1 (0-8s): Open with person at desk looking at traditional chaotic workflow (papers, multiple software windows), thought bubble shows confusion/overwhelm
+Scene 2 (8-18s): Animation transforms workspace: AI robot character appears as helpful assistant (friendly, not threatening design), robot starts handling repetitive tasks shown as:
+- Analyzing satellite image data (map with scanning effect)
+- Running energy calculations (numbers crunching animation)
+- Generating material lists (items checking off)
+- Pricing updates (dollar signs updating)
+Each task shows AI robot efficiently completing while sparkle/magic effects show speed
+Scene 3 (18-30s): Split screen: Left shows AI handling data tasks with speed indicators, Right shows person now focusing on creative work:
+- Consulting with client (handshake animation)
+- Making design adjustments (thoughtful expression)
+- Customizing solutions (creative tools icon)
+- Building relationships (connection nodes animation)
+Scene 4 (30-40s): Both sides merge - AI and person give high-five or thumbs up, workflow diagram shows synergy with "AI + Human = Better Results" equation, complete solar design output appears, fade to BAESS logo with tagline "Let AI handle repetitive, you handle creative"
+Style: Modern flat design animation, friendly color palette, welcoming AI character design (not intimidating), smooth transitions, clear iconography, professional explainer video style, upbeat background music, 1080p quality.
 ```
 
----
-
-### Video 3.4 - ROI Summary & Investment Breakdown (5 seconds)
-
-**Screenshot Requirements:**
-- Large ROI percentage prominently displayed
-- Pie chart or breakdown showing cost components
-- Investment vs Returns comparison
-- Profit projections visible
-- Timeline visualization
-- Success indicators/badges
-- Professional financial summary layout
-
-**AI Video Generation Prompt:**
+### Voice-Over Script:
 ```
-Create a 5-second premium investment summary video.
+[Friendly, conversational voice - reassuring tone]
 
-Animation Instructions:
-- ROI percentage: Large number that scales in with explosive burst (0-1 sec)
-- Pie chart: Animated slice-by-slice reveal (clockwise) with each segment
-- Segments: Each slice pops out slightly when appearing
-- Labels: Fly in from their respective segments with leader lines
-- Percentage texts: Count up with synchronized rotation
-- Investment breakdown: List items appear with slide and fade
-- Cost vs Revenue: Side-by-side bars grow with race animation
-- Profit indicator: Green arrow shoots upward with particle trail
-- Timeline visualization: Horizontal bar fills showing years to break-even
-- Success badges: Trophy/award icons bounce in
+[0-8s]
+"AI in solar design isn't magic. It's not here to replace you.
+It's here to help."
 
-Visual Effects:
-- Pie chart has 3D depth (isometric view)
-- Slices have gradient fills and soft shadows
-- Glow effects on high-value segments
-- Connecting lines between labels and segments animate
-- Numbers have metallic/golden effect for profits
-- Background: Subtle rising graph pattern
-- Color scheme: Sector-specific colors with premium gradients
-- Particles: Currency symbols float in background
-- Text: Premium font with subtle emboss effect
-- Final frame: "Excellent Investment" banner slides in from top
+[8-18s]
+"AI excels at repetitive tasks:
+Analyzing satellite imagery. Running thousands of calculations.
+Generating material lists. Updating pricing data."
 
-Style: Executive presentation, investor pitch deck, premium financial report
-Mood: Solid investment, profitable venture, smart business decision
-Resolution: 4K at 60fps, sophisticated and polished
+[18-30s]
+"That frees you to focus on what really matters—
+and what AI can't do:
+Understanding client needs. Making site-specific judgments.
+Handling edge cases. Building relationships."
+
+[30-40s]
+"AI handles the repetitive. You handle the creative.
+Together, you deliver better results, faster.
+BAESS Labs. Smarter solar design. www.baess.app"
+```
+
+### Alternative Script (Reassuring to Traditional Designers):
+```
+[Warm, reassuring voice]
+
+[0-8s]
+"Worried AI will replace solar designers?
+It won't. Here's why."
+
+[8-18s]
+"AI is great at processing data and running calculations—
+tasks computers should do."
+
+[18-30s]
+"But AI can't understand your clients' unique needs,
+make judgment calls on complex sites,
+or build the trust that closes deals.
+That's why you're irreplaceable."
+
+[30-40s]
+"BAESS lets AI do what it does best,
+so you can do what you do best.
+Try it free at www.baess.app"
 ```
 
 ---
 
-## 🎬 Video Stitching Guide
+## 📹 Video 7: Campaign Finale - Thank You & CTA (Day 15)
+**Duration:** 30 seconds  
+**Style:** Thank you montage, celebration, call-to-action  
+**Tone:** Grateful, energetic, inspiring
 
-### Recommended Sequence Order
+### Video Generation Prompt:
+```
+Create a 30-second thank you and call-to-action video for campaign finale.
+Scene 1 (0-5s): "Thank You" text appears with particle celebration effect, subtle confetti animation, warm lighting
+Scene 2 (5-15s): Quick montage of campaign highlights (0.7s per clip):
+- Clip 1: AI PV Designer interface in action
+- Clip 2: BESS Designer 3D visualization
+- Clip 3: Financial dashboard with metrics
+- Clip 4: Happy users/professionals working
+- Clip 5: Time savings comparison
+- Clip 6: BOQ generation
+- Clip 7: Roadmap visualization
+- Clip 8: Community/team collaboration
+Each clip with smooth transitions, maintaining high energy
+Scene 3 (15-23s): Call-to-action section builds up dynamically:
+- "Ready to Try BAESS?" appears
+- Check marks animate in: "✓ Start Free Today" "✓ No Credit Card" "✓ Design in Minutes"
+- CTA button pulses: "Get Started"
+- Website URL displays prominently: "www.baess.app"
+Scene 4 (23-30s): Final shot: Solar panels generating energy with sunset, energy flow visualization, text overlay "Join 1000+ Solar Professionals", BAESS Labs logo with tagline "Solar Intelligence for the Future", fade to end card with social media handles
+Style: Energetic celebration video, fast-paced montage, upbeat inspiring music, professional transitions, warm grateful feel mixed with excitement, clear CTA hierarchy, 1080p quality, memorable ending.
+```
 
-| # | Scene | Duration | Transition |
-|---|-------|----------|------------|
-| 1 | Map Zoom (1.1) | 5 sec | Cross-dissolve (0.3s) |
-| 2 | Polygon Drawing (1.2) | 6 sec | Smooth fade |
-| 3 | Modules Filling (1.3) | 5 sec | Zoom transition |
-| 4 | AI Processing (2.2) | 6 sec | Bright flash |
-| 5 | BOQ Table (2.3) | 6 sec | Cross-dissolve |
-| 6 | Financial Dashboard (3.1) | 6 sec | Smooth fade |
-| 7 | ROI Summary (3.4) | 5 sec | Fade to logo |
+### Voice-Over Script:
+```
+[Warm, energetic voice - grateful and inspiring]
 
-**Total Duration:** ~39 seconds (trim to 30-35 seconds as needed)
+[0-5s]
+"Thank you for following our 15-day journey."
 
-### Transition Effects
+[5-15s]
+"We've shown you AI-powered PV design,
+battery storage integration, financial analysis,
+and how we're working to make solar design faster and simpler."
 
-1. **Cross-Dissolve (0.3 sec)**
-   - Use between similar scenes
-   - Smooth, professional transition
-   - Best for maintaining flow
+[15-23s - voice builds with energy]
+"Now it's your turn.
+Start your free trial today—no credit card required.
+Design your first project in minutes."
 
-2. **Zoom Transition**
-   - From area design to BOQ generation
-   - Creates sense of diving deeper
-   - Use sparingly for impact
+[23-30s - inspiring, warm conclusion]
+"Join over a thousand solar professionals already using BAESS Labs.
+Together, let's accelerate the clean energy transition.
+Visit www.baess.app and let's build the future."
 
-3. **Bright Flash (0.2 sec)**
-   - When entering AI processing
-   - Adds excitement and energy
-   - Use for dramatic moments
+[Music swells and fades]
+```
 
-4. **Smooth Fade**
-   - Standard professional transition
-   - Works everywhere
-   - Safe choice for most cuts
+### Alternative Script (More Direct):
+```
+[Confident, direct voice]
 
-### Audio Recommendations
+[0-5s]
+"Thanks for watching this series."
 
-**Music:**
-- Genre: Modern electronic, ambient tech
-- BPM: 120-130
-- Mood: Innovative, energetic, professional
-- Build: Gradual intensity increase
-- Peak: During financial metrics reveal
+[5-15s]
+"You've seen what BAESS can do:
+Faster designs. Better analysis. More time for what matters."
 
-**Sound Effects:**
-- UI interactions: Subtle clicks, beeps
-- Transitions: Whoosh sounds
-- Data reveals: Digital chimes
-- Success moments: Satisfying pings
-- AI processing: Futuristic hum
+[15-23s]
+"Ready to experience it yourself?
+Start free right now at www.baess.app
+No credit card. No commitment."
 
-**Voiceover (Optional):**
-- Professional narrator
-- Key phrases:
-  - "Design solar systems in minutes"
-  - "AI-powered BOQ generation"
-  - "Comprehensive financial analysis"
-  - "Your solar intelligence platform"
+[23-30s]
+"Join the future of solar design.
+BAESS Labs. Get started today."
+```
+
+---
+
+## 📹 BONUS: Quick Tips Videos (15 seconds each)
+### For use between main campaign posts
+
+### Tip Video 1: Temperature Coefficient
+**Duration:** 15 seconds
+
+#### Video Prompt:
+```
+Create a 15-second quick tip video about solar module temperature effects.
+Scene 1 (0-5s): Animated thermometer showing rising temperature from 25°C to 45°C, solar panel illustration changes from blue (cool/efficient) to orange-red (hot/less efficient)
+Scene 2 (5-12s): Graph animates showing efficiency loss curve, numbers decrease from 100% to 85%, "10-15% impact in hot climates" text appears
+Scene 3 (12-15s): BAESS Labs logo with tip number "#SolarTip 1", "Learn more at www.baess.app"
+Style: Quick educational animation, clear visuals, simple graphics, professional but accessible, 1080p.
+```
+
+#### Voice-Over Script:
+```
+[Quick, educational voice]
+
+"Quick solar tip: Module efficiency drops 0.3% to 0.5%
+for every degree above 25 Celsius.
+In hot climates, that's a 10-15% impact on production.
+Always factor temperature into your designs."
+```
+
+### Tip Video 2: Maintenance Costs
+**Duration:** 15 seconds
+
+#### Video Prompt:
+```
+Create a 15-second video about including maintenance costs in proposals.
+Scene 1 (0-5s): Solar system on roof, calendar pages flip through 25 years, maintenance icons appear (cleaning, inspection, repairs)
+Scene 2 (5-12s): Financial projection graph, one line shows "with O&M costs" (realistic curve), another shows "without O&M" (overly optimistic), difference highlighted, text: "0.5-1% annually = significant impact"
+Scene 3 (12-15s): Checkmark with "Set realistic expectations", BAESS Labs logo
+Style: Clear educational graphics, professional financial visualization, 1080p.
+```
+
+#### Voice-Over Script:
+```
+[Professional, advisory voice]
+
+"Don't forget O&M costs in your financial projections.
+Just 0.5% to 1% annually makes a significant difference
+over 25 years. Set realistic expectations.
+Your clients will thank you."
+```
+
+---
+
+## 🎵 Background Music Recommendations
+
+### For Problem-Solution Videos (Day 1):
+- **Style:** Emotional, builds from somber to uplifting
+- **Reference:** Corporate motivation tracks
+- **Tempo:** 80-100 BPM, builds to 120 BPM
+- **Mood:** Empathetic → Hopeful → Inspiring
+
+### For Product Demos (Day 3, 7, 9):
+- **Style:** Clean, modern, tech-forward
+- **Reference:** Corporate tech product videos
+- **Tempo:** 120-130 BPM, consistent energy
+- **Mood:** Professional, confident, innovative
+
+### For Testimonials (Day 5):
+- **Style:** Warm, acoustic, authentic
+- **Reference:** Documentary-style backgrounds
+- **Tempo:** 90-110 BPM, relaxed
+- **Mood:** Genuine, relatable, grateful
+
+### For Explainer/Educational (Day 11):
+- **Style:** Friendly, upbeat, accessible
+- **Reference:** Explainer video tracks
+- **Tempo:** 110-120 BPM, playful but professional
+- **Mood:** Educational, approachable, clear
+
+### For Thank You/Finale (Day 15):
+- **Style:** Celebratory, energetic, inspiring
+- **Reference:** Motivational conclusion tracks
+- **Tempo:** 128-140 BPM, high energy
+- **Mood:** Grateful, exciting, forward-looking
+
+---
+
+## 🎙️ Voice-Over Guidelines
+
+### Voice Characteristics:
+- **Gender:** Neutral (male or female works, focus on tone)
+- **Age Range:** 30-45 years (professional, experienced)
+- **Accent:** Neutral/General American or International English
+- **Pace:** Moderate (not too fast, not too slow)
+- **Tone:** Professional yet conversational
+
+### Recording Quality:
+- **Format:** WAV or high-quality MP3 (320kbps minimum)
+- **Sample Rate:** 48kHz
+- **Bit Depth:** 24-bit
+- **Environment:** Studio or quiet space with acoustic treatment
+- **Equipment:** Professional microphone (condenser recommended)
+
+### Delivery Tips:
+- Smile while speaking (it changes the tone positively)
+- Emphasize key value propositions naturally
+- Pause briefly before important statements
+- Maintain consistent energy throughout
+- Sound confident but not arrogant
+- Be conversational, not robotic
 
 ---
 
 ## 📐 Technical Specifications
 
-### Resolution & Format
-- **Resolution:** 4K (3840x2160px)
-- **Frame Rate:** 60fps
-- **Aspect Ratio:** 16:9 (horizontal)
-- **Alternative:** 9:16 (vertical for TikTok/Reels)
-- **Codec:** H.264 or H.265 (HEVC)
-- **Bitrate:** 50-100 Mbps
+### Video Format:
+- **Resolution:** 1920x1080 (1080p) minimum
+- **Aspect Ratio:** 16:9 for main videos, 1:1 for LinkedIn square format
+- **Frame Rate:** 30fps (or 60fps for product demos)
+- **Codec:** H.264
+- **File Format:** MP4
 
-### Color & Grading
-- **Color Space:** sRGB or Rec. 709
-- **Primary Colors:**
-  - Navy Blue: #0A2463
-  - Bright Blue: #3B82F6
-  - Vibrant Orange: #FFA500
-  - Success Green: #10B981
-- **Saturation:** Enhanced by 10-15%
-- **Contrast:** Increased for clarity
-- **Brightness:** Optimized for web viewing
+### File Size:
+- **LinkedIn:** Under 200MB per video recommended
+- **Compression:** High quality, optimized for web
 
-### Export Settings (Final Video)
-- **Format:** MP4
-- **Resolution:** 1920x1080 (Full HD) or 4K
-- **Frame Rate:** 30fps or 60fps
-- **Audio:** AAC, 192 kbps, 48kHz
-- **File Size:** Aim for <50MB for web
-
-### Platform-Specific Versions
-
-**Website Landing Page:**
-- Resolution: 1920x1080
-- Duration: 30 seconds
-- Autoplay: Yes (muted)
-- Loop: Yes
-
-**YouTube:**
-- Resolution: 4K or 1080p
-- Duration: 30-60 seconds
-- Format: MP4 (H.264)
-- Include captions
-
-**LinkedIn:**
-- Resolution: 1920x1080
-- Duration: 30 seconds max
-- Square format option: 1080x1080
-- First 3 seconds must be engaging
-
-**Instagram/Facebook:**
-- Resolution: 1080x1080 (square) or 1080x1920 (story)
-- Duration: 15-30 seconds
-- Vertical format preferred
-
-**TikTok:**
-- Resolution: 1080x1920 (vertical)
-- Duration: 15-30 seconds
-- Fast-paced, engaging first 2 seconds
-- Trending audio optional
+### Captions:
+- Always include SRT caption file
+- Hard-code captions for better accessibility
+- Use clear, readable font (Arial or Roboto)
+- Position captions in lower third
 
 ---
 
-## 📝 Screenshot Capture Guidelines
+## ✅ Quality Checklist Before Publishing
 
-### Technical Setup
-- **Screen Resolution:** 1920x1080 minimum (4K preferred)
-- **Frame Rate:** 60fps for screen recording
-- **Browser:** Chrome/Edge, full screen mode
-- **Display Scale:** 100% (no zoom)
-- **Cursor:** Use clean professional cursor or hide
-- **Remove:** Bookmarks bar, extensions, personal data
+### Pre-Production:
+- [ ] Script reviewed and approved
+- [ ] Storyboard or shot list created
+- [ ] Voice-over recorded and edited
+- [ ] Music tracks licensed and downloaded
+- [ ] Visual assets gathered (screenshots, graphics)
 
-### Capture Best Practices
+### Production:
+- [ ] All scenes captured or animated
+- [ ] Audio levels balanced and normalized
+- [ ] Transitions smooth and professional
+- [ ] Color grading applied consistently
+- [ ] Branding (logo, colors) included
 
-**DO:**
-✅ Use demo/sample project with impressive data
-✅ Ensure text is crisp and fully readable
-✅ Keep brand colors consistent (blue & orange)
-✅ Show loading states and transitions
-✅ Capture "success" states with green indicators
-✅ Use realistic but aspirational numbers
-✅ Include sophisticated UI elements
-✅ Show interactive elements clearly
+### Post-Production:
+- [ ] Captions added and synced
+- [ ] Final render in correct format
+- [ ] File size optimized for LinkedIn
+- [ ] Test playback on mobile and desktop
+- [ ] Alt text written for accessibility
 
-**DON'T:**
-❌ Include personal or client information
-❌ Show error states or bugs
-❌ Have cluttered desktop/tabs visible
-❌ Use low-quality or pixelated content
-❌ Include watermarks if possible
-❌ Show empty or placeholder states
-❌ Rush movements - keep deliberate
-
-### Data to Display
-
-**PV Area Design:**
-- System size: 500-1000 kW
-- Module count: 1,500-3,000 modules
-- GCR: 0.65-0.75
-- Multiple zones: 3-5 areas
-
-**BOQ Generation:**
-- Total items: 50+ line items
-- Categories: 8-10 categories
-- Quantities: Realistic, professional
-- Pricing: $250,000-$500,000 total
-
-**Financial Analysis:**
-- NPV: $150,000-$300,000
-- IRR: 12-18%
-- Payback: 6-8 years
-- LCOE: $0.05-$0.08/kWh
+### Platform Optimization:
+- [ ] Video length appropriate for platform
+- [ ] First 3 seconds grab attention
+- [ ] Silent viewing still makes sense
+- [ ] CTA clear and visible
+- [ ] Thumbnail image attractive
 
 ---
 
-## 🎯 AI Video Generation Tools
+**All videos should align with BAESS Labs brand values:**
+- Professional but approachable
+- Innovative but not intimidating
+- Confident but humble
+- Data-driven but human-focused
 
-### Recommended Platforms
-
-1. **Runway ML Gen-2**
-   - Best for: Realistic motion enhancement
-   - Strengths: Natural movements, AI intelligence
-   - Price: $$$ (credit-based)
-   - Website: runwayml.com
-
-2. **Pika Labs**
-   - Best for: Dynamic effects and transitions
-   - Strengths: Fast generation, good quality
-   - Price: $$ (subscription)
-   - Website: pika.art
-
-3. **Kaiber**
-   - Best for: Stylized animations
-   - Strengths: Artistic effects, music sync
-   - Price: $$ (subscription)
-   - Website: kaiber.ai
-
-4. **Luma AI Dream Machine**
-   - Best for: Smooth motion and depth
-   - Strengths: 3D depth effects
-   - Price: $ (free tier available)
-   - Website: lumalabs.ai
-
-5. **Stability AI (Stable Video Diffusion)**
-   - Best for: Open-source control
-   - Strengths: Customization, local processing
-   - Price: Free (self-hosted)
-   - Website: stability.ai
-
-### Generation Tips
-
-1. **Upload Quality:** Use highest quality screenshots
-2. **Prompts:** Copy prompts exactly as provided
-3. **Iterations:** Generate 2-3 versions of each
-4. **Consistency:** Use same settings across all clips
-5. **Review:** Check each clip before moving to next
-6. **Backup:** Save all generated videos separately
-
----
-
-## 🚀 Post-Production Workflow
-
-### Video Editing Software
-
-**Professional:**
-- Adobe Premiere Pro
-- Final Cut Pro
-- DaVinci Resolve
-
-**Beginner-Friendly:**
-- iMovie
-- Filmora
-- Canva Video Editor
-
-### Editing Steps
-
-1. **Import All Clips**
-   - Organize by scene number
-   - Create timeline at 60fps
-
-2. **Arrange Sequence**
-   - Follow recommended order
-   - Add transitions between clips
-
-3. **Color Correction**
-   - Match color temperature
-   - Ensure consistent brightness
-   - Apply brand colors
-
-4. **Add Audio**
-   - Background music
-   - Sound effects
-   - Voiceover (optional)
-
-5. **Text Overlays** (Optional)
-   - App name at start
-   - Feature callouts
-   - CTA at end
-   - Website URL
-
-6. **Logo Animation**
-   - Final logo reveal
-   - Tagline
-   - Contact information
-
-7. **Export**
-   - Test on multiple devices
-   - Check audio sync
-   - Verify file size
-
----
-
-## 💡 Additional Content Ideas
-
-### Extended Versions
-
-**Full Tutorial (2-3 minutes):**
-- Include voice-over explaining each step
-- Add text overlays with feature names
-- Show more detailed workflow
-- Include customer testimonials
-
-**Feature Deep-Dive Series:**
-- Individual videos for each major feature
-- 30-60 seconds each
-- More technical details
-- Target professional audience
-
-**Social Media Snippets:**
-- 6-second loops for Instagram Stories
-- 15-second TikTok versions
-- Quote cards with video backgrounds
-- Before/after comparisons
-
-### Platform-Specific Adaptations
-
-**LinkedIn Version:**
-- Professional tone
-- ROI focus
-- Business value emphasis
-- Add statistics
-
-**Instagram/TikTok Version:**
-- Fast-paced
-- Trending audio
-- Text overlays throughout
-- Hook in first 2 seconds
-
-**YouTube Version:**
-- Longer format (60 seconds)
-- Detailed feature showcase
-- Subscribe CTA
-- Video description with links
-
----
-
-## 📊 Success Metrics
-
-Track these metrics after publishing:
-
-- **View Rate:** % who watch full video
-- **Engagement:** Likes, shares, comments
-- **Click-Through:** Website visits from video
-- **Conversions:** Sign-ups from video viewers
-- **Completion Rate:** % who watch to end
-- **Platform Performance:** Which platform performs best
-
----
-
-## 🔄 Version History
-
-| Version | Date | Changes |
-|---------|------|---------|
-| 1.0 | Jan 2025 | Initial document creation |
-
----
-
-## 📞 Support & Questions
-
-For questions about video creation:
-- Review this document thoroughly
-- Test with one scene first
-- Iterate based on results
-- Maintain brand consistency
-
-**Remember:** Quality over quantity. Better to have one amazing 30-second video than multiple mediocre ones.
-
----
-
-**Document End**
-
-*Generated for PV AI Designer Pro - Solar Intelligence Platform*
-
+**Good luck with your video production! 🎬**
