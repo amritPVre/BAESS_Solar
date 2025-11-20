@@ -23,25 +23,61 @@ export default async function handler(req, res) {
       hasSignature: !!req.headers['webhook-signature'] || !!req.headers['x-dodo-signature']
     });
 
-    // Try both possible signature header names
-    const signature = req.headers['webhook-signature'] || req.headers['x-dodo-signature'];
+    // Get Svix webhook headers
+    const svixId = req.headers['webhook-id'];
+    const svixTimestamp = req.headers['webhook-timestamp'];
+    const svixSignature = req.headers['webhook-signature'];
     const webhookSecret = process.env.DODO_WEBHOOK_SECRET;
 
-    // Verify signature if secret is configured
-    if (webhookSecret && signature) {
-      const body = JSON.stringify(req.body);
-      const expectedSignature = crypto
-        .createHmac('sha256', webhookSecret)
-        .update(body)
-        .digest('hex');
+    console.log('📝 Webhook Headers:', {
+      svixId,
+      svixTimestamp,
+      svixSignature: svixSignature ? 'present' : 'missing',
+      secretConfigured: !!webhookSecret
+    });
 
-      if (signature !== expectedSignature) {
-        console.error('❌ Invalid webhook signature');
-        return res.status(401).json({ error: 'Invalid signature' });
+    // Verify Svix signature if secret is configured
+    if (webhookSecret && svixSignature && svixId && svixTimestamp) {
+      try {
+        // Svix signature format: v1,base64_signature
+        const signatureParts = svixSignature.split(',');
+        if (signatureParts.length !== 2 || signatureParts[0] !== 'v1') {
+          console.error('❌ Invalid signature format');
+          return res.status(401).json({ error: 'Invalid signature format' });
+        }
+
+        const signature = signatureParts[1];
+        
+        // Svix signs: webhook-id.webhook-timestamp.body
+        const body = JSON.stringify(req.body);
+        const signedContent = `${svixId}.${svixTimestamp}.${body}`;
+        
+        // Remove "whsec_" prefix from secret if present
+        const secret = webhookSecret.replace('whsec_', '');
+        
+        // Calculate expected signature
+        const expectedSignature = crypto
+          .createHmac('sha256', secret)
+          .update(signedContent)
+          .digest('base64');
+
+        if (signature !== expectedSignature) {
+          console.error('❌ Invalid webhook signature');
+          console.error('Expected:', expectedSignature);
+          console.error('Received:', signature);
+          return res.status(401).json({ error: 'Invalid signature' });
+        }
+        console.log('✅ Webhook signature verified (Svix)');
+      } catch (error) {
+        console.error('❌ Signature verification error:', error);
+        return res.status(401).json({ error: 'Signature verification failed' });
       }
-      console.log('✅ Webhook signature verified');
     } else {
-      console.log('⚠️ Webhook signature verification skipped (secret not configured or signature missing)');
+      console.log('⚠️ Webhook signature verification skipped');
+      console.log('   Secret:', !!webhookSecret);
+      console.log('   Signature:', !!svixSignature);
+      console.log('   ID:', !!svixId);
+      console.log('   Timestamp:', !!svixTimestamp);
     }
 
     const event = req.body;
@@ -56,9 +92,22 @@ export default async function handler(req, res) {
       }
     );
 
+    // Extract event type (Dodo uses 'type' field)
+    const eventType = event.type || event.event_type;
+    console.log('📋 Event Type:', eventType);
+
     // Get user_id and plan_id from metadata
     const userId = event.data?.metadata?.user_id;
     const planId = event.data?.metadata?.plan_id;
+    const customerEmail = event.data?.customer?.email;
+
+    console.log('📊 Webhook Data:', {
+      userId,
+      planId,
+      customerEmail,
+      customerId: event.data?.customer?.customer_id,
+      subscriptionId: event.data?.subscription_id
+    });
 
     if (!userId) {
       console.error('❌ No user_id in webhook metadata');
@@ -68,20 +117,41 @@ export default async function handler(req, res) {
     console.log('👤 Processing webhook for user:', userId);
 
     // Handle different event types
-    switch (event.event_type) {
+    switch (eventType) {
       case 'subscription.active':
         console.log('🟢 Subscription activated');
         await supabase.rpc('update_subscription_tier', {
           p_user_id: userId,
           p_new_tier: planId || 'pro',
-          p_dodo_customer_id: event.data.customer_id,
-          p_dodo_subscription_id: event.data.id
+          p_dodo_customer_id: event.data.customer?.customer_id,
+          p_dodo_subscription_id: event.data.subscription_id
         });
         break;
 
+      case 'payment.succeeded':
+        console.log('💰 Payment succeeded - activating subscription');
+        const { data: rpcResult, error: rpcError } = await supabase.rpc('update_subscription_tier', {
+          p_user_id: userId,
+          p_new_tier: planId || 'pro',
+          p_dodo_customer_id: event.data.customer?.customer_id,
+          p_dodo_subscription_id: event.data.subscription_id
+        });
+
+        if (rpcError) {
+          console.error('❌ RPC Error:', rpcError);
+          throw rpcError;
+        }
+        console.log('✅ RPC Result:', rpcResult);
+        break;
+
       case 'subscription.renewed':
-        console.log('🔄 Subscription renewed');
-        // Optionally refresh credits or extend access
+        console.log('🔄 Subscription renewed - refreshing credits');
+        await supabase.rpc('update_subscription_tier', {
+          p_user_id: userId,
+          p_new_tier: planId || 'pro',
+          p_dodo_customer_id: event.data.customer?.customer_id,
+          p_dodo_subscription_id: event.data.subscription_id
+        });
         break;
 
       case 'subscription.on_hold':
