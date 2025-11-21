@@ -98,17 +98,15 @@ CREATE POLICY "Anyone can view published posts"
 -- Note: This requires pg_cron extension to be enabled in Supabase
 -- Uncomment the following if you want automatic publishing via pg_cron:
 
-/*
 -- Enable pg_cron extension (if not already enabled)
-CREATE EXTENSION IF NOT EXISTS pg_cron;
+-- CREATE EXTENSION IF NOT EXISTS pg_cron;
 
 -- Schedule the auto-publish function to run every 5 minutes
-SELECT cron.schedule(
-  'publish-scheduled-blog-posts',
-  '*/5 * * * *',  -- Every 5 minutes
-  $$SELECT public.publish_scheduled_blog_posts()$$
-);
-*/
+-- SELECT cron.schedule(
+--   'publish-scheduled-blog-posts',
+--   '*/5 * * * *',  -- Every 5 minutes
+--   $$SELECT public.publish_scheduled_blog_posts()$$
+-- );
 
 -- ============================================================================
 -- Alternative: Manual trigger (call from Edge Function or client)
