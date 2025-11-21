@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Save, Eye, X } from 'lucide-react';
+import { ArrowLeft, Save, Eye, X, Clock, Calendar } from 'lucide-react';
 import {
   getPostById,
   createPost,
@@ -55,9 +55,15 @@ export const BlogPostEditor = () => {
     canonical_url: '',
     status: 'draft',
     published_at: '',
+    scheduled_at: '',
     read_time_minutes: 5,
     tags: [],
   });
+
+  // Scheduling state
+  const [showScheduleDialog, setShowScheduleDialog] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState('');
+  const [scheduleTime, setScheduleTime] = useState('');
 
   useEffect(() => {
     loadInitialData();
@@ -133,7 +139,7 @@ export const BlogPostEditor = () => {
     );
   };
 
-  const handleSave = async (status: 'draft' | 'published') => {
+  const handleSave = async (status: 'draft' | 'published' | 'scheduled', scheduledDateTime?: string) => {
     if (!formData.title.trim()) {
       toast.error('Title is required');
       return;
@@ -147,13 +153,36 @@ export const BlogPostEditor = () => {
       return;
     }
 
+    // Validate scheduled date if status is scheduled
+    if (status === 'scheduled' && !scheduledDateTime) {
+      toast.error('Please select a date and time for scheduling');
+      return;
+    }
+
     setSaving(true);
     try {
+      // Determine published_at and scheduled_at based on status
+      let published_at = formData.published_at || null;
+      let scheduled_at = formData.scheduled_at || null;
+
+      if (status === 'published') {
+        published_at = new Date().toISOString();
+        scheduled_at = null;
+      } else if (status === 'scheduled' && scheduledDateTime) {
+        scheduled_at = scheduledDateTime;
+        published_at = null;
+      } else if (status === 'draft') {
+        // Keep existing values for drafts
+        published_at = formData.published_at || null;
+        scheduled_at = null;
+      }
+
       // Convert empty strings to null for optional fields
       const postData: BlogPostInput = {
         ...formData,
         status,
-        published_at: status === 'published' ? new Date().toISOString() : (formData.published_at || null),
+        published_at,
+        scheduled_at,
         tags: selectedTags,
         // Convert empty strings to null for UUID and optional fields
         category_id: formData.category_id || null,
@@ -170,13 +199,24 @@ export const BlogPostEditor = () => {
       if (isEditMode && id) {
         const { error } = await updatePost(id, postData);
         if (error) throw new Error(error);
-        toast.success('Post updated successfully');
+        
+        if (status === 'scheduled') {
+          toast.success(`Post scheduled for ${new Date(scheduledDateTime!).toLocaleString()}`);
+        } else {
+          toast.success('Post updated successfully');
+        }
       } else {
         const { error } = await createPost(postData);
         if (error) throw new Error(error);
-        toast.success('Post created successfully');
+        
+        if (status === 'scheduled') {
+          toast.success(`Post scheduled for ${new Date(scheduledDateTime!).toLocaleString()}`);
+        } else {
+          toast.success('Post created successfully');
+        }
       }
 
+      setShowScheduleDialog(false);
       navigate('/blog/admin');
     } catch (error: any) {
       console.error('Error saving post:', error);
@@ -184,6 +224,50 @@ export const BlogPostEditor = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  // Handle scheduling
+  const handleScheduleClick = () => {
+    setShowScheduleDialog(true);
+    
+    // Set default date/time (tomorrow at 9 AM)
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(9, 0, 0, 0);
+    
+    const dateStr = tomorrow.toISOString().split('T')[0];
+    const timeStr = '09:00';
+    
+    setScheduleDate(dateStr);
+    setScheduleTime(timeStr);
+  };
+
+  const handleScheduleSave = () => {
+    if (!scheduleDate || !scheduleTime) {
+      toast.error('Please select both date and time');
+      return;
+    }
+
+    // Combine date and time
+    const scheduledDateTime = new Date(`${scheduleDate}T${scheduleTime}`);
+    const now = new Date();
+
+    // Validate: Must be in the future
+    if (scheduledDateTime <= now) {
+      toast.error('Scheduled time must be in the future');
+      return;
+    }
+
+    // Validate: Maximum 14 days in the future
+    const maxDate = new Date(now);
+    maxDate.setDate(maxDate.getDate() + 14);
+    if (scheduledDateTime > maxDate) {
+      toast.error('Cannot schedule more than 14 days in advance');
+      return;
+    }
+
+    // Save with scheduled status
+    handleSave('scheduled', scheduledDateTime.toISOString());
   };
 
   if (loading) {
@@ -233,12 +317,21 @@ export const BlogPostEditor = () => {
                   Save Draft
                 </Button>
                 <Button
+                  onClick={handleScheduleClick}
+                  disabled={saving}
+                  variant="outline"
+                  className="border-[#8B5CF6] text-[#8B5CF6] hover:bg-[#8B5CF6]/10"
+                >
+                  <Clock className="mr-2 h-4 w-4" />
+                  Schedule
+                </Button>
+                <Button
                   onClick={() => handleSave('published')}
                   disabled={saving}
                   className="bg-gradient-to-r from-[#FFA500] to-[#F7931E] hover:from-[#F7931E] hover:to-[#FFA500] text-white"
                 >
                   <Eye className="mr-2 h-4 w-4" />
-                  Publish
+                  Publish Now
                 </Button>
               </div>
             </div>
@@ -492,6 +585,100 @@ export const BlogPostEditor = () => {
             </div>
           </div>
         </div>
+
+        {/* Schedule Dialog */}
+        {showScheduleDialog && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <Card className="w-full max-w-md border-2 border-[#FFA500]">
+              <CardHeader>
+                <CardTitle className="text-[#0A2463] flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-[#FFA500]" />
+                  Schedule Post
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="schedule-date">
+                    Publication Date <span className="text-[#FFA500]">*</span>
+                  </Label>
+                  <Input
+                    id="schedule-date"
+                    type="date"
+                    value={scheduleDate}
+                    onChange={(e) => setScheduleDate(e.target.value)}
+                    min={new Date(Date.now() + 86400000).toISOString().split('T')[0]} // Tomorrow
+                    max={new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]} // 14 days
+                    className="border-[#FFA500]/50 focus:border-[#FFA500]"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="schedule-time">
+                    Publication Time <span className="text-[#FFA500]">*</span>
+                  </Label>
+                  <Input
+                    id="schedule-time"
+                    type="time"
+                    value={scheduleTime}
+                    onChange={(e) => setScheduleTime(e.target.value)}
+                    className="border-[#FFA500]/50 focus:border-[#FFA500]"
+                  />
+                </div>
+
+                <div className="bg-[#FEF3C7] border border-[#FFA500]/30 rounded-lg p-4 space-y-2">
+                  <p className="text-sm font-medium text-[#0A2463] flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-[#FFA500]" />
+                    Scheduling Guidelines
+                  </p>
+                  <ul className="text-xs text-[#0A2463]/80 space-y-1 ml-6 list-disc">
+                    <li>Posts can be scheduled up to 14 days in advance</li>
+                    <li>Scheduled posts will auto-publish at the selected time</li>
+                    <li>You can edit or reschedule before publication</li>
+                    <li>Best for SEO: Space posts 2-3 days apart</li>
+                  </ul>
+                </div>
+
+                {scheduleDate && scheduleTime && (
+                  <div className="bg-white border border-[#FFA500] rounded-lg p-3">
+                    <p className="text-sm text-[#0A2463]">
+                      <span className="font-semibold">Will publish on:</span>
+                      <br />
+                      <span className="text-[#FFA500]">
+                        {new Date(`${scheduleDate}T${scheduleTime}`).toLocaleString('en-US', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    onClick={() => setShowScheduleDialog(false)}
+                    variant="outline"
+                    className="flex-1 border-[#0A2463] text-[#0A2463]"
+                    disabled={saving}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleScheduleSave}
+                    disabled={saving || !scheduleDate || !scheduleTime}
+                    className="flex-1 bg-gradient-to-r from-[#8B5CF6] to-[#7C3AED] hover:from-[#7C3AED] hover:to-[#8B5CF6] text-white"
+                  >
+                    <Clock className="mr-2 h-4 w-4" />
+                    {saving ? 'Scheduling...' : 'Schedule Post'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </>
   );

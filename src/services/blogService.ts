@@ -45,7 +45,7 @@ export interface BlogPost {
   canonical_url?: string;
   
   // Status
-  status: 'draft' | 'published' | 'archived';
+  status: 'draft' | 'published' | 'archived' | 'scheduled';
   published_at?: string;
   scheduled_at?: string;
   
@@ -83,7 +83,7 @@ export interface BlogPostInput {
   meta_keywords?: string | null;
   og_image?: string | null;
   canonical_url?: string | null;
-  status?: 'draft' | 'published' | 'archived';
+  status?: 'draft' | 'published' | 'archived' | 'scheduled';
   published_at?: string | null;
   scheduled_at?: string | null;
   read_time_minutes?: number;
