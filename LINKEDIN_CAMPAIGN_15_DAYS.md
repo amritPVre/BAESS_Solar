@@ -117,15 +117,106 @@ Try it free → www.baess.app
 - Highlight: Key metrics boxed
 - Background: Light purple overlay
 
-### AI Video Generation Prompt:
+### AI Video Generation Prompts (Veo 3.1 - 3x8 Second Videos):
+
+#### **Video 1: Location Input & Map Loading (8 seconds)**
+
 ```
-Create a 30-second screen recording video showing solar PV design process. 
-Scene 1 (0-7s): Cursor enters address "123 Main Street, California" in location field, map loads showing satellite view
-Scene 2 (8-15s): User inputs roof dimensions (50x30 feet), roof area highlights on map
-Scene 3 (16-22s): AI calculates optimal module layout, animation shows panels being placed on roof, system specs appear
-Scene 4 (23-30s): Results dashboard displays with energy production graphs, financial metrics, ROI calculations
-Style: Clean modern UI, smooth transitions, professional color scheme (blue and orange), cursor movements natural and purposeful, text overlays for each step, upbeat background music (optional), no voice-over for this version, 1080p quality.
+Duration: Exactly 8 seconds
+
+Scene Description:
+A professional solar design web application interface with clean white and orange accents. Camera is focused on the center of the screen showing a location input form. A cursor smoothly moves into frame from the bottom-right, hovers over an empty address field labeled "Project Location", and begins typing "San Francisco, California" character by character in a natural typing rhythm. Once complete, the cursor clicks a blue "Analyze Location" button that pulses gently. The screen elegantly transitions with a subtle fade as a Google Maps satellite view loads in the background, zooming smoothly from Earth view down to a residential rooftop in San Francisco. The map settles with a gentle bounce effect, and a small orange location pin drops onto the roof with a satisfying animation. A semi-transparent overlay appears showing "Location Verified ✓" in the top-right corner.
+
+Visual Style: Modern SaaS interface, bright and airy aesthetic, soft shadows, smooth animations, professional cursor movements, orange (#FFA500) and blue (#0A2463) color scheme matching BAESS Labs branding.
+
+Camera: Static front-facing view of desktop screen, slight depth of field on background elements, 1920x1080 resolution.
+
+Lighting: Bright, even lighting simulating a well-lit office environment, slight screen glow effect.
+
+Reference Image: Attach screenshot of your location input page from www.baess.app/solar-designer
 ```
+
+**📎 Reference Image to Attach:** Screenshot of the PV AI Designer Pro location/address input screen
+
+---
+
+#### **Video 2: Roof Area Configuration & AI Processing (8 seconds)**
+
+```
+Duration: Exactly 8 seconds
+
+Scene Description:
+Continuing from the previous scene, the satellite map view remains visible in the background. Camera slowly zooms in 10% on the interface as a new modal or side panel slides in from the right with smooth easing. The panel displays "Roof Configuration" at the top in bold text. The cursor moves naturally to input fields and enters roof dimensions: "Length: 50 ft" in the first field, pauses briefly, then "Width: 30 ft" in the second field. As the cursor moves away, the roof area on the satellite map highlights with an animated orange overlay that pulses once. Below the inputs, a calculation appears: "Total Usable Area: 1,500 sq ft". The cursor then clicks a prominent "Design System" button. Immediately, a semi-transparent loading overlay appears with an animated spinner and text that reads "AI Analyzing Optimal Configuration..." The spinner rotates smoothly, and small particle effects (like data points or energy sparks) flow from the corners toward the center, suggesting AI processing.
+
+Visual Style: Clean modern interface with glass-morphism effects on panels, smooth animations, professional color palette (orange accents on white/light gray background), subtle drop shadows for depth.
+
+Camera: Gentle 10% zoom-in over 8 seconds to create focus and momentum, maintaining front-facing view.
+
+Lighting: Consistent bright office lighting, slight ambient glow around active UI elements, screen reflection effect.
+
+Reference Image: Attach screenshot of your roof area input screen with highlighted roof area on map
+```
+
+**📎 Reference Image to Attach:** Screenshot of the roof configuration panel with the satellite map showing a highlighted roof area
+
+---
+
+#### **Video 3: System Design Generation & Results (8 seconds)**
+
+```
+Duration: Exactly 8 seconds
+
+Scene Description:
+The AI loading animation from Video 2 completes with a satisfying "complete" checkmark animation. The interface smoothly transitions as the satellite map view transforms into a 3D-style visualization where solar panels appear one by one in a grid pattern on the rooftop, each panel materializing with a quick scale-up animation and subtle glow effect. The panel placement completes in the first 3 seconds. Simultaneously, a sleek results dashboard slides up from the bottom of the screen with elegant animations. The dashboard displays key metrics appearing sequentially: "System Size: 12.5 kW" with a counter animation, "Annual Production: 18,250 kWh" with a rising bar chart, and "25-Year Savings: $85,400" with dollar signs animating in. On the right side, a circular ROI indicator fills from 0% to 100% with an orange progress ring. A small badge in the corner reads "Design Complete ✓" with a sparkle effect. The entire scene has a polished, professional feel with micro-interactions and smooth motion design.
+
+Visual Style: Modern data dashboard aesthetic, animated charts and counters, glass-morphism cards, orange and blue color scheme, professional typography, subtle particle effects for celebration of completion.
+
+Camera: Slight pull-back zoom (reverse of Video 2) to reveal the full dashboard, maintaining front-facing view, 1920x1080 resolution.
+
+Lighting: Bright and optimistic lighting, subtle glow effects around key metrics, screen illumination suggesting success/completion.
+
+Reference Image: Attach screenshot of your results dashboard showing energy production graphs and financial metrics
+```
+
+**📎 Reference Image to Attach:** Screenshot of the complete results dashboard with energy production graphs, financial metrics, and system specifications
+
+---
+
+### 🎬 **Veo 3.1 Generation Tips:**
+
+1. **Generate in Order:** Create Video 1 first, then Video 2, then Video 3 (one per day if needed)
+2. **Attach Reference Images:** Use actual screenshots from www.baess.app for better accuracy
+3. **Consistent Style:** Mention "match the style of previous video" when generating Video 2 and 3
+4. **Export Settings:** 1080p, MP4 format, 30fps
+5. **Combine Videos:** Use a simple video editor (CapCut, Canva Video Editor, or Windows Video Editor) to stitch all 3 together into one 24-second video
+6. **Add Text Overlay (Optional):** Add step numbers "1/4", "2/4", "3/4" in the corner for clarity
+7. **Background Music:** Add a single upbeat track across all 3 videos when stitching them together
+
+---
+
+### 📱 **LinkedIn Upload Strategy:**
+
+**Option A - Single Video (Recommended):**
+- Stitch all 3 videos together → 24 seconds total
+- Add subtle transitions between segments
+- Include soft background music
+- Upload as one cohesive video
+
+**Option B - Carousel with Videos:**
+- Upload each 8-second video separately as a 3-slide carousel
+- LinkedIn supports video carousels
+- Users can swipe through each step
+- More engaging, tells a sequential story
+
+---
+
+### 🎯 **Alternative: Screenshot Carousel + Single Hero Video**
+
+If video generation is challenging:
+- Use the 4-slide screenshot carousel (already detailed above)
+- Generate only Video 3 (final results) as the "wow" moment
+- Post carousel first, video second in comments
+- Still highly engaging, less production effort
 
 ---
 
