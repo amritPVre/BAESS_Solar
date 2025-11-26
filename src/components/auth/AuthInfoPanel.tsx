@@ -1,7 +1,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Info } from "lucide-react";
+import { Zap, Brain, Rocket } from "lucide-react";
 
 const AuthInfoPanel: React.FC = () => {
   return (
@@ -9,45 +9,70 @@ const AuthInfoPanel: React.FC = () => {
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.5 }}
-      className="hidden md:flex flex-col justify-center p-6"
+      className="hidden md:flex flex-col justify-center p-8"
     >
-      <div className="flex justify-center mb-6">
-        <img src="/BAESS_logo_v02.png" alt="BAESS Labs" className="h-20 w-auto" onError={(e) => e.currentTarget.style.display = 'none'} />
+      <div className="flex flex-col items-center mb-12">
+        <img 
+          src="/BAESS_logo_v02.png" 
+          alt="BAESS Labs" 
+          className="h-24 w-auto mb-4" 
+          onError={(e) => e.currentTarget.style.display = 'none'} 
+        />
+        <p className="text-sm font-medium text-gray-500 tracking-wide">Solar Intelligence Delivered</p>
       </div>
       
-      <h2 className="text-2xl font-semibold mb-4">Welcome to our platform!</h2>
-      <p className="text-lg text-gray-600 mb-6">
-        Advanced solar PV design and financial analysis platform. Sign in to save your projects, track your calculations, and generate professional reports.
+      <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-[#0A2463] via-[#1976D2] to-[#FFA500] bg-clip-text text-transparent">
+        Welcome Back
+      </h1>
+      <p className="text-base text-gray-600 mb-12">
+        AI-powered solar design platform
       </p>
       
-      <div className="bg-solar-light rounded-lg p-4 mb-6 border border-solar/20">
-        <div className="flex items-start">
-          <Info className="h-5 w-5 text-solar mr-2 mt-0.5" />
-          <p className="text-sm text-gray-700">
-            All your data is securely stored and you'll be able to access your projects from any device after signing in.
-          </p>
-        </div>
-      </div>
-      
-      <div className="space-y-4">
-        <div className="flex items-center">
-          <div className="w-8 h-8 rounded-full bg-solar-light flex items-center justify-center mr-3">
-            <span className="text-solar font-semibold">1</span>
+      <div className="space-y-6">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200/50"
+        >
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center shadow-lg">
+            <Brain className="h-6 w-6 text-white" />
           </div>
-          <p>Design your solar system with custom parameters</p>
-        </div>
-        <div className="flex items-center">
-          <div className="w-8 h-8 rounded-full bg-solar-light flex items-center justify-center mr-3">
-            <span className="text-solar font-semibold">2</span>
+          <div>
+            <p className="font-semibold text-gray-900">AI Design</p>
+            <p className="text-xs text-gray-600">Intelligent simulation</p>
           </div>
-          <p>Calculate financial metrics and environmental impact</p>
-        </div>
-        <div className="flex items-center">
-          <div className="w-8 h-8 rounded-full bg-solar-light flex items-center justify-center mr-3">
-            <span className="text-solar font-semibold">3</span>
+        </motion.div>
+
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200/50"
+        >
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
+            <Zap className="h-6 w-6 text-white" />
           </div>
-          <p>Export professional reports for clients</p>
-        </div>
+          <div>
+            <p className="font-semibold text-gray-900">Fast Analysis</p>
+            <p className="text-xs text-gray-600">Real-time calculations</p>
+          </div>
+        </motion.div>
+
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200/50"
+        >
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center shadow-lg">
+            <Rocket className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <p className="font-semibold text-gray-900">Pro Reports</p>
+            <p className="text-xs text-gray-600">Export-ready docs</p>
+          </div>
+        </motion.div>
       </div>
     </motion.div>
   );
