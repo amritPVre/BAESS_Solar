@@ -1,69 +1,164 @@
-# Welcome to your Lovable project
+# BAESS Solar - AI-Powered Solar Design Platform
 
-## Project info
+## About BAESS Labs
 
-**URL**: https://lovable.dev/projects/02bd18aa-6686-448d-a7e8-310cd9374588
+BAESS Solar is a comprehensive solar design and engineering platform that combines AI-powered tools with professional-grade calculations to revolutionize solar system design and financial analysis.
 
-## How can I edit this code?
+**Live URL**: https://www.baess.app
 
-There are several ways of editing your application.
+## Key Features
 
-**Use Lovable**
+- **AI PV Designer Pro** - Advanced solar system design simulator with AI-powered BOQ generation
+- **BESS Designer** - Battery Energy Storage System design tool
+- **AI Financial Analysis** - Intelligent financial modeling and reporting
+- **3D Visualization** - Interactive solar panel placement and shading analysis
+- **Professional Reports** - Export-ready engineering documentation
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/02bd18aa-6686-448d-a7e8-310cd9374588) and start prompting.
+## Technology Stack
 
-Changes made via Lovable will be committed automatically to this repo.
+This project is built with modern web technologies:
 
-**Use your preferred IDE**
+- **Vite** - Lightning-fast build tool
+- **TypeScript** - Type-safe JavaScript
+- **React** - UI framework
+- **shadcn/ui** - Component library
+- **Tailwind CSS** - Utility-first CSS
+- **Supabase** - Backend and authentication
+- **Google Maps API** - Location services
+- **Gemini AI** - AI-powered features
+- **Dodo Payments** - Payment processing
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## Getting Started
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Prerequisites
 
-Follow these steps:
+- Node.js (v18 or higher) - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- npm or yarn package manager
+
+### Installation
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+# Step 1: Clone the repository
+git clone https://github.com/amritPVre/BAESS_Solar.git
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# Step 2: Navigate to the project directory
+cd BAESS_Solar
 
-# Step 3: Install the necessary dependencies.
-npm i
+# Step 3: Install dependencies
+npm install
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Step 4: Set up environment variables
+# Copy .env.example to .env and fill in your API keys
+
+# Step 5: Start the development server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### Available Scripts
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```sh
+# Start frontend development server (localhost:8080)
+npm run dev
 
-**Use GitHub Codespaces**
+# Start backend server (localhost:3001)
+npm run server
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+# Run both frontend and backend concurrently
+npm run dev:full
 
-## What technologies are used for this project?
+# Build for production
+npm run build
 
-This project is built with .
+# Preview production build
+npm run preview
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+# Lint code
+npm run lint
+```
 
-## How can I deploy this project?
+## Environment Variables
 
-Simply open [Lovable](https://lovable.dev/projects/02bd18aa-6686-448d-a7e8-310cd9374588) and click on Share -> Publish.
+Create a `.env` file in the root directory with the following:
 
-## I want to use a custom domain - is that possible?
+```env
+# Supabase
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+# Google Maps
+VITE_GOOGLE_MAPS_API_KEY=your_google_maps_key
+
+# Gemini AI
+VITE_GEMINI_API_KEY=your_gemini_api_key
+
+# Dodo Payments
+VITE_DODO_API_KEY=your_dodo_api_key
+DODO_WEBHOOK_SECRET=your_webhook_secret
+
+# App URLs
+VITE_APP_URL=http://localhost:8084
+VITE_API_URL=http://localhost:3001
+
+# reCAPTCHA
+VITE_RECAPTCHA_SITE_KEY=your_recaptcha_site_key
+VITE_RECAPTCHA_SECRET_KEY=your_recaptcha_secret_key
+```
+
+## Deployment
+
+### Vercel (Recommended)
+
+1. Push your code to GitHub
+2. Import project in Vercel
+3. Add environment variables in Vercel dashboard
+4. Deploy!
+
+For detailed deployment instructions, see `DEPLOYMENT.md`
+
+### Custom Domain Setup
+
+The app is deployed at `www.baess.app` with custom domain configuration. For DNS setup instructions, see the documentation in the project.
+
+## Project Structure
+
+```
+├── src/
+│   ├── components/        # React components
+│   ├── pages/            # Page components
+│   ├── services/         # API services
+│   ├── hooks/            # Custom React hooks
+│   ├── lib/              # Utility functions
+│   └── integrations/     # Third-party integrations
+├── api/                  # Vercel serverless functions
+├── supabase/             # Database migrations
+├── public/               # Static assets
+└── ...config files
+```
+
+## Features Documentation
+
+- **AI BOQ Generation** - Uses Gemini 2.0 for intelligent bill of quantities
+- **PV Simulation** - NREL PVWatts integration for accurate energy modeling
+- **Financial Analysis** - Industry-standard financial calculations
+- **User Management** - Supabase authentication with role-based access
+- **Subscription Plans** - Integrated with Dodo Payments
+- **Referral System** - Built-in referral program for user growth
+
+## Support
+
+For questions or issues:
+- Email: konnect@baesslabs.com
+- GitHub Issues: [Report a bug](https://github.com/amritPVre/BAESS_Solar/issues)
+
+## License
+
+Proprietary - All rights reserved by BAESS Labs
+
+## Contributing
+
+This is a private project. For collaboration inquiries, contact konnect@baesslabs.com
+
+---
+
+**Built with ❤️ by BAESS Labs**  
+Solar Intelligence for the Future
