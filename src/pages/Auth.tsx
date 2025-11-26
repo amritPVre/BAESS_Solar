@@ -83,7 +83,7 @@ const Auth: React.FC = () => {
               transition={{ duration: 0.5 }}
             >
               <Card className="shadow-2xl border-0 bg-white/80 backdrop-blur-xl">
-                <CardHeader className="space-y-4">
+                <CardHeader className="space-y-1">
                   <div className="flex justify-center">
                     <img 
                       src="/BAESS_logo_v02.png" 
@@ -92,9 +92,6 @@ const Auth: React.FC = () => {
                       onError={(e) => e.currentTarget.style.display = 'none'} 
                     />
                   </div>
-                  <CardDescription className="text-center text-sm text-gray-600">
-                    Solar Intelligence Delivered
-                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {error && (

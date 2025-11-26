@@ -15,10 +15,9 @@ const AuthInfoPanel: React.FC = () => {
         <img 
           src="/BAESS_logo_v02.png" 
           alt="BAESS Labs" 
-          className="h-24 w-auto mb-4" 
+          className="h-24 w-auto" 
           onError={(e) => e.currentTarget.style.display = 'none'} 
         />
-        <p className="text-sm font-medium text-gray-500 tracking-wide">Solar Intelligence Delivered</p>
       </div>
       
       <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-[#0A2463] via-[#1976D2] to-[#FFA500] bg-clip-text text-transparent">
