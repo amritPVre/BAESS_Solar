@@ -41,6 +41,8 @@ import BESSDesigner from "./pages/BESSDesigner";
 import Products from "./pages/Products";
 import ProductBESSDesigner from "./pages/ProductBESSDesigner";
 import ProductPVDesigner from "./pages/ProductPVDesigner";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 const queryClient = new QueryClient();
 
@@ -56,6 +58,8 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               
               {/* Protected Routes */}
               <Route path="/dashboard" element={

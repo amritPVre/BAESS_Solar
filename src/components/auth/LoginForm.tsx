@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useAuth } from "@/hooks/useAuth";
+import { Link } from "react-router-dom";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email" }),
@@ -68,7 +69,15 @@ const LoginForm: React.FC<LoginFormProps> = ({ setError, clearError }) => {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password</FormLabel>
+              <div className="flex items-center justify-between">
+                <FormLabel>Password</FormLabel>
+                <Link 
+                  to="/forgot-password" 
+                  className="text-sm text-solar hover:text-solar-dark hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              </div>
               <FormControl>
                 <Input type="password" placeholder="Password" {...field} />
               </FormControl>
