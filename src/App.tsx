@@ -43,6 +43,7 @@ import ProductBESSDesigner from "./pages/ProductBESSDesigner";
 import ProductPVDesigner from "./pages/ProductPVDesigner";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import SolarAIChat from "./pages/SolarAIChat";
 
 const queryClient = new QueryClient();
 
@@ -87,6 +88,13 @@ const App = () => (
               <Route path="/bess-designer" element={
                 <AuthGuard>
                   <BESSDesigner />
+                </AuthGuard>
+              } />
+              
+              {/* Solar AI Chat Route */}
+              <Route path="/solar-ai-chat" element={
+                <AuthGuard>
+                  <SolarAIChat />
                 </AuthGuard>
               } />
               

@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Save, Eye, X, Clock, Calendar } from 'lucide-react';
+import { ArrowLeft, Save, Eye, X, Clock, Calendar, Image as ImageIcon, FileText } from 'lucide-react';
 import {
   getPostById,
   createPost,
@@ -64,6 +64,12 @@ export const BlogPostEditor = () => {
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleTime, setScheduleTime] = useState('');
+
+  // Media insertion state
+  const [showMediaDialog, setShowMediaDialog] = useState(false);
+  const [mediaType, setMediaType] = useState<'image' | 'pdf'>('image');
+  const [mediaUrl, setMediaUrl] = useState('');
+  const [mediaCaption, setMediaCaption] = useState('');
 
   useEffect(() => {
     loadInitialData();
@@ -270,6 +276,42 @@ export const BlogPostEditor = () => {
     handleSave('scheduled', scheduledDateTime.toISOString());
   };
 
+  // Handle media insertion
+  const handleOpenMediaDialog = (type: 'image' | 'pdf') => {
+    setMediaType(type);
+    setMediaUrl('');
+    setMediaCaption('');
+    setShowMediaDialog(true);
+  };
+
+  const handleInsertMedia = () => {
+    if (!mediaUrl.trim()) {
+      toast.error('Please enter a media URL');
+      return;
+    }
+
+    let mediaMarkdown = '';
+    
+    if (mediaType === 'image') {
+      // Insert custom image markdown with caption
+      mediaMarkdown = `\n\n<div class="content-image">\n  <img src="${mediaUrl}" alt="${mediaCaption || 'Content image'}" />\n  ${mediaCaption ? `<p class="image-caption">${mediaCaption}</p>` : ''}\n</div>\n\n`;
+    } else if (mediaType === 'pdf') {
+      // Insert custom PDF viewer markdown
+      mediaMarkdown = `\n\n<div class="pdf-viewer">\n  <iframe src="${mediaUrl}" title="${mediaCaption || 'PDF Document'}" frameborder="0"></iframe>\n  ${mediaCaption ? `<p class="pdf-caption">${mediaCaption}</p>` : ''}\n</div>\n\n`;
+    }
+
+    // Insert at the end of current content
+    setFormData((prev) => ({
+      ...prev,
+      content: prev.content + mediaMarkdown,
+    }));
+
+    setShowMediaDialog(false);
+    setMediaUrl('');
+    setMediaCaption('');
+    toast.success(`${mediaType === 'image' ? 'Image' : 'PDF'} inserted successfully`);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#FEF3C7] to-white flex items-center justify-center">
@@ -381,7 +423,31 @@ export const BlogPostEditor = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="content">Content *</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="content">Content *</Label>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          onClick={() => handleOpenMediaDialog('image')}
+                          variant="outline"
+                          size="sm"
+                          className="border-[#FFA500] text-[#FFA500] hover:bg-[#FFA500]/10"
+                        >
+                          <ImageIcon className="h-4 w-4 mr-2" />
+                          Insert Image
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={() => handleOpenMediaDialog('pdf')}
+                          variant="outline"
+                          size="sm"
+                          className="border-[#0A2463] text-[#0A2463] hover:bg-[#0A2463]/10"
+                        >
+                          <FileText className="h-4 w-4 mr-2" />
+                          Insert PDF
+                        </Button>
+                      </div>
+                    </div>
                     <Textarea
                       id="content"
                       value={formData.content}
@@ -391,7 +457,7 @@ export const BlogPostEditor = () => {
                       className="font-mono text-sm"
                     />
                     <p className="text-xs text-[#0A2463]/60">
-                      Read time: {formData.read_time_minutes} min
+                      Read time: {formData.read_time_minutes} min • Supports Markdown & HTML
                     </p>
                   </div>
                 </CardContent>
@@ -585,6 +651,168 @@ export const BlogPostEditor = () => {
             </div>
           </div>
         </div>
+
+        {/* Media Insertion Dialog */}
+        {showMediaDialog && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <Card className="w-full max-w-2xl border-2 border-[#FFA500]">
+              <CardHeader>
+                <CardTitle className="text-[#0A2463] flex items-center gap-2">
+                  {mediaType === 'image' ? (
+                    <><ImageIcon className="h-5 w-5 text-[#FFA500]" /> Insert Image</>
+                  ) : (
+                    <><FileText className="h-5 w-5 text-[#0A2463]" /> Insert PDF Viewer</>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Preview Section */}
+                {mediaUrl && (
+                  <div className="border-2 border-[#FFA500]/20 rounded-lg p-4 bg-gray-50">
+                    <p className="text-sm font-medium text-[#0A2463] mb-3">Preview:</p>
+                    {mediaType === 'image' ? (
+                      <div className="space-y-2">
+                        <img
+                          src={mediaUrl}
+                          alt="Preview"
+                          className="w-full max-h-96 object-contain rounded-lg"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src =
+                              'https://via.placeholder.com/800x400?text=Invalid+Image+URL';
+                          }}
+                        />
+                        {mediaCaption && (
+                          <p className="text-center text-sm text-[#0A2463]/70 italic">
+                            {mediaCaption}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="w-full h-96 bg-white rounded-lg flex items-center justify-center border border-gray-300">
+                          <iframe
+                            src={mediaUrl}
+                            title="PDF Preview"
+                            className="w-full h-full rounded-lg"
+                            onError={(e) => {
+                              (e.target as HTMLIFrameElement).outerHTML =
+                                '<div class="text-red-500 p-4">Invalid PDF URL or PDF cannot be embedded</div>';
+                            }}
+                          />
+                        </div>
+                        {mediaCaption && (
+                          <p className="text-center text-sm text-[#0A2463]/70 italic">
+                            {mediaCaption}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* URL Input */}
+                <div className="space-y-2">
+                  <Label htmlFor="media-url">
+                    {mediaType === 'image' ? 'Image' : 'PDF'} URL <span className="text-[#FFA500]">*</span>
+                  </Label>
+                  <Input
+                    id="media-url"
+                    type="url"
+                    value={mediaUrl}
+                    onChange={(e) => setMediaUrl(e.target.value)}
+                    placeholder={
+                      mediaType === 'image'
+                        ? 'https://example.com/image.jpg'
+                        : 'https://example.com/document.pdf'
+                    }
+                    className="border-[#FFA500]/50 focus:border-[#FFA500]"
+                  />
+                  <p className="text-xs text-[#0A2463]/60">
+                    {mediaType === 'image'
+                      ? 'Paste the direct URL to your image (JPG, PNG, GIF, WebP)'
+                      : 'Paste the direct URL to your PDF file'}
+                  </p>
+                </div>
+
+                {/* Caption Input */}
+                <div className="space-y-2">
+                  <Label htmlFor="media-caption">
+                    Caption <span className="text-[#0A2463]/50">(Optional)</span>
+                  </Label>
+                  <Input
+                    id="media-caption"
+                    value={mediaCaption}
+                    onChange={(e) => setMediaCaption(e.target.value)}
+                    placeholder={
+                      mediaType === 'image'
+                        ? 'Add a description for the image...'
+                        : 'Add a description for the PDF...'
+                    }
+                    className="border-[#FFA500]/50 focus:border-[#FFA500]"
+                  />
+                </div>
+
+                {/* Help Text */}
+                <div className="bg-[#FEF3C7] border border-[#FFA500]/30 rounded-lg p-4 space-y-2">
+                  <p className="text-sm font-medium text-[#0A2463] flex items-center gap-2">
+                    {mediaType === 'image' ? (
+                      <><ImageIcon className="h-4 w-4 text-[#FFA500]" /> Image Guidelines</>
+                    ) : (
+                      <><FileText className="h-4 w-4 text-[#0A2463]" /> PDF Guidelines</>
+                    )}
+                  </p>
+                  <ul className="text-xs text-[#0A2463]/80 space-y-1 ml-6 list-disc">
+                    {mediaType === 'image' ? (
+                      <>
+                        <li>Use high-quality images (min 1200px wide recommended)</li>
+                        <li>Supported formats: JPG, PNG, GIF, WebP</li>
+                        <li>Images will be displayed full-width within content</li>
+                        <li>Add descriptive captions for better accessibility</li>
+                      </>
+                    ) : (
+                      <>
+                        <li>PDF will be embedded with a scrollable viewer</li>
+                        <li>Viewers can scroll through pages within the article</li>
+                        <li>Recommended height: 600px (auto-sized)</li>
+                        <li>Some PDFs may not allow embedding (security settings)</li>
+                      </>
+                    )}
+                  </ul>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    onClick={() => {
+                      setShowMediaDialog(false);
+                      setMediaUrl('');
+                      setMediaCaption('');
+                    }}
+                    variant="outline"
+                    className="flex-1 border-[#0A2463] text-[#0A2463]"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleInsertMedia}
+                    disabled={!mediaUrl.trim()}
+                    className={`flex-1 ${
+                      mediaType === 'image'
+                        ? 'bg-gradient-to-r from-[#FFA500] to-[#F7931E] hover:from-[#F7931E] hover:to-[#FFA500]'
+                        : 'bg-gradient-to-r from-[#0A2463] to-[#0F2E5C] hover:from-[#0F2E5C] hover:to-[#0A2463]'
+                    } text-white`}
+                  >
+                    {mediaType === 'image' ? (
+                      <><ImageIcon className="mr-2 h-4 w-4" /> Insert Image</>
+                    ) : (
+                      <><FileText className="mr-2 h-4 w-4" /> Insert PDF</>
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Schedule Dialog */}
         {showScheduleDialog && (

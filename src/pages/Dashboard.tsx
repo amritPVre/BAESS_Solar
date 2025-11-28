@@ -318,22 +318,18 @@ const Dashboard: React.FC = () => {
                 </Card>
               </motion.div>
 
-              {/* AI BOQ Generator Card */}
+              {/* Solar AI Chat Card */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.1 }}
-                className="opacity-75"
+                whileHover={{ scale: 1.02 }}
+                className="cursor-pointer"
+                onClick={() => navigate('/solar-ai-chat')}
               >
-                <Card className="h-full border-2 border-gray-300 shadow-lg relative overflow-hidden">
-                  {/* Background Image */}
-                  <div 
-                    className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 bg-cover bg-center bg-no-repeat"
-                    style={{ 
-                      backgroundImage: "url('/boq-generator-bg.jpg.png')",
-                      opacity: 0.4
-                    }}
-                  ></div>
+                <Card className="h-full border-2 border-transparent hover:border-emerald-400 transition-all duration-300 shadow-lg hover:shadow-2xl relative overflow-hidden">
+                  {/* Background Gradient */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 opacity-60"></div>
                   
                   {/* Glass Morphism Overlay */}
                   <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-teal-500/10 to-cyan-500/10 backdrop-blur-[1px]"></div>
@@ -341,42 +337,39 @@ const Dashboard: React.FC = () => {
                   <CardHeader className="relative z-10 pb-4 bg-white/80 backdrop-blur-md">
                     <div className="flex items-center justify-between mb-4">
                       <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg">
-                        <FileText className="h-8 w-8" />
+                        <Sparkles className="h-8 w-8" />
                       </div>
-                      <Badge className="bg-gradient-to-r from-gray-500 to-gray-600 text-white text-xs px-3 py-1">
-                        Coming Soon
+                      <Badge className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs px-3 py-1">
+                        AI Powered
                       </Badge>
                     </div>
                     <CardTitle className="text-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 bg-clip-text text-transparent font-bold">
-                      AI BOQ Generator
+                      Solar AI Assistant
                     </CardTitle>
                     <CardDescription className="text-sm mt-2 text-gray-700 font-medium">
-                      Intelligent Bill of Quantities generation using advanced AI algorithms for accurate cost estimation and material planning
+                      AI-powered chat interface for solar engineering calculations, financial analysis, and system design with Gemini 2.5 Flash
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="relative z-10 bg-white/70 backdrop-blur-sm">
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm">
                         <Sparkles className="h-4 w-4 text-emerald-600" />
-                        <span className="text-gray-800 font-medium">AI-Powered Cost Analysis</span>
+                        <span className="text-gray-800 font-medium">15+ Calculation Types</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
                         <Sparkles className="h-4 w-4 text-teal-600" />
-                        <span className="text-gray-800 font-medium">Smart Material Estimation</span>
+                        <span className="text-gray-800 font-medium">Real-time AI Insights</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
                         <Sparkles className="h-4 w-4 text-cyan-600" />
-                        <span className="text-gray-800 font-medium">Automated Documentation</span>
+                        <span className="text-gray-800 font-medium">Export to PDF/Excel</span>
                       </div>
                     </div>
                   </CardContent>
                   <CardFooter className="relative z-10 bg-white/80 backdrop-blur-md">
-                    <Button 
-                      disabled 
-                      className="w-full bg-gray-400 text-white cursor-not-allowed opacity-60"
-                    >
-                      <Clock className="h-4 w-4 mr-2" />
-                      Coming Soon
+                    <Button className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-md">
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Launch AI Assistant
                     </Button>
                   </CardFooter>
                 </Card>

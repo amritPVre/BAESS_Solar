@@ -1,0 +1,893 @@
+/* Solar AI Chat - Modern Dark Theme */
+
+/* Light Theme (Default) - Already styled in components */
+
+/* Dark Theme - Modern AI SaaS Aesthetic */
+.dark-theme {
+  /* Background Colors */
+  --bg-primary: #0a0e1a;
+  --bg-secondary: #121828;
+  --bg-tertiary: #1a2235;
+  --bg-elevated: #1e2638;
+  
+  /* Surface Colors */
+  --surface-1: rgba(30, 38, 56, 0.5);
+  --surface-2: rgba(30, 38, 56, 0.8);
+  --surface-glass: rgba(30, 38, 56, 0.6);
+  
+  /* Text Colors */
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-tertiary: #94a3b8;
+  --text-inverse: #0a0e1a;
+  
+  /* Accent Colors */
+  --accent-primary: #00d9ff;
+  --accent-secondary: #a855f7;
+  --accent-success: #10b981;
+  --accent-warning: #f59e0b;
+  --accent-error: #ef4444;
+  
+  /* Gradient Colors */
+  --gradient-primary: linear-gradient(135deg, #00d9ff 0%, #a855f7 100%);
+  --gradient-secondary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --gradient-accent: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  
+  /* Border Colors */
+  --border-subtle: rgba(100, 116, 139, 0.2);
+  --border-default: rgba(100, 116, 139, 0.3);
+  --border-strong: rgba(100, 116, 139, 0.5);
+  --border-glow: rgba(0, 217, 255, 0.3);
+  
+  /* Shadow Colors */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 0 20px rgba(0, 217, 255, 0.3);
+}
+
+/* Header Styles */
+.dark-theme .solar-ai-header {
+  background: var(--bg-secondary) !important;
+  border-bottom: 1px solid var(--border-default) !important;
+  box-shadow: var(--shadow-md);
+}
+
+.dark-theme .solar-ai-header h1,
+.dark-theme .solar-ai-header p,
+.dark-theme .solar-ai-header span,
+.dark-theme .solar-ai-header button {
+  color: var(--text-primary) !important;
+}
+
+.dark-theme .solar-ai-logo {
+  filter: brightness(1.2);
+}
+
+/* Fix all header text visibility */
+.dark-theme header * {
+  color: var(--text-primary) !important;
+}
+
+.dark-theme header button[class*="outline"] {
+  border-color: var(--border-default) !important;
+  background: transparent !important;
+}
+
+.dark-theme header button[class*="outline"]:hover {
+  background: var(--surface-1) !important;
+  border-color: var(--accent-primary) !important;
+}
+
+/* Sidebar Styles */
+.dark-theme .chat-sidebar {
+  background: var(--bg-secondary) !important;
+  border-right: 1px solid var(--border-default) !important;
+}
+
+.dark-theme .chat-sidebar * {
+  color: #ffffff !important;
+}
+
+.dark-theme .chat-sidebar h2,
+.dark-theme .chat-sidebar h3,
+.dark-theme .chat-sidebar h4 {
+  color: #ffffff !important;
+}
+
+.dark-theme .chat-sidebar p,
+.dark-theme .chat-sidebar span {
+  color: #cbd5e1 !important;
+}
+
+.dark-theme .chat-sidebar button {
+  background: transparent !important;
+  border-color: var(--border-default) !important;
+}
+
+.dark-theme .chat-sidebar button:hover {
+  background: var(--surface-1) !important;
+}
+
+/* Collapsed sidebar - dark background with white icons */
+.dark-theme .chat-sidebar-collapsed {
+  background: var(--bg-tertiary) !important;
+}
+
+.dark-theme .chat-sidebar-collapsed button {
+  background: var(--bg-elevated) !important;
+  border: 1px solid var(--border-default) !important;
+}
+
+.dark-theme .chat-sidebar-collapsed button:hover {
+  background: var(--surface-2) !important;
+  border-color: var(--accent-primary) !important;
+}
+
+.dark-theme .chat-sidebar-collapsed svg {
+  color: #ffffff !important;
+}
+
+.dark-theme .chat-session-item {
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  transition: all 0.2s ease;
+}
+
+.dark-theme .chat-session-item:hover {
+  background: var(--surface-1) !important;
+  border-color: var(--border-subtle) !important;
+}
+
+.dark-theme .chat-session-item.active {
+  background: var(--surface-2) !important;
+  border-color: var(--accent-primary) !important;
+  box-shadow: 0 0 10px rgba(0, 217, 255, 0.2);
+}
+
+.dark-theme .chat-session-item h4 {
+  color: var(--text-primary) !important;
+}
+
+.dark-theme .chat-session-item p {
+  color: var(--text-secondary) !important;
+}
+
+.dark-theme .chat-session-title {
+  color: var(--text-primary) !important;
+}
+
+.dark-theme .chat-session-meta {
+  color: var(--text-secondary) !important;
+}
+
+/* Chat Interface Styles - PURE WHITE TEXT */
+.dark-theme .chat-interface {
+  background: var(--bg-primary) !important;
+}
+
+.dark-theme .chat-interface * {
+  color: #ffffff !important;
+}
+
+.dark-theme .chat-welcome {
+  background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%) !important;
+}
+
+.dark-theme .chat-welcome * {
+  color: #ffffff !important;
+}
+
+.dark-theme .chat-welcome h2,
+.dark-theme .chat-welcome h3 {
+  color: #ffffff !important;
+}
+
+.dark-theme .chat-welcome p {
+  color: #cbd5e1 !important;
+}
+
+.dark-theme .message-user {
+  background: var(--gradient-primary);
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 217, 255, 0.3);
+}
+
+.dark-theme .message-assistant {
+  background: var(--surface-2);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+}
+
+.dark-theme .message-timestamp {
+  color: var(--text-tertiary);
+}
+
+.dark-theme .chat-input-area {
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-default);
+}
+
+.dark-theme .chat-textarea {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+}
+
+.dark-theme .chat-textarea:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px rgba(0, 217, 255, 0.1);
+}
+
+.dark-theme .chat-textarea::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* Artifact Canvas Styles - PURE WHITE TEXT FOR MAXIMUM VISIBILITY */
+.dark-theme .artifact-canvas {
+  background: var(--bg-secondary) !important;
+  border-left: 1px solid var(--border-default) !important;
+}
+
+.dark-theme .artifact-canvas * {
+  color: #ffffff !important;
+}
+
+.dark-theme .artifact-canvas h1,
+.dark-theme .artifact-canvas h2,
+.dark-theme .artifact-canvas h3,
+.dark-theme .artifact-canvas h4,
+.dark-theme .artifact-canvas h5 {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+.dark-theme .artifact-canvas p,
+.dark-theme .artifact-canvas span,
+.dark-theme .artifact-canvas li,
+.dark-theme .artifact-canvas div {
+  color: #ffffff !important;
+}
+
+/* Buttons in artifact header (PDF, Excel, Expand, Close) */
+.dark-theme .artifact-header button {
+  background: var(--bg-elevated) !important;
+  color: #ffffff !important;
+  border: 1px solid var(--border-default) !important;
+}
+
+.dark-theme .artifact-header button:hover {
+  background: var(--surface-2) !important;
+  border-color: var(--accent-primary) !important;
+  box-shadow: 0 0 10px rgba(0, 217, 255, 0.3);
+}
+
+.dark-theme .artifact-header button svg {
+  color: #ffffff !important;
+}
+
+.dark-theme .artifact-header {
+  background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-elevated) 100%) !important;
+  border-bottom: 1px solid var(--border-default) !important;
+}
+
+.dark-theme .artifact-header h2 {
+  color: #f1f5f9 !important;
+}
+
+.dark-theme .artifact-header p {
+  color: var(--text-secondary) !important;
+}
+
+.dark-theme .artifact-content {
+  background: var(--bg-primary) !important;
+}
+
+/* Specific fix for "Calculation Results" and other headings */
+.dark-theme .artifact-content [class*="CardTitle"],
+.dark-theme .artifact-content h1,
+.dark-theme .artifact-content h2,
+.dark-theme .artifact-content h3,
+.dark-theme .artifact-content h4 {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+.dark-theme .artifact-tab {
+  color: var(--text-secondary);
+  border-bottom: 2px solid transparent;
+}
+
+.dark-theme .artifact-tab:hover {
+  color: var(--text-primary);
+  background: var(--surface-1);
+}
+
+.dark-theme .artifact-tab.active {
+  color: var(--accent-primary);
+  border-bottom-color: var(--accent-primary);
+}
+
+/* Button Styles */
+.dark-theme .btn-primary {
+  background: var(--gradient-primary) !important;
+  color: white !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(0, 217, 255, 0.3);
+}
+
+.dark-theme .btn-primary:hover {
+  box-shadow: 0 6px 16px rgba(0, 217, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+.dark-theme .btn-secondary {
+  background: var(--surface-2) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-default) !important;
+}
+
+.dark-theme .btn-secondary:hover {
+  background: var(--surface-glass) !important;
+  border-color: var(--accent-primary) !important;
+}
+
+.dark-theme .btn-ghost:hover {
+  background: var(--surface-1) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Export Buttons (PDF & Excel) - Improved targeting */
+.dark-theme header button {
+  color: var(--text-primary) !important;
+}
+
+.dark-theme header button span {
+  color: var(--text-primary) !important;
+}
+
+.dark-theme header button[class*="outline"] {
+  background: var(--bg-elevated) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid rgba(100, 116, 139, 0.4) !important;
+  transition: all 0.2s ease;
+}
+
+.dark-theme header button[class*="outline"]:hover:not(:disabled) {
+  background: var(--surface-2) !important;
+  border-color: var(--accent-primary) !important;
+  box-shadow: 0 0 10px rgba(0, 217, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+/* Generic outline buttons in header */
+.dark-theme header button[variant="outline"],
+.dark-theme header button[class*="outline"] {
+  background: var(--bg-elevated) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-default) !important;
+}
+
+.dark-theme header button[variant="outline"]:hover,
+.dark-theme header button[class*="outline"]:hover {
+  background: var(--surface-2) !important;
+  border-color: var(--accent-primary) !important;
+  box-shadow: 0 0 10px rgba(0, 217, 255, 0.2);
+}
+
+.dark-theme header button[variant="outline"]:disabled,
+.dark-theme header button[class*="outline"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  border-color: var(--border-subtle) !important;
+}
+
+/* Card Styles */
+.dark-theme .card,
+.dark-theme [class*="card"] {
+  background: var(--surface-2) !important;
+  border: 1px solid var(--border-default) !important;
+  box-shadow: var(--shadow-md);
+  color: var(--text-primary) !important;
+}
+
+.dark-theme .card *,
+.dark-theme [class*="card"] * {
+  color: var(--text-primary) !important;
+}
+
+.dark-theme .card:hover {
+  border-color: var(--accent-primary) !important;
+  box-shadow: var(--shadow-glow);
+}
+
+/* Input Styles */
+.dark-theme input,
+.dark-theme textarea {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+}
+
+.dark-theme input:focus,
+.dark-theme textarea:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px rgba(0, 217, 255, 0.1);
+}
+
+.dark-theme input::placeholder,
+.dark-theme textarea::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* Badge Styles */
+.dark-theme .badge,
+.dark-theme [class*="badge"] {
+  background: var(--surface-2) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-default) !important;
+}
+
+.dark-theme .badge-accent {
+  background: var(--gradient-primary) !important;
+  color: white !important;
+  border: none !important;
+}
+
+/* Subscription Badge (Enterprise, etc.) */
+.dark-theme [class*="bg-yellow"],
+.dark-theme [class*="bg-amber"] {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%) !important;
+  color: #0a0e1a !important;
+  font-weight: 600 !important;
+}
+
+/* AI Credits Badge */
+.dark-theme [class*="AI CREDITS"],
+.dark-theme button:has([class*="CREDITS"]) {
+  background: rgba(168, 85, 247, 0.2) !important;
+  border: 1px solid rgba(168, 85, 247, 0.4) !important;
+  color: #e9d5ff !important;
+}
+
+.dark-theme button:has([class*="CREDITS"]):hover {
+  background: rgba(168, 85, 247, 0.3) !important;
+  border-color: rgba(168, 85, 247, 0.6) !important;
+}
+
+/* Modal/Dialog Styles */
+.dark-theme .dialog-overlay {
+  background: rgba(10, 14, 26, 0.75);
+  backdrop-filter: blur(4px);
+}
+
+.dark-theme .dialog-content {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+}
+
+/* Scrollbar Styles */
+.dark-theme ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.dark-theme ::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+.dark-theme ::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+}
+
+.dark-theme ::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary);
+}
+
+/* Loading Spinner */
+.dark-theme .spinner {
+  border-color: var(--accent-primary);
+  border-top-color: transparent;
+}
+
+/* Glow Effects */
+.dark-theme .glow-cyan {
+  box-shadow: 0 0 20px rgba(0, 217, 255, 0.4);
+}
+
+.dark-theme .glow-purple {
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.4);
+}
+
+/* Avatar Styles */
+.dark-theme .avatar-bot {
+  background: var(--gradient-primary);
+}
+
+.dark-theme .avatar-user {
+  background: var(--gradient-secondary);
+}
+
+/* Task Selector Modal */
+.dark-theme .task-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border-default);
+  transition: all 0.3s ease;
+}
+
+.dark-theme .task-card:hover {
+  background: var(--surface-glass);
+  border-color: var(--accent-primary);
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-2px);
+}
+
+/* Theme Toggle Button */
+.theme-toggle {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.dark-theme .theme-toggle {
+  background: var(--surface-2);
+  border: 1px solid var(--border-default);
+}
+
+.dark-theme .theme-toggle:hover {
+  background: var(--surface-glass);
+  border-color: var(--accent-primary);
+  box-shadow: var(--shadow-glow);
+}
+
+/* Markdown Content in Dark Theme */
+.dark-theme .prose {
+  color: var(--text-primary) !important;
+}
+
+.dark-theme .prose *,
+.dark-theme .prose h1,
+.dark-theme .prose h2,
+.dark-theme .prose h3,
+.dark-theme .prose h4,
+.dark-theme .prose h5,
+.dark-theme .prose h6,
+.dark-theme .prose p,
+.dark-theme .prose li,
+.dark-theme .prose span {
+  color: var(--text-primary) !important;
+}
+
+.dark-theme .prose strong {
+  color: var(--text-primary) !important;
+}
+
+.dark-theme .prose code {
+  background: var(--bg-tertiary) !important;
+  color: var(--accent-primary) !important;
+  border: 1px solid var(--border-subtle);
+}
+
+.dark-theme .prose pre {
+  background: var(--bg-tertiary) !important;
+  border: 1px solid var(--border-default);
+}
+
+.dark-theme .prose pre code {
+  color: var(--text-primary) !important;
+}
+
+.dark-theme .prose table {
+  border-color: var(--border-default) !important;
+}
+
+.dark-theme .prose th {
+  background: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-default) !important;
+}
+
+.dark-theme .prose td {
+  border-color: var(--border-default) !important;
+  color: var(--text-secondary) !important;
+}
+
+/* Animations */
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(0, 217, 255, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(0, 217, 255, 0.6);
+  }
+}
+
+.dark-theme .animate-glow {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+/* Global Dark Theme Text Colors */
+.dark-theme {
+  color: var(--text-primary) !important;
+}
+
+.dark-theme div,
+.dark-theme span,
+.dark-theme p,
+.dark-theme h1,
+.dark-theme h2,
+.dark-theme h3,
+.dark-theme h4,
+.dark-theme h5,
+.dark-theme h6 {
+  color: var(--text-primary) !important;
+}
+
+/* Override any white or light backgrounds in dark theme */
+.dark-theme [class*="bg-white"],
+.dark-theme .bg-white {
+  background: var(--bg-secondary) !important;
+}
+
+.dark-theme [class*="bg-gray-50"],
+.dark-theme .bg-gray-50 {
+  background: var(--bg-tertiary) !important;
+}
+
+.dark-theme [class*="bg-gray-100"],
+.dark-theme .bg-gray-100 {
+  background: var(--surface-2) !important;
+}
+
+/* Override text colors that might be too dark */
+.dark-theme [class*="text-gray-900"],
+.dark-theme .text-gray-900 {
+  color: var(--text-primary) !important;
+}
+
+.dark-theme [class*="text-gray-800"],
+.dark-theme .text-gray-800 {
+  color: var(--text-primary) !important;
+}
+
+.dark-theme [class*="text-gray-700"],
+.dark-theme .text-gray-700 {
+  color: var(--text-secondary) !important;
+}
+
+.dark-theme [class*="text-gray-600"],
+.dark-theme .text-gray-600 {
+  color: var(--text-secondary) !important;
+}
+
+.dark-theme [class*="text-gray-500"],
+.dark-theme .text-gray-500 {
+  color: var(--text-tertiary) !important;
+}
+
+/* Ensure buttons have proper colors */
+.dark-theme button[class*="border"] {
+  border-color: var(--border-default) !important;
+}
+
+/* Fix tabs */
+.dark-theme [role="tablist"] button {
+  color: var(--text-secondary) !important;
+  background: transparent !important;
+}
+
+.dark-theme [role="tablist"] button[data-state="active"] {
+  color: var(--accent-primary) !important;
+  background: var(--surface-1) !important;
+}
+
+/* AI Credit Balance Component - Completely redesigned for dark theme */
+.dark-theme [class*="from-blue-500"][class*="to-indigo-500"],
+.dark-theme [class*="from-purple-500"][class*="to-pink-500"],
+.dark-theme [class*="from-yellow-500"][class*="to-orange-500"],
+.dark-theme [class*="from-red-500"][class*="to-orange-500"] {
+  background: rgba(0, 217, 255, 0.15) !important;
+  border: 1px solid rgba(0, 217, 255, 0.4) !important;
+}
+
+/* Credits text in dark mode */
+.dark-theme [class*="from-blue-600"],
+.dark-theme [class*="from-purple-600"],
+.dark-theme [class*="text-blue-600"],
+.dark-theme [class*="text-red-600"],
+.dark-theme [class*="text-yellow-600"] {
+  background: linear-gradient(135deg, #00d9ff 0%, #a855f7 100%) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+/* AI Credits label */
+.dark-theme span[class*="uppercase"]:has-text("AI Credits"),
+.dark-theme span:contains("AI Credits") {
+  color: var(--text-tertiary) !important;
+}
+
+/* Enterprise/Pro/Free badges - More specific selectors */
+.dark-theme [class*="amber"] {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%) !important;
+  border: 2px solid #fbbf24 !important;
+}
+
+.dark-theme [class*="amber"] * {
+  color: #0a0e1a !important;
+  font-weight: 700 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.dark-theme span:contains("Enterprise"),
+.dark-theme span:contains("enterprise") {
+  color: #0a0e1a !important;
+}
+
+.dark-theme [class*="purple-100"] {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%) !important;
+  border: 2px solid #8b5cf6 !important;
+}
+
+.dark-theme [class*="purple-100"] * {
+  color: white !important;
+  font-weight: 700 !important;
+}
+
+.dark-theme [class*="gray-100"][class*="border-gray"] {
+  background: var(--surface-2) !important;
+  color: var(--text-secondary) !important;
+  border: 1px solid var(--border-default) !important;
+}
+
+/* Strong color fixes for maximum visibility */
+.dark-theme .text-gray-400 {
+  color: var(--text-tertiary) !important;
+}
+
+.dark-theme [class*="text-muted"],
+.dark-theme .text-muted-foreground {
+  color: var(--text-secondary) !important;
+}
+
+/* Ensure all button text is visible */
+.dark-theme button * {
+  color: inherit !important;
+}
+
+/* Make sure the "Send" button stays visible with dark background */
+.dark-theme .btn-primary,
+.dark-theme button[class*="from-blue-600"] {
+  background: var(--bg-elevated) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(0, 217, 255, 0.5) !important;
+  box-shadow: 0 0 15px rgba(0, 217, 255, 0.3) !important;
+}
+
+.dark-theme .btn-primary:hover,
+.dark-theme button[class*="from-blue-600"]:hover {
+  background: var(--surface-2) !important;
+  border-color: var(--accent-primary) !important;
+  box-shadow: 0 0 20px rgba(0, 217, 255, 0.5) !important;
+}
+
+.dark-theme .btn-primary *,
+.dark-theme button[class*="from-blue-600"] * {
+  color: #ffffff !important;
+}
+
+.dark-theme .btn-primary svg,
+.dark-theme button[class*="from-blue-600"] svg {
+  color: #ffffff !important;
+}
+
+/* Plus button before Send */
+.dark-theme button[class*="border-blue-200"] {
+  background: var(--bg-elevated) !important;
+  border: 1px solid rgba(0, 217, 255, 0.4) !important;
+  color: #ffffff !important;
+}
+
+.dark-theme button[class*="border-blue-200"]:hover {
+  background: var(--surface-2) !important;
+  border-color: var(--accent-primary) !important;
+  box-shadow: 0 0 10px rgba(0, 217, 255, 0.3);
+}
+
+.dark-theme button[class*="border-blue-200"] svg {
+  color: var(--accent-primary) !important;
+}
+
+/* Tab buttons in artifact canvas - PURE WHITE TEXT */
+.dark-theme [role="tab"] {
+  background: transparent !important;
+  color: #94a3b8 !important;
+  border-bottom: 2px solid transparent !important;
+}
+
+.dark-theme [role="tab"]:hover {
+  color: #ffffff !important;
+  background: rgba(0, 217, 255, 0.1) !important;
+}
+
+.dark-theme [role="tab"][data-state="active"] {
+  color: #ffffff !important;
+  background: var(--bg-tertiary) !important;
+  border-bottom-color: var(--accent-primary) !important;
+}
+
+/* TabsList background */
+.dark-theme [role="tablist"] {
+  background: var(--bg-elevated) !important;
+  border: 1px solid var(--border-default) !important;
+}
+
+/* Specific fix for Results/Insights/Raw Data tabs */
+.dark-theme button:contains("Results"),
+.dark-theme button:contains("Insights"),
+.dark-theme button:contains("Raw Data") {
+  color: #ffffff !important;
+}
+
+/* Final comprehensive visibility fixes */
+
+/* Ensure ALL text elements are visible in dark theme */
+.dark-theme,
+.dark-theme * {
+  --tw-text-opacity: 1 !important;
+}
+
+/* Override any inherited dark text */
+.dark-theme .text-black,
+.dark-theme [class*="text-black"] {
+  color: var(--text-primary) !important;
+}
+
+/* Fix any remaining button text */
+.dark-theme button {
+  color: var(--text-primary) !important;
+}
+
+.dark-theme button[class*="gradient"] {
+  color: white !important;
+}
+
+.dark-theme button[class*="gradient"] * {
+  color: white !important;
+}
+
+/* Make sure icon buttons stay visible */
+.dark-theme button svg {
+  color: currentColor !important;
+}
+
+/* Specific button text overrides for header */
+.dark-theme header button {
+  font-weight: 500 !important;
+}
+
+.dark-theme header button:not([class*="gradient"]) {
+  color: var(--text-primary) !important;
+}
+
+/* Input focus rings in dark theme */
+.dark-theme input:focus-visible,
+.dark-theme textarea:focus-visible {
+  outline: 2px solid var(--accent-primary) !important;
+  outline-offset: 2px;
+}
+
+/* Transition for theme switching */
+.theme-transition {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+

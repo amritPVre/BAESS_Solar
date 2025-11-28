@@ -219,6 +219,35 @@ export const BlogPost = () => {
                 )}
 
                 {/* Content with Markdown Rendering */}
+                <style>{`
+                  .image-caption,
+                  .pdf-caption {
+                    text-align: center;
+                    font-size: 0.875rem;
+                    color: rgba(10, 36, 99, 0.7);
+                    font-style: italic;
+                    margin-top: 0.75rem;
+                    padding: 0 1rem;
+                  }
+                  .content-image img {
+                    width: 100%;
+                    display: block;
+                  }
+                  .content-image p {
+                    margin: 0;
+                    padding: 1rem;
+                    background: linear-gradient(to bottom, rgba(254, 243, 199, 0.3), rgba(254, 243, 199, 0.1));
+                  }
+                  .pdf-viewer iframe {
+                    border: none;
+                  }
+                  .pdf-viewer p {
+                    margin: 0;
+                    padding: 1rem;
+                    background: rgba(10, 36, 99, 0.05);
+                    border-top: 1px solid rgba(10, 36, 99, 0.1);
+                  }
+                `}</style>
                 <div className="prose prose-lg prose-slate max-w-none markdown-content">
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
@@ -305,6 +334,33 @@ export const BlogPost = () => {
                           src={src}
                           alt={alt || ''}
                           className="w-full rounded-lg my-8 shadow-lg"
+                        />
+                      ),
+                      // Custom div handling for content-image and pdf-viewer
+                      div: ({ children, className }) => {
+                        if (className === 'content-image') {
+                          return (
+                            <div className="my-10 rounded-xl overflow-hidden border-2 border-[#FFA500]/20 shadow-xl">
+                              {children}
+                            </div>
+                          );
+                        }
+                        if (className === 'pdf-viewer') {
+                          return (
+                            <div className="my-10 rounded-xl overflow-hidden border-2 border-[#0A2463]/20 shadow-xl bg-gray-50">
+                              {children}
+                            </div>
+                          );
+                        }
+                        return <div className={className}>{children}</div>;
+                      },
+                      // Handle iframes (for PDF viewers)
+                      iframe: ({ src, title }) => (
+                        <iframe
+                          src={src}
+                          title={title || 'Embedded content'}
+                          className="w-full h-[600px] rounded-lg"
+                          allowFullScreen
                         />
                       ),
                       hr: () => <hr className="border-t-2 border-[#FFA500]/20 my-10" />,
