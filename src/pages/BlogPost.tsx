@@ -207,8 +207,8 @@ export const BlogPost = () => {
 
         {/* Main Content */}
         <article className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-5xl pb-12">
-          {/* Article Content - Full Width, Medium-style */}
-          <div className="max-w-[740px] mx-auto">
+          {/* Article Content - Full Width */}
+          <div className="w-full">
             <Card className="border-2 border-[#FFA500]/20 shadow-xl">
               <CardContent className="p-6 sm:p-10 md:p-16">
                 {/* Excerpt */}
