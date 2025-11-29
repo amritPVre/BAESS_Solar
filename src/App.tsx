@@ -3,8 +3,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Helmet } from "react-helmet";
+import { useEffect } from "react";
+import { initGA, trackPageView } from "@/utils/analytics";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
@@ -47,7 +49,25 @@ import SolarAIChat from "./pages/SolarAIChat";
 
 const queryClient = new QueryClient();
 
-const App = () => (
+// Component to track page views on route changes
+const AnalyticsTracker = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    // Track page view when route changes
+    trackPageView(location.pathname + location.search);
+  }, [location]);
+
+  return null;
+};
+
+const App = () => {
+  // Initialize Google Analytics on mount
+  useEffect(() => {
+    initGA();
+  }, []);
+
+  return (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <SolarProjectsProvider>
@@ -56,6 +76,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <AnalyticsTracker />
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
@@ -192,6 +213,7 @@ const App = () => (
       </SolarProjectsProvider>
     </AuthProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;
