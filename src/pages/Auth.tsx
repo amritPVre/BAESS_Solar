@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { ArrowLeft, Home } from "lucide-react";
-import { GoogleReCaptchaProvider } from "react-google-recaptcha-v3";
 import LoginForm from "@/components/auth/LoginForm";
 import RegisterForm from "@/components/auth/RegisterForm";
 import AuthInfoPanel from "@/components/auth/AuthInfoPanel";
@@ -39,33 +38,8 @@ const Auth: React.FC = () => {
 
   const clearError = () => setError(null);
 
-  const recaptchaSiteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
-
-  // Wrapper component to conditionally include reCAPTCHA
-  const ReCaptchaWrapper = ({ children }: { children: React.ReactNode }) => {
-    if (recaptchaSiteKey) {
-      return (
-        <GoogleReCaptchaProvider
-          reCaptchaKey={recaptchaSiteKey}
-          language="en"
-          useRecaptchaNet={false}
-          useEnterprise={false}
-          scriptProps={{
-            async: true,
-            defer: true,
-            appendTo: "head",
-          }}
-        >
-          {children}
-        </GoogleReCaptchaProvider>
-      );
-    }
-    return <>{children}</>;
-  };
-
   return (
-    <ReCaptchaWrapper>
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-orange-50 relative overflow-hidden">
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-orange-50 relative overflow-hidden">
         {/* Futuristic Background Elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-20 right-20 w-96 h-96 bg-orange-200/30 rounded-full blur-3xl" />
@@ -146,7 +120,6 @@ const Auth: React.FC = () => {
           </div>
         </div>
       </div>
-    </ReCaptchaWrapper>
   );
 };
 

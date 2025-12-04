@@ -8,7 +8,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useAuth } from "@/hooks/useAuth";
-import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 import { useSearchParams } from "react-router-dom";
 import { applyReferralCode } from "@/services/referralService";
 import { useToast } from "@/hooks/use-toast";
@@ -44,7 +43,6 @@ interface RegisterFormProps {
 
 const RegisterForm: React.FC<RegisterFormProps> = ({ setError, clearError }) => {
   const { register } = useAuth();
-  const { executeRecaptcha } = useGoogleReCaptcha();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const [isRegistering, setIsRegistering] = React.useState(false);
@@ -69,18 +67,6 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ setError, clearError }) => 
     setIsRegistering(true);
     
     try {
-      // Execute reCAPTCHA v3
-      if (!executeRecaptcha) {
-        console.warn("reCAPTCHA not loaded yet, proceeding without verification");
-      } else {
-        const recaptchaToken = await executeRecaptcha('register');
-        console.log("✅ reCAPTCHA token obtained:", recaptchaToken.substring(0, 20) + "...");
-        
-        // Note: In a production setup, you would send this token to your backend
-        // for verification. For now, we're just generating the token which
-        // already deters most bots from submitting the form.
-      }
-
       console.log("Attempting registration with:", values.email);
       const result = await register(values.name, values.email, values.password);
       
@@ -237,19 +223,6 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ setError, clearError }) => 
         >
           {isRegistering ? "Registering..." : "Register"}
         </Button>
-
-        {/* reCAPTCHA Badge Notice */}
-        <p className="text-xs text-gray-500 text-center mt-4">
-          This site is protected by reCAPTCHA and the Google{" "}
-          <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-            Privacy Policy
-          </a>{" "}
-          and{" "}
-          <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-            Terms of Service
-          </a>{" "}
-          apply.
-        </p>
       </form>
     </Form>
   );
