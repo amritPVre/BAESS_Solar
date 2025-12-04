@@ -103,27 +103,27 @@ export const AICreditBalance: React.FC<AICreditBalanceProps> = ({
     };
 
     return (
-      <div className={cn("flex items-center gap-3", className)}>
+      <div className={cn("flex items-center gap-3 ai-credits-compact", className)}>
         {/* Sleek Credit Display */}
         <div className={cn(
-          "relative group flex items-center gap-2.5 px-3 py-2 rounded-lg border transition-all duration-300 cursor-default hover:shadow-lg",
+          "relative group flex items-center gap-2.5 px-3 py-2 rounded-lg border transition-all duration-300 cursor-default hover:shadow-lg ai-credit-badge",
           getGradientStyle()
         )}>
           {/* Icon with glow effect */}
-          <div className="relative">
+          <div className="relative ai-credit-icon-wrapper">
             <div className={cn(
-              "absolute inset-0 rounded-full blur-md opacity-30",
+              "absolute inset-0 rounded-full blur-md opacity-30 ai-credit-glow",
               balance.isSuperAdmin ? "bg-gradient-to-r from-purple-500 to-pink-500" :
               usagePercentage > 80 ? "bg-red-500" :
               usagePercentage > 60 ? "bg-yellow-500" :
-              "bg-blue-500"
+              "bg-blue-500 dark:bg-cyan-400"
             )} />
             <Sparkles className={cn(
-              "h-4 w-4 relative z-10 transition-transform duration-300 group-hover:scale-110",
-              balance.isSuperAdmin ? "text-purple-600" :
-              usagePercentage > 80 ? "text-red-600" :
-              usagePercentage > 60 ? "text-yellow-600" :
-              "text-blue-600"
+              "h-4 w-4 relative z-10 transition-transform duration-300 group-hover:scale-110 ai-credit-icon",
+              balance.isSuperAdmin ? "text-purple-600 dark:text-cyan-400" :
+              usagePercentage > 80 ? "text-red-600 dark:text-red-400" :
+              usagePercentage > 60 ? "text-yellow-600 dark:text-yellow-400" :
+              "text-blue-600 dark:text-cyan-400"
             )} />
             {usagePercentage > 80 && !balance.isSuperAdmin && (
               <span className="absolute -top-1 -right-1 flex h-2 w-2">
@@ -134,17 +134,17 @@ export const AICreditBalance: React.FC<AICreditBalanceProps> = ({
           </div>
 
           {/* Credit Numbers - Clean & Bold */}
-          <div className="flex items-baseline gap-1">
+          <div className="flex items-baseline gap-1 ai-credit-numbers">
             <span className={cn(
-              "text-lg font-bold tracking-tight transition-all leading-none",
+              "text-lg font-bold tracking-tight transition-all leading-none dark:text-white",
               getTextColor()
             )}>
               {formatCreditDisplay(balance.remaining, balance.isSuperAdmin)}
             </span>
             {!balance.isSuperAdmin && (
               <>
-                <span className="text-gray-400 font-medium text-sm leading-none">/</span>
-                <span className="text-sm font-semibold text-gray-500 leading-none">
+                <span className="text-gray-400 dark:text-gray-500 font-medium text-sm leading-none">/</span>
+                <span className="text-sm font-semibold text-gray-500 dark:text-gray-400 leading-none">
                   {balance.monthlyLimit}
                 </span>
               </>
@@ -152,7 +152,7 @@ export const AICreditBalance: React.FC<AICreditBalanceProps> = ({
           </div>
 
           {/* Label */}
-          <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wider leading-none">
+          <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider leading-none ai-credit-label">
             AI Credits
           </span>
 
@@ -189,7 +189,7 @@ export const AICreditBalance: React.FC<AICreditBalanceProps> = ({
         <Badge 
           variant="outline" 
           className={cn(
-            "text-[10px] font-semibold px-2 py-1.5 transition-all hover:scale-105 h-9",
+            "text-[10px] font-semibold px-2 py-1.5 transition-all hover:scale-105 h-9 tier-badge dark:bg-purple-900/20 dark:border-purple-500/40 dark:text-purple-300",
             tierColors[balance.subscriptionTier]
           )}
         >

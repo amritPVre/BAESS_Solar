@@ -41,18 +41,30 @@ const Auth: React.FC = () => {
 
   const recaptchaSiteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
 
+  // Wrapper component to conditionally include reCAPTCHA
+  const ReCaptchaWrapper = ({ children }: { children: React.ReactNode }) => {
+    if (recaptchaSiteKey) {
+      return (
+        <GoogleReCaptchaProvider
+          reCaptchaKey={recaptchaSiteKey}
+          language="en"
+          useRecaptchaNet={false}
+          useEnterprise={false}
+          scriptProps={{
+            async: true,
+            defer: true,
+            appendTo: "head",
+          }}
+        >
+          {children}
+        </GoogleReCaptchaProvider>
+      );
+    }
+    return <>{children}</>;
+  };
+
   return (
-    <GoogleReCaptchaProvider
-      reCaptchaKey={recaptchaSiteKey || ""}
-      language="en"
-      useRecaptchaNet={false}
-      useEnterprise={false}
-      scriptProps={{
-        async: true,
-        defer: true,
-        appendTo: "head",
-      }}
-    >
+    <ReCaptchaWrapper>
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-orange-50 relative overflow-hidden">
         {/* Futuristic Background Elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -134,7 +146,7 @@ const Auth: React.FC = () => {
           </div>
         </div>
       </div>
-    </GoogleReCaptchaProvider>
+    </ReCaptchaWrapper>
   );
 };
 

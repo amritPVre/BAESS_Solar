@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ChatHistorySidebar } from '@/components/solar-ai-chat/ChatHistorySidebar';
 import { ChatInterface } from '@/components/solar-ai-chat/ChatInterface';
 import { ArtifactCanvas } from '@/components/solar-ai-chat/ArtifactCanvas';
 import { TaskSelector } from '@/components/solar-ai-chat/TaskSelector';
 import { ChatSession, ChatMessage, CalculationType, ArtifactData } from '@/types/solar-ai-chat';
+import { getCalculationTask } from '@/config/solar-calculation-prompts';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -36,6 +37,11 @@ const SolarAIChatContent: React.FC = () => {
   const [selectedCalculationType, setSelectedCalculationType] = useState<CalculationType | null>(null);
   const [currentArtifact, setCurrentArtifact] = useState<ArtifactData | null>(null);
   const [isArtifactVisible, setIsArtifactVisible] = useState(true);
+
+  // Get the selected task details for displaying in chat interface
+  const selectedTask = useMemo(() => {
+    return selectedCalculationType ? getCalculationTask(selectedCalculationType) : null;
+  }, [selectedCalculationType]);
 
   // Load chat sessions on mount
   useEffect(() => {
@@ -71,11 +77,39 @@ const SolarAIChatContent: React.FC = () => {
     };
   };
 
-  const handleSelectTask = (taskId: CalculationType) => {
+  const handleSelectTask = async (taskId: CalculationType) => {
     setSelectedCalculationType(taskId);
     const newSession = createNewSession(taskId);
     setCurrentSession(newSession);
     setIsTaskSelectorOpen(false);
+
+    // For PV sizing, send an initial AI message to start the conversation
+    if (taskId === 'pv_sizing') {
+      const initialAIMessage: ChatMessage = {
+        id: `msg_${Date.now()}_ai`,
+        role: 'assistant',
+        content: `Great! I'll help you design a grid-connected solar PV system. Let me guide you through the process step by step.
+
+**Step 1 of 8: Energy Consumption**
+
+Do you have your **Daily Average Day-time Electricity Consumption** value (in kWh)?
+
+This is your energy usage from 6:00 AM to 6:00 PM.
+
+Please reply with:
+- **"Yes, [value] kWh"** - if you know your daytime consumption
+- **"No"** - if you don't have this value (I'll proceed with space-based sizing)`,
+        timestamp: new Date(),
+        calculationType: taskId,
+      };
+
+      const sessionWithInitialMessage = {
+        ...newSession,
+        messages: [initialAIMessage],
+        title: 'PV System Design',
+      };
+      setCurrentSession(sessionWithInitialMessage);
+    }
   };
 
   const handleNewChat = () => {
@@ -173,32 +207,38 @@ const SolarAIChatContent: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // Get AI response
-      const aiResponse = await solarAIChatService.sendMessage(
+      // Get AI response (both chat and canvas)
+      const { chatResponse, canvasResponse } = await solarAIChatService.sendMessage(
         messageContent,
         selectedCalculationType,
         currentSession.messages
       );
 
-      // Create AI message
+      // Create AI message for chat (brief, conversational)
       const aiMessage: ChatMessage = {
         id: `msg_${Date.now()}_ai`,
         role: 'assistant',
-        content: aiResponse,
+        content: chatResponse,
         timestamp: new Date(),
         calculationType: selectedCalculationType,
       };
 
-      // Create artifact from response
-      const artifact: ArtifactData = {
-        type: 'calculation',
-        title: `${selectedCalculationType.replace(/_/g, ' ')} Results`,
-        data: aiResponse,
-        calculationType: selectedCalculationType,
-        timestamp: new Date(),
-      };
-      setCurrentArtifact(artifact);
-      aiMessage.artifactData = artifact;
+      // Only create artifact if we have canvas response (actual calculation results)
+      let artifact: ArtifactData | null = null;
+      if (canvasResponse) {
+        artifact = {
+          type: 'calculation',
+          title: `${selectedCalculationType.replace(/_/g, ' ')} Results`,
+          data: canvasResponse,
+          calculationType: selectedCalculationType,
+          timestamp: new Date(),
+        };
+      }
+      // Only update artifact if we have new calculation results
+      if (artifact) {
+        setCurrentArtifact(artifact);
+        aiMessage.artifactData = artifact;
+      }
 
       // Update session with AI message
       const finalSession = {
@@ -367,8 +407,8 @@ const SolarAIChatContent: React.FC = () => {
             onRenameSession={handleRenameSession}
           />
 
-          {/* Chat Interface */}
-          <div className="chat-interface flex-1 min-w-[400px] theme-transition">
+          {/* Chat Interface - 30% width, flexible when sidebar collapsed */}
+          <div className="chat-interface w-[30%] min-w-[350px] flex-shrink-0 flex-grow theme-transition">
             {!currentSession ? (
               <div className="chat-welcome h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 theme-transition">
                 <div className="text-center px-8">
@@ -397,12 +437,13 @@ const SolarAIChatContent: React.FC = () => {
                 onSendMessage={handleSendMessage}
                 onOpenTaskSelector={() => setIsTaskSelectorOpen(true)}
                 userName={user?.name}
+                selectedTask={selectedTask}
               />
             )}
           </div>
 
-          {/* Artifact Canvas */}
-          {currentSession && (
+          {/* Artifact Canvas - 55% width, fixed */}
+          <div className="artifact-canvas-wrapper w-[55%] flex-shrink-0">
             <ArtifactCanvas
               artifact={currentArtifact}
               onExportPDF={handleExportArtifactPDF}
@@ -410,7 +451,7 @@ const SolarAIChatContent: React.FC = () => {
               isVisible={isArtifactVisible}
               onToggleVisibility={() => setIsArtifactVisible(!isArtifactVisible)}
             />
-          )}
+          </div>
         </div>
 
         {/* Task Selector Modal */}

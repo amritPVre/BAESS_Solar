@@ -187,6 +187,119 @@
   color: #cbd5e1 !important;
 }
 
+/* Welcome screen button - PURE WHITE TEXT ON GRADIENT */
+.dark-theme .chat-welcome button {
+  background: linear-gradient(135deg, #0066cc 0%, #5033cc 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(0, 217, 255, 0.3) !important;
+  box-shadow: 0 4px 20px rgba(0, 102, 204, 0.4) !important;
+}
+
+.dark-theme .chat-welcome button:hover {
+  background: linear-gradient(135deg, #0077ee 0%, #6044dd 100%) !important;
+  box-shadow: 0 6px 30px rgba(0, 217, 255, 0.5) !important;
+  transform: translateY(-2px) !important;
+}
+
+.dark-theme .chat-welcome button *,
+.dark-theme .chat-welcome button span {
+  color: #ffffff !important;
+}
+
+.dark-theme .chat-welcome button svg {
+  color: #ffffff !important;
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.5));
+}
+
+/* Force white text on all gradient buttons in welcome screen */
+.dark-theme .chat-welcome button[class*="gradient"],
+.dark-theme .chat-welcome button[class*="from-blue"],
+.dark-theme .chat-welcome button[class*="to-indigo"] {
+  color: #ffffff !important;
+}
+
+.dark-theme .chat-welcome button[class*="gradient"] *,
+.dark-theme .chat-welcome button[class*="from-blue"] *,
+.dark-theme .chat-welcome button[class*="to-indigo"] * {
+  color: #ffffff !important;
+}
+
+/* Ultra-specific selector for the "Select Calculation Task" button */
+.dark-theme .chat-welcome button.bg-gradient-to-r,
+.dark-theme .chat-welcome button.text-white,
+.dark-theme button.text-white {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.dark-theme .chat-welcome button.bg-gradient-to-r *,
+.dark-theme .chat-welcome button.text-white *,
+.dark-theme button.text-white * {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Ensure Tailwind's text-white class works in dark theme */
+.dark-theme .text-white {
+  color: #ffffff !important;
+}
+
+/* Gradient buttons should always have white text */
+.dark-theme .bg-gradient-to-r.from-blue-600 {
+  color: #ffffff !important;
+}
+
+.dark-theme .bg-gradient-to-r.from-blue-600 * {
+  color: #ffffff !important;
+}
+
+/* Task-specific welcome message styling */
+.dark-theme .chat-welcome-title {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+.dark-theme .chat-welcome-description {
+  color: #cbd5e1 !important;
+}
+
+/* Required Inputs Card - Dark Theme */
+.dark-theme .required-inputs-card {
+  background: linear-gradient(135deg, rgba(30, 64, 175, 0.2) 0%, rgba(67, 56, 202, 0.2) 100%) !important;
+  border: 1px solid rgba(0, 217, 255, 0.3) !important;
+  box-shadow: 0 4px 20px rgba(0, 102, 204, 0.2) !important;
+}
+
+.dark-theme .required-inputs-title {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+.dark-theme .required-inputs-subtitle {
+  color: #94a3b8 !important;
+}
+
+.dark-theme .required-input-item {
+  color: #e2e8f0 !important;
+}
+
+.dark-theme .required-inputs-hint {
+  color: #94a3b8 !important;
+  border-top-color: rgba(0, 217, 255, 0.2) !important;
+}
+
+/* Number circles in required inputs */
+.dark-theme .required-inputs-card li span:first-child {
+  background: rgba(0, 217, 255, 0.2) !important;
+  color: #00d9ff !important;
+  border: 1px solid rgba(0, 217, 255, 0.3) !important;
+}
+
+/* ListChecks icon in required inputs */
+.dark-theme .required-inputs-card svg {
+  color: #00d9ff !important;
+}
+
 .dark-theme .message-user {
   background: var(--gradient-primary);
   color: white;
@@ -221,6 +334,15 @@
 
 .dark-theme .chat-textarea::placeholder {
   color: var(--text-tertiary);
+}
+
+/* Artifact Canvas Wrapper - Fixed 55% width */
+.artifact-canvas-wrapper {
+  height: 100%;
+}
+
+.artifact-canvas-wrapper > * {
+  height: 100%;
 }
 
 /* Artifact Canvas Styles - PURE WHITE TEXT FOR MAXIMUM VISIBILITY */
@@ -508,20 +630,6 @@
 
 .dark-theme .avatar-user {
   background: var(--gradient-secondary);
-}
-
-/* Task Selector Modal */
-.dark-theme .task-card {
-  background: var(--surface-2);
-  border: 1px solid var(--border-default);
-  transition: all 0.3s ease;
-}
-
-.dark-theme .task-card:hover {
-  background: var(--surface-glass);
-  border-color: var(--accent-primary);
-  box-shadow: var(--shadow-glow);
-  transform: translateY(-2px);
 }
 
 /* Theme Toggle Button */
@@ -889,5 +997,651 @@
 /* Transition for theme switching */
 .theme-transition {
   transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* ========================================
+   TASK SELECTOR MODAL STYLES
+   ======================================== */
+
+/* Modal Overlay */
+html.dark-theme [data-radix-dialog-overlay],
+html.dark-theme .fixed.inset-0[style*="background"],
+.dark-theme [data-radix-dialog-overlay],
+.dark-theme .fixed.inset-0[style*="background"] {
+  background: rgba(0, 0, 0, 0.9) !important;
+  backdrop-filter: blur(12px) !important;
+}
+
+/* Modal Content Container - AGGRESSIVE DARK THEME */
+html.dark-theme .task-selector-modal,
+html.dark-theme [data-radix-dialog-content],
+html.dark-theme .modal-content,
+.dark-theme .task-selector-modal,
+.dark-theme [data-radix-dialog-content],
+.dark-theme .modal-content {
+  background: #0a0e1a !important;
+  border: 1px solid rgba(0, 217, 255, 0.3) !important;
+  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 217, 255, 0.2) !important;
+}
+
+/* Modal Title - WHITE */
+html.dark-theme .task-selector-title,
+html.dark-theme .task-selector-modal h2,
+html.dark-theme .task-selector-modal h3,
+html.dark-theme [data-radix-dialog-content] h2,
+html.dark-theme [data-radix-dialog-content] h3,
+.dark-theme .task-selector-title,
+.dark-theme .task-selector-modal h2,
+.dark-theme .task-selector-modal h3,
+.dark-theme [data-radix-dialog-content] h2,
+.dark-theme [data-radix-dialog-content] h3 {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+/* Modal Subtitle/Description - WHITE */
+html.dark-theme .task-selector-description,
+html.dark-theme .task-selector-modal > div > p,
+html.dark-theme [data-radix-dialog-content] > div > p,
+.dark-theme .task-selector-description,
+.dark-theme .task-selector-modal > div > p,
+.dark-theme [data-radix-dialog-content] > div > p {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Search Input in Modal - VERY AGGRESSIVE */
+html.dark-theme .task-selector-modal input[type="text"],
+html.dark-theme .task-selector-modal input[type="search"],
+html.dark-theme [data-radix-dialog-content] input[type="text"],
+html.dark-theme [data-radix-dialog-content] input[type="search"],
+.dark-theme .task-selector-modal input[type="text"],
+.dark-theme .task-selector-modal input[type="search"],
+.dark-theme [data-radix-dialog-content] input[type="text"],
+.dark-theme [data-radix-dialog-content] input[type="search"] {
+  background: #1e2638 !important;
+  border: 1px solid rgba(100, 116, 139, 0.3) !important;
+  color: #ffffff !important;
+  padding: 12px 16px !important;
+}
+
+/* Search placeholder - WHITE */
+html.dark-theme .task-selector-modal input::placeholder,
+html.dark-theme [data-radix-dialog-content] input::placeholder,
+.dark-theme .task-selector-modal input::placeholder,
+.dark-theme [data-radix-dialog-content] input::placeholder {
+  color: #94a3b8 !important;
+  -webkit-text-fill-color: #94a3b8 !important;
+}
+
+html.dark-theme .task-selector-modal input:focus,
+html.dark-theme [data-radix-dialog-content] input:focus,
+.dark-theme .task-selector-modal input:focus,
+.dark-theme [data-radix-dialog-content] input:focus {
+  border-color: #00d9ff !important;
+  box-shadow: 0 0 0 3px rgba(0, 217, 255, 0.1) !important;
+  outline: none !important;
+}
+
+/* Filter Tab Buttons - WHITE TEXT */
+html.dark-theme .task-selector-modal button[role="tab"],
+html.dark-theme [data-radix-dialog-content] button[role="tab"],
+html.dark-theme .task-filter-tab,
+.dark-theme .task-selector-modal button[role="tab"],
+.dark-theme [data-radix-dialog-content] button[role="tab"],
+.dark-theme .task-filter-tab {
+  background: #121828 !important;
+  border: 1px solid rgba(100, 116, 139, 0.3) !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  font-weight: 500 !important;
+  padding: 10px 20px !important;
+  border-radius: 8px !important;
+}
+
+html.dark-theme .task-selector-modal button[role="tab"]:hover,
+html.dark-theme [data-radix-dialog-content] button[role="tab"]:hover,
+.dark-theme .task-selector-modal button[role="tab"]:hover,
+.dark-theme [data-radix-dialog-content] button[role="tab"]:hover {
+  background: #1e2638 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  border-color: rgba(0, 217, 255, 0.4) !important;
+}
+
+html.dark-theme .task-selector-modal button[role="tab"][data-state="active"],
+html.dark-theme [data-radix-dialog-content] button[role="tab"][data-state="active"],
+html.dark-theme .task-filter-tab.active,
+.dark-theme .task-selector-modal button[role="tab"][data-state="active"],
+.dark-theme [data-radix-dialog-content] button[role="tab"][data-state="active"],
+.dark-theme .task-filter-tab.active {
+  background: linear-gradient(135deg, rgba(0, 217, 255, 0.2) 0%, rgba(168, 85, 247, 0.2) 100%) !important;
+  border-color: #00d9ff !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  box-shadow: 0 0 15px rgba(0, 217, 255, 0.3) !important;
+}
+
+/* Badge counts on tabs - CYAN BG WITH DARK TEXT */
+html.dark-theme .task-selector-modal button[role="tab"] span[class*="badge"],
+html.dark-theme .task-selector-modal button[role="tab"] span[class*="ml-"],
+html.dark-theme [data-radix-dialog-content] button[role="tab"] span[class*="badge"],
+html.dark-theme [data-radix-dialog-content] button[role="tab"] span[class*="ml-"],
+.dark-theme .task-selector-modal button[role="tab"] span[class*="badge"],
+.dark-theme .task-selector-modal button[role="tab"] span[class*="ml-"],
+.dark-theme [data-radix-dialog-content] button[role="tab"] span[class*="badge"],
+.dark-theme [data-radix-dialog-content] button[role="tab"] span[class*="ml-"] {
+  background: #00d9ff !important;
+  color: #0a0e1a !important;
+  -webkit-text-fill-color: #0a0e1a !important;
+  font-weight: 600 !important;
+}
+
+/* Calculation Cards - ULTRA AGGRESSIVE */
+html.dark-theme .task-selector-modal .calculation-card,
+html.dark-theme .task-selector-modal [class*="card"],
+html.dark-theme [data-radix-dialog-content] .calculation-card,
+html.dark-theme [data-radix-dialog-content] [class*="card"],
+.dark-theme .task-selector-modal .calculation-card,
+.dark-theme .task-selector-modal [class*="card"],
+.dark-theme [data-radix-dialog-content] .calculation-card,
+.dark-theme [data-radix-dialog-content] [class*="card"] {
+  background: linear-gradient(135deg, #121828 0%, #1a2235 100%) !important;
+  border: 1px solid rgba(100, 116, 139, 0.3) !important;
+  border-radius: 12px !important;
+  padding: 20px !important;
+  transition: all 0.3s ease !important;
+}
+
+html.dark-theme .task-selector-modal .calculation-card:hover,
+html.dark-theme .task-selector-modal [class*="card"]:hover,
+html.dark-theme [data-radix-dialog-content] .calculation-card:hover,
+html.dark-theme [data-radix-dialog-content] [class*="card"]:hover,
+.dark-theme .task-selector-modal .calculation-card:hover,
+.dark-theme .task-selector-modal [class*="card"]:hover,
+.dark-theme [data-radix-dialog-content] .calculation-card:hover,
+.dark-theme [data-radix-dialog-content] [class*="card"]:hover {
+  border-color: #00d9ff !important;
+  box-shadow: 0 8px 25px rgba(0, 217, 255, 0.2) !important;
+  transform: translateY(-2px) !important;
+}
+
+/* Card Icon Container - Keep gradient colors - no override needed */
+
+/* Card Title - ULTRA AGGRESSIVE */
+html.dark-theme .task-selector-modal h3,
+html.dark-theme .task-selector-modal h4,
+html.dark-theme [data-radix-dialog-content] h3,
+html.dark-theme [data-radix-dialog-content] h4,
+.dark-theme .task-selector-modal h3,
+.dark-theme .task-selector-modal h4,
+.dark-theme [data-radix-dialog-content] h3,
+.dark-theme [data-radix-dialog-content] h4 {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+/* Card Description - all <p> tags in modal */
+html.dark-theme .task-selector-modal p:not(.task-selector-description),
+html.dark-theme [data-radix-dialog-content] p:not(.task-selector-description),
+.dark-theme .task-selector-modal p:not(.task-selector-description),
+.dark-theme [data-radix-dialog-content] p:not(.task-selector-description) {
+  color: #94a3b8 !important;
+}
+
+/* Card Type Badges (mixed, table, chart, report) - ONLY TEXT COLOR TO DARK BLUE */
+html.dark-theme .task-selector-modal [class*="badge"],
+html.dark-theme [data-radix-dialog-content] [class*="badge"],
+.dark-theme .task-selector-modal [class*="badge"],
+.dark-theme [data-radix-dialog-content] [class*="badge"] {
+  color: #1e3a8a !important;
+  -webkit-text-fill-color: #1e3a8a !important;
+}
+
+/* Card Action Buttons (Select button) - DARK TEXT FOR VISIBILITY */
+html.dark-theme .task-selector-modal [class*="card"] button,
+html.dark-theme [data-radix-dialog-content] [class*="card"] button,
+.dark-theme .task-selector-modal [class*="card"] button,
+.dark-theme [data-radix-dialog-content] [class*="card"] button {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 217, 255, 0.5) !important;
+  color: #0a0e1a !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+}
+
+html.dark-theme .task-selector-modal [class*="card"] button:hover,
+html.dark-theme [data-radix-dialog-content] [class*="card"] button:hover,
+.dark-theme .task-selector-modal [class*="card"] button:hover,
+.dark-theme [data-radix-dialog-content] [class*="card"] button:hover {
+  background: #00d9ff !important;
+  border-color: #00d9ff !important;
+  color: #0a0e1a !important;
+  box-shadow: 0 0 20px rgba(0, 217, 255, 0.6) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Close button in modal */
+.dark-theme [data-radix-dialog-content] button[aria-label*="Close"],
+.dark-theme [data-radix-dialog-content] .close-button {
+  background: transparent !important;
+  color: #94a3b8 !important;
+  border: none !important;
+}
+
+.dark-theme [data-radix-dialog-content] button[aria-label*="Close"]:hover {
+  color: #ffffff !important;
+  background: var(--surface-1) !important;
+}
+
+/* Grid layout for calculation cards */
+.dark-theme [data-radix-dialog-content] [class*="grid"] {
+  gap: 16px !important;
+}
+
+/* Scrollbar in modal */
+.dark-theme [data-radix-dialog-content]::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dark-theme [data-radix-dialog-content]::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+.dark-theme [data-radix-dialog-content]::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+  border-radius: 4px;
+}
+
+.dark-theme [data-radix-dialog-content]::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary);
+}
+
+/* Footer text in modal - ULTRA AGGRESSIVE */
+html.dark-theme .task-selector-modal footer,
+html.dark-theme .task-selector-modal .bg-gray-50,
+html.dark-theme [data-radix-dialog-content] footer,
+html.dark-theme [data-radix-dialog-content] .bg-gray-50,
+.dark-theme .task-selector-modal footer,
+.dark-theme .task-selector-modal .bg-gray-50,
+.dark-theme [data-radix-dialog-content] footer,
+.dark-theme [data-radix-dialog-content] .bg-gray-50 {
+  background: #1a2235 !important;
+  color: #94a3b8 !important;
+  border-top: 1px solid rgba(100, 116, 139, 0.3) !important;
+}
+
+/* Task Card specific styles - ULTRA AGGRESSIVE */
+html.dark-theme .task-card,
+.dark-theme .task-card {
+  background: linear-gradient(135deg, #121828 0%, #1a2235 100%) !important;
+  border: 1px solid rgba(100, 116, 139, 0.3) !important;
+  transition: all 0.3s ease !important;
+}
+
+html.dark-theme .task-card:hover,
+.dark-theme .task-card:hover {
+  border-color: #00d9ff !important;
+  box-shadow: 0 8px 25px rgba(0, 217, 255, 0.25), 0 0 20px rgba(0, 217, 255, 0.1) !important;
+  transform: translateY(-4px) !important;
+}
+
+html.dark-theme .task-card h3,
+html.dark-theme .task-card h4,
+html.dark-theme .task-card [class*="CardTitle"],
+.dark-theme .task-card h3,
+.dark-theme .task-card h4,
+.dark-theme .task-card [class*="CardTitle"] {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+html.dark-theme .task-card p,
+html.dark-theme .task-card [class*="CardDescription"],
+.dark-theme .task-card p,
+.dark-theme .task-card [class*="CardDescription"] {
+  color: #94a3b8 !important;
+}
+
+/* Search icon color - LIGHT GRAY FOR VISIBILITY */
+html.dark-theme .task-selector-modal .text-gray-400,
+html.dark-theme [data-radix-dialog-content] .text-gray-400,
+.dark-theme .task-selector-modal .text-gray-400,
+.dark-theme [data-radix-dialog-content] .text-gray-400 {
+  color: #94a3b8 !important;
+  -webkit-text-fill-color: #94a3b8 !important;
+}
+
+html.dark-theme .task-selector-modal .text-gray-600,
+html.dark-theme [data-radix-dialog-content] .text-gray-600,
+.dark-theme .task-selector-modal .text-gray-600,
+.dark-theme [data-radix-dialog-content] .text-gray-600 {
+  color: #94a3b8 !important;
+}
+
+html.dark-theme .task-selector-modal .text-gray-300,
+html.dark-theme [data-radix-dialog-content] .text-gray-300,
+.dark-theme .task-selector-modal .text-gray-300,
+.dark-theme [data-radix-dialog-content] .text-gray-300 {
+  color: #64748b !important;
+}
+
+/* Dialog header border - ULTRA AGGRESSIVE */
+html.dark-theme .task-selector-header,
+html.dark-theme .task-selector-modal .border-b,
+html.dark-theme [data-radix-dialog-content] .border-b,
+.dark-theme .task-selector-header,
+.dark-theme .task-selector-modal .border-b,
+.dark-theme [data-radix-dialog-content] .border-b {
+  border-color: rgba(100, 116, 139, 0.3) !important;
+}
+
+/* Badge variants in dark theme - ONLY TEXT COLOR TO DARK BLUE */
+html.dark-theme .task-selector-modal [data-variant="secondary"],
+html.dark-theme [data-radix-dialog-content] [data-variant="secondary"],
+.dark-theme .task-selector-modal [data-variant="secondary"],
+.dark-theme [data-radix-dialog-content] [data-variant="secondary"] {
+  color: #1e3a8a !important;
+  -webkit-text-fill-color: #1e3a8a !important;
+}
+
+html.dark-theme .task-selector-modal [data-variant="outline"],
+html.dark-theme [data-radix-dialog-content] [data-variant="outline"],
+.dark-theme .task-selector-modal [data-variant="outline"],
+.dark-theme [data-radix-dialog-content] [data-variant="outline"] {
+  color: #1e3a8a !important;
+  -webkit-text-fill-color: #1e3a8a !important;
+}
+
+/* TabsList and TabsTrigger specific */
+.dark-theme .dark-theme [class*="TabsList"],
+.dark-theme [data-radix-tabs-list] {
+  background: var(--bg-elevated) !important;
+  border: 1px solid var(--border-default) !important;
+  padding: 4px !important;
+  border-radius: 10px !important;
+}
+
+.dark-theme [class*="TabsTrigger"],
+.dark-theme [data-radix-tabs-trigger] {
+  background: transparent !important;
+  color: #94a3b8 !important;
+  border: none !important;
+  padding: 10px 16px !important;
+  border-radius: 6px !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+}
+
+.dark-theme [class*="TabsTrigger"]:hover,
+.dark-theme [data-radix-tabs-trigger]:hover {
+  background: rgba(0, 217, 255, 0.1) !important;
+  color: #ffffff !important;
+}
+
+.dark-theme [class*="TabsTrigger"][data-state="active"],
+.dark-theme [data-radix-tabs-trigger][data-state="active"] {
+  background: linear-gradient(135deg, rgba(0, 217, 255, 0.15) 0%, rgba(168, 85, 247, 0.15) 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 15px rgba(0, 217, 255, 0.2) !important;
+}
+
+/* Gradient icon backgrounds - keep as is, only ensure SVG is white */
+.dark-theme .task-card .bg-gradient-to-br svg {
+  color: #ffffff !important;
+}
+
+/* Badges inside task cards - ONLY TEXT COLOR TO DARK BLUE */
+.dark-theme .task-card [class*="badge"],
+.dark-theme .task-card [data-variant="secondary"],
+.dark-theme .task-card [data-variant="outline"] {
+  color: #1e3a8a !important;
+  -webkit-text-fill-color: #1e3a8a !important;
+}
+
+/* All badge text inside cards should be dark blue */
+html.dark-theme .task-card [class*="badge"] *,
+html.dark-theme [data-radix-dialog-content] .task-card [class*="badge"] *,
+.dark-theme .task-card [class*="badge"] *,
+.dark-theme [data-radix-dialog-content] .task-card [class*="badge"] * {
+  color: #1e3a8a !important;
+  -webkit-text-fill-color: #1e3a8a !important;
+}
+
+/* Badges in card content section - ONLY TEXT COLOR CHANGE */
+html.dark-theme [data-radix-dialog-content] [class*="CardContent"] [class*="badge"],
+.dark-theme [data-radix-dialog-content] [class*="CardContent"] [class*="badge"] {
+  color: #1e3a8a !important;
+  -webkit-text-fill-color: #1e3a8a !important;
+}
+
+/* Top-right output format badges (mixed, table, chart, report) - ONLY TEXT COLOR */
+html.dark-theme [data-radix-dialog-content] [class*="CardHeader"] [class*="badge"],
+.dark-theme [data-radix-dialog-content] [class*="CardHeader"] [class*="badge"] {
+  color: #1e3a8a !important;
+  -webkit-text-fill-color: #1e3a8a !important;
+}
+
+/* FORCE dark text on ALL badges in task selector modal - ONLY COLOR */
+html.dark-theme .task-selector-modal [class*="text-"][class*="px-"],
+html.dark-theme [data-radix-dialog-content] [class*="text-"][class*="px-"],
+.dark-theme .task-selector-modal [class*="text-"][class*="px-"],
+.dark-theme [data-radix-dialog-content] [class*="text-"][class*="px-"] {
+  color: #1e3a8a !important;
+  -webkit-text-fill-color: #1e3a8a !important;
+}
+
+/* Cancel button in footer - ULTRA AGGRESSIVE */
+html.dark-theme .task-selector-modal footer button,
+html.dark-theme .task-selector-modal .bg-gray-50 button,
+html.dark-theme [data-radix-dialog-content] footer button,
+html.dark-theme [data-radix-dialog-content] .bg-gray-50 button,
+.dark-theme .task-selector-modal footer button,
+.dark-theme .task-selector-modal .bg-gray-50 button,
+.dark-theme [data-radix-dialog-content] footer button,
+.dark-theme [data-radix-dialog-content] .bg-gray-50 button {
+  background: #1e2638 !important;
+  border: 1px solid rgba(100, 116, 139, 0.3) !important;
+  color: #ffffff !important;
+}
+
+html.dark-theme .task-selector-modal footer button:hover,
+html.dark-theme .task-selector-modal .bg-gray-50 button:hover,
+html.dark-theme [data-radix-dialog-content] footer button:hover,
+html.dark-theme [data-radix-dialog-content] .bg-gray-50 button:hover,
+.dark-theme .task-selector-modal footer button:hover,
+.dark-theme .task-selector-modal .bg-gray-50 button:hover,
+.dark-theme [data-radix-dialog-content] footer button:hover,
+.dark-theme [data-radix-dialog-content] .bg-gray-50 button:hover {
+  background: rgba(30, 38, 56, 0.8) !important;
+  border-color: #00d9ff !important;
+  box-shadow: 0 0 10px rgba(0, 217, 255, 0.2) !important;
+}
+
+/* CATCH-ALL: Override any remaining light backgrounds in modal */
+html.dark-theme .task-selector-modal *,
+html.dark-theme [data-radix-dialog-content] *,
+.dark-theme .task-selector-modal *,
+.dark-theme [data-radix-dialog-content] * {
+  border-color: rgba(100, 116, 139, 0.3) !important;
+}
+
+html.dark-theme .task-selector-modal .bg-white,
+html.dark-theme [data-radix-dialog-content] .bg-white,
+.dark-theme .task-selector-modal .bg-white,
+.dark-theme [data-radix-dialog-content] .bg-white {
+  background: #121828 !important;
+}
+
+html.dark-theme .task-selector-modal .text-gray-900,
+html.dark-theme [data-radix-dialog-content] .text-gray-900,
+.dark-theme .task-selector-modal .text-gray-900,
+.dark-theme [data-radix-dialog-content] .text-gray-900 {
+  color: #ffffff !important;
+}
+
+html.dark-theme .task-selector-modal .text-gray-600,
+html.dark-theme [data-radix-dialog-content] .text-gray-600,
+.dark-theme .task-selector-modal .text-gray-600,
+.dark-theme [data-radix-dialog-content] .text-gray-600 {
+  color: #94a3b8 !important;
+}
+
+html.dark-theme .task-selector-modal .text-gray-300,
+html.dark-theme [data-radix-dialog-content] .text-gray-300,
+.dark-theme .task-selector-modal .text-gray-300,
+.dark-theme [data-radix-dialog-content] .text-gray-300 {
+  color: #64748b !important;
+}
+
+html.dark-theme .task-selector-modal .text-gray-400,
+html.dark-theme [data-radix-dialog-content] .text-gray-400,
+.dark-theme .task-selector-modal .text-gray-400,
+.dark-theme [data-radix-dialog-content] .text-gray-400 {
+  color: #64748b !important;
+}
+
+/* ==================================================
+   ULTIMATE CATCH-ALL FOR TASK SELECTOR MODAL
+   ================================================== */
+
+/* Force dark theme on the modal container itself */
+html.dark-theme [role="dialog"],
+.dark-theme [role="dialog"] {
+  background: #0a0e1a !important;
+  color: #ffffff !important;
+  color-scheme: dark !important;
+}
+
+/* Force dark theme on modal content */
+html.dark-theme [role="dialog"] > *,
+.dark-theme [role="dialog"] > * {
+  color-scheme: dark !important;
+}
+
+/* ==================================================
+   AI CREDIT BALANCE COMPONENT - DARK THEME
+   ================================================== */
+
+/* AI Credits Badge/Button in Header */
+.dark-theme .ai-credit-badge {
+  background: linear-gradient(135deg, rgba(0, 217, 255, 0.15) 0%, rgba(168, 85, 247, 0.15) 100%) !important;
+  border-color: rgba(0, 217, 255, 0.4) !important;
+  box-shadow: 0 0 15px rgba(0, 217, 255, 0.2) !important;
+}
+
+.dark-theme .ai-credit-badge:hover {
+  background: linear-gradient(135deg, rgba(0, 217, 255, 0.2) 0%, rgba(168, 85, 247, 0.2) 100%) !important;
+  border-color: rgba(0, 217, 255, 0.6) !important;
+  box-shadow: 0 0 20px rgba(0, 217, 255, 0.3) !important;
+}
+
+/* Icon in AI Credits - MAXIMUM VISIBILITY */
+.dark-theme .ai-credit-icon {
+  color: #00d9ff !important;
+  filter: drop-shadow(0 0 6px rgba(0, 217, 255, 0.8)) !important;
+}
+
+/* Glow effect behind icon */
+.dark-theme .ai-credit-icon-wrapper .absolute {
+  background: radial-gradient(circle, rgba(0, 217, 255, 0.4) 0%, transparent 70%) !important;
+  opacity: 0.6 !important;
+}
+
+/* Credit numbers - Pure White */
+.dark-theme .ai-credit-numbers span {
+  color: #ffffff !important;
+}
+
+.dark-theme .ai-credit-numbers .text-gray-400,
+.dark-theme .ai-credit-numbers .text-gray-500 {
+  color: #94a3b8 !important;
+}
+
+/* "AI Credits" label - Visible gray */
+.dark-theme .ai-credit-label {
+  color: #cbd5e1 !important;
+}
+
+/* Tier Badge next to AI Credits */
+.dark-theme .tier-badge {
+  background: rgba(168, 85, 247, 0.2) !important;
+  border-color: rgba(168, 85, 247, 0.5) !important;
+  color: #e9d5ff !important;
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.2) !important;
+}
+
+.dark-theme .tier-badge svg {
+  color: #e9d5ff !important;
+}
+
+.dark-theme .tier-badge:hover {
+  background: rgba(168, 85, 247, 0.3) !important;
+  border-color: rgba(168, 85, 247, 0.7) !important;
+  box-shadow: 0 0 15px rgba(168, 85, 247, 0.3) !important;
+}
+
+/* Tooltip in AI Credits */
+.dark-theme .ai-credits-compact .group-hover\\:visible {
+  background: #1e2638 !important;
+  border: 1px solid rgba(0, 217, 255, 0.3) !important;
+  color: #ffffff !important;
+}
+
+/* Override specific gradient backgrounds in dark theme */
+.dark-theme .ai-credit-badge.bg-gradient-to-r {
+  background: linear-gradient(135deg, rgba(0, 217, 255, 0.15) 0%, rgba(168, 85, 247, 0.15) 100%) !important;
+}
+
+/* Red state (low credits) */
+.dark-theme .ai-credit-badge.from-red-500 {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(249, 115, 22, 0.2) 100%) !important;
+  border-color: rgba(239, 68, 68, 0.5) !important;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Yellow state (medium credits) */
+.dark-theme .ai-credit-badge.from-yellow-500 {
+  background: linear-gradient(135deg, rgba(234, 179, 8, 0.2) 0%, rgba(249, 115, 22, 0.2) 100%) !important;
+  border-color: rgba(234, 179, 8, 0.5) !important;
+}
+
+/* Super admin state */
+.dark-theme .ai-credit-badge.from-purple-500 {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.2) 0%, rgba(236, 72, 153, 0.2) 50%, rgba(251, 191, 36, 0.2) 100%) !important;
+  border-color: rgba(168, 85, 247, 0.6) !important;
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.3) !important;
+}
+
+/* Ensure gradient text is visible in dark theme */
+.dark-theme .bg-clip-text.text-transparent {
+  background: linear-gradient(135deg, #a855f7 0%, #ec4899 50%, #fbbf24 100%) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+/* Export PDF/Excel buttons in header - MAXIMUM VISIBILITY */
+.dark-theme .solar-ai-header button[class*="outline"] {
+  background: var(--bg-elevated) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(0, 217, 255, 0.3) !important;
+  font-weight: 500 !important;
+}
+
+.dark-theme .solar-ai-header button[class*="outline"]:hover:not(:disabled) {
+  background: var(--surface-2) !important;
+  border-color: #00d9ff !important;
+  box-shadow: 0 0 15px rgba(0, 217, 255, 0.3) !important;
+  transform: translateY(-1px) !important;
+}
+
+.dark-theme .solar-ai-header button[class*="outline"]:disabled {
+  opacity: 0.4 !important;
+  color: #64748b !important;
+  border-color: rgba(100, 116, 139, 0.2) !important;
+  cursor: not-allowed !important;
 }
 

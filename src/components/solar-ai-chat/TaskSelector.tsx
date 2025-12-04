@@ -69,12 +69,12 @@ export const TaskSelector: React.FC<TaskSelectorProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[85vh] p-0">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b">
-          <DialogTitle className="text-2xl font-bold">
+      <DialogContent className="max-w-5xl max-h-[85vh] p-0 task-selector-modal">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b task-selector-header">
+          <DialogTitle className="text-2xl font-bold task-selector-title">
             Select Calculation Task
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="task-selector-description">
             Choose a solar engineering or financial calculation to perform
           </DialogDescription>
           

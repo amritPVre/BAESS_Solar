@@ -233,7 +233,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ setError, clearError }) => 
         <Button 
           type="submit" 
           className="w-full bg-solar hover:bg-solar-dark"
-          disabled={isRegistering || !executeRecaptcha}
+          disabled={isRegistering}
         >
           {isRegistering ? "Registering..." : "Register"}
         </Button>
