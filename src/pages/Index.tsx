@@ -146,6 +146,9 @@ const Index: React.FC = () => {
               <Link to="/faq" className="text-sm font-medium text-[#0A2463] hover:text-[#FFA500] transition-colors">
                 FAQ
               </Link>
+              <Link to="/sandbox" className="text-sm font-medium text-purple-600 hover:text-[#FFA500] transition-colors flex items-center gap-1">
+                🧪 Sandbox
+              </Link>
           {user ? (
             <Link to="/dashboard">
                   <Button className="bg-gradient-to-r from-[#FFA500] to-[#F7931E] hover:from-[#F7931E] hover:to-[#FFA500] text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300">
@@ -207,6 +210,9 @@ const Index: React.FC = () => {
                 </Link>
                 <Link to="/faq" onClick={() => setIsMenuOpen(false)} className="text-sm font-medium text-[#0A2463] hover:text-[#FFA500] transition-colors">
                   FAQ
+                </Link>
+                <Link to="/sandbox" onClick={() => setIsMenuOpen(false)} className="text-sm font-medium text-purple-600 hover:text-[#FFA500] transition-colors flex items-center gap-1">
+                  🧪 Sandbox
                 </Link>
                 <a href="#testimonials" onClick={() => setIsMenuOpen(false)} className="text-sm font-medium text-[#0A2463] hover:text-[#FFA500] transition-colors">
                   Testimonials

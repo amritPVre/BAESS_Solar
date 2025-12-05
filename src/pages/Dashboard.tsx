@@ -13,7 +13,7 @@ import { AdvancedCalculatorProjectService, type AdvancedCalculatorProject } from
 import { toast } from "sonner";
 import { formatCurrency, formatNumber } from "@/utils/calculations";
 import { motion } from "framer-motion";
-import { Sun, Plus, Calculator, BarChart3, FileText, Settings, LogOut, Home, Zap, Trash2, Eye, Sparkles, Brain, Cpu, User, CreditCard, ChevronDown, BatteryCharging, Clock } from "lucide-react";
+import { Sun, Plus, Calculator, BarChart3, FileText, Settings, LogOut, Home, Zap, Trash2, Eye, Sparkles, Brain, Cpu, User, CreditCard, ChevronDown, BatteryCharging, Clock, Boxes } from "lucide-react";
 import NoticeBoard from "@/components/dashboard/NoticeBoard";
 import { AICreditBalance } from "@/components/ai-credits/AICreditBalance";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -135,6 +135,13 @@ const Dashboard: React.FC = () => {
           <div className="flex gap-3 flex-wrap items-center">
             {/* AI Credit Balance */}
             <AICreditBalance compact={true} />
+            
+            <Link to="/sandbox">
+              <Button variant="outline" className="flex gap-2 border-purple-300 text-purple-700 hover:bg-purple-50 hover:text-purple-800">
+                <Boxes className="h-4 w-4" />
+                Sandbox
+              </Button>
+            </Link>
             
             <Link to="/">
               <Button variant="outline" className="flex gap-2">

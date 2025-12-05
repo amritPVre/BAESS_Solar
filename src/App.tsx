@@ -47,6 +47,11 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import SolarAIChat from "./pages/SolarAIChat";
 
+// ========== SANDBOX IMPORTS START ==========
+import SandboxLayout from "./pages/sandbox/SandboxLayout";
+import SandboxHome from "./pages/sandbox/SandboxHome";
+// ========== SANDBOX IMPORTS END ==========
+
 const queryClient = new QueryClient();
 
 // Component to track page views on route changes
@@ -118,6 +123,17 @@ const App = () => {
                   <SolarAIChat />
                 </AuthGuard>
               } />
+              
+              {/* ========== SANDBOX ROUTES START ========== */}
+              <Route path="/sandbox" element={
+                <AuthGuard>
+                  <SandboxLayout />
+                </AuthGuard>
+              }>
+                <Route index element={<SandboxHome />} />
+                {/* Add more sandbox app routes here */}
+              </Route>
+              {/* ========== SANDBOX ROUTES END ========== */}
               
               {/* For backward compatibility - maintain both routes */}
               <Route path="/calculator" element={
